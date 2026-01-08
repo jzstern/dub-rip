@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("dub-rip App", () => {
 	test("should load the homepage", async ({ page }) => {
@@ -8,7 +8,9 @@ test.describe("dub-rip App", () => {
 		await expect(page).toHaveTitle(/dub-rip/i);
 
 		// Check main input is visible
-		await expect(page.locator('input[type="text"], input[type="url"]').first()).toBeVisible();
+		await expect(
+			page.locator('input[type="text"], input[type="url"]').first(),
+		).toBeVisible();
 	});
 
 	test("should show error for invalid URL", async ({ page }) => {
@@ -23,7 +25,7 @@ test.describe("dub-rip App", () => {
 
 		// Should show some error indication (adjust selector based on your UI)
 		await expect(
-			page.locator('[data-testid="error"], .error, [role="alert"]').first()
+			page.locator('[data-testid="error"], .error, [role="alert"]').first(),
 		).toBeVisible({ timeout: 10000 });
 	});
 
@@ -62,12 +64,17 @@ test.describe("Video Preview Flow", () => {
 		await page.locator('button[type="submit"]').first().click();
 
 		// Wait for loading to complete (skeleton or actual content)
-		await page.waitForSelector('[data-testid="video-preview"], [data-testid="preview-skeleton"]', {
-			timeout: 30000,
-		});
+		await page.waitForSelector(
+			'[data-testid="video-preview"], [data-testid="preview-skeleton"]',
+			{
+				timeout: 30000,
+			},
+		);
 
 		// Eventually should show the preview
-		await expect(page.locator('[data-testid="video-preview"]')).toBeVisible({ timeout: 60000 });
+		await expect(page.locator('[data-testid="video-preview"]')).toBeVisible({
+			timeout: 60000,
+		});
 	});
 });
 

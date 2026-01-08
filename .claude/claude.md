@@ -331,9 +331,7 @@ This PR:
 - `/compound` - Capture learnings to improve future work
 
 ### Hooks (Automatic)
-- **Auto-format**: TypeScript/Svelte files formatted with Biome after edits
-- **Protected files**: Blocks edits to `.env`, `bun.lock`, `.git/`, `node_modules/`
-- **Context hints**: Suggests relevant commands based on prompt keywords
+- **Auto-format & lint**: TypeScript/Svelte/JSON files are automatically checked and fixed with Biome after edits (removes unused imports, organizes imports, fixes formatting)
 
 ### Compound Engineering Philosophy
 Each unit of work should make subsequent work easier. After completing tasks:

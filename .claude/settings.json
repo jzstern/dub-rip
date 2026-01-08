@@ -11,17 +11,6 @@
 					}
 				]
 			}
-		],
-		"PreToolUse": [
-			{
-				"matcher": "Edit|Write",
-				"hooks": [
-					{
-						"type": "command",
-						"command": "python3 << 'EOF'\nimport json, sys\ndata = json.load(sys.stdin)\npath = data.get('tool_input', {}).get('file_path', '')\nblocked = ['.env', 'bun.lock', '.git/', 'node_modules/']\nif any(b in path for b in blocked):\n    print(f\"Blocked: Cannot modify protected file: {path}\", file=sys.stderr)\n    sys.exit(2)\nsys.exit(0)\nEOF"
-					}
-				]
-			}
 		]
 	}
 }

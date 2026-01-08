@@ -99,20 +99,26 @@ export const POST: RequestHandler = async ({ request }) => {
 				`${outputPath}.%(ext)s`,
 			]);
 
-			downloadProcess.on("progress", (progress) => {
-				console.log(
-					"Download progress:",
-					`${progress.percent}%`,
-					progress.currentSpeed,
-					progress.eta,
-				);
-			});
+			downloadProcess.on(
+				"progress",
+				(progress: { percent: number; currentSpeed: string; eta: string }) => {
+					console.log(
+						"Download progress:",
+						`${progress.percent}%`,
+						progress.currentSpeed,
+						progress.eta,
+					);
+				},
+			);
 
-			downloadProcess.on("ytDlpEvent", (eventType, eventData) => {
-				console.log("yt-dlp event:", eventType, eventData);
-			});
+			downloadProcess.on(
+				"ytDlpEvent",
+				(eventType: string, eventData: string) => {
+					console.log("yt-dlp event:", eventType, eventData);
+				},
+			);
 
-			downloadProcess.on("error", (error) => {
+			downloadProcess.on("error", (error: Error) => {
 				console.error("Download process error:", error);
 			});
 

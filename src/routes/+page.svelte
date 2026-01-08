@@ -1,11 +1,11 @@
 <script lang="ts">
+import DownloadButton from "$lib/components/DownloadButton.svelte";
+import PlaylistPreview from "$lib/components/PlaylistPreview.svelte";
+import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
 import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
-import PlaylistPreview from "$lib/components/PlaylistPreview.svelte";
-import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
-import DownloadButton from "$lib/components/DownloadButton.svelte";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
 
 let url = $state("");

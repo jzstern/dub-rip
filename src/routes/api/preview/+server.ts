@@ -64,7 +64,10 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (!response.ok) {
 			if (response.status === 401 || response.status === 403) {
-				return json({ error: "Video is unavailable or private" }, { status: 404 });
+				return json(
+					{ error: "Video is unavailable or private" },
+					{ status: 404 },
+				);
 			}
 			throw new Error(`oEmbed failed: ${response.status}`);
 		}
@@ -73,7 +76,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { artist, title } = parseArtistAndTitle(oembed.title);
 
 		// Check if URL contains playlist parameter
-		const isPlaylist = url.includes('list=') || url.includes('/playlist');
+		const isPlaylist = url.includes("list=") || url.includes("/playlist");
 
 		return json({
 			success: true,

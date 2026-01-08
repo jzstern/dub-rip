@@ -3,6 +3,7 @@ import { existsSync, unlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { extractVideoId } from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -76,6 +77,12 @@ export const GET: RequestHandler = async ({ url }) => {
 		return new Response("URL parameter required", { status: 400 });
 	}
 
+	// Validate URL to prevent command injection
+	const videoId = extractVideoId(videoUrl);
+	if (!videoId && !videoUrl.includes("list=")) {
+		return new Response("Invalid YouTube URL", { status: 400 });
+	}
+
 	const stream = new ReadableStream({
 		async start(controller) {
 			const encoder = new TextEncoder();
@@ -115,9 +122,10 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "status", message: "Getting video info..." });
 
 				// Get video info first to extract title
-				const { exec } = require("node:child_process");
+				// Using execFile with array arguments prevents command injection
+				const { execFile } = require("node:child_process");
 				const { promisify } = require("node:util");
-				const execPromise = promisify(exec);
+				const execFilePromise = promisify(execFile);
 				const binaryPath = join(tmpdir(), "yt-dlp");
 
 				let videoTitle = "";
@@ -125,8 +133,16 @@ export const GET: RequestHandler = async ({ url }) => {
 				let trackTitle = "";
 
 				try {
-					const result = await execPromise(
-						`"${binaryPath}" --cookies-from-browser chrome --print "%(title)s" --no-warnings "${videoUrl}"`,
+					const result = await execFilePromise(
+						binaryPath,
+						[
+							"--cookies-from-browser",
+							"chrome",
+							"--print",
+							"%(title)s",
+							"--no-warnings",
+							videoUrl,
+						],
 						{ timeout: 30000 },
 					);
 					videoTitle = result.stdout.trim();

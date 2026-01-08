@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { json } from "@sveltejs/kit";
+import { extractVideoId } from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -52,6 +53,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (!url) {
 			return json({ error: "YouTube URL is required" }, { status: 400 });
+		}
+
+		// Validate URL to prevent potential security issues
+		const videoId = extractVideoId(url);
+		if (!videoId) {
+			return json({ error: "Invalid YouTube URL" }, { status: 400 });
 		}
 
 		console.log("Processing URL:", url);

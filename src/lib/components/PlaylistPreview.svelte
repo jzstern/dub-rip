@@ -7,7 +7,11 @@ interface Props {
 	onToggle: (checked: boolean) => void;
 }
 
-let { playlist, downloadPlaylist = $bindable(false), onToggle }: Props = $props();
+let {
+	playlist,
+	downloadPlaylist = $bindable(false),
+	onToggle,
+}: Props = $props();
 </script>
 
 <div class="p-3 rounded-md border bg-muted/50 space-y-2">

@@ -54,7 +54,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const binaryPath = join(tmpdir(), "yt-dlp");
 
 		// Check if URL is a playlist
-		const isPlaylist = url.includes('list=') || url.includes('/playlist');
+		const isPlaylist = url.includes("list=") || url.includes("/playlist");
 
 		let playlistInfo = null;
 		let duration = null;
@@ -75,15 +75,19 @@ export const POST: RequestHandler = async ({ request }) => {
 			duration = videoInfo.duration;
 
 			// Parse playlist entries
-			const entries = playlistResult.stdout.trim().split('\n').filter(Boolean);
+			const entries = playlistResult.stdout.trim().split("\n").filter(Boolean);
 			const playlistData = entries.map((line: string) => JSON.parse(line));
 
 			const firstEntry = playlistData[0];
 
 			playlistInfo = {
-				title: firstEntry?.playlist_title || videoInfo.playlist_title || 'Playlist',
-				count: firstEntry?.n_entries || firstEntry?.playlist_count || playlistData.length,
-				uploader: firstEntry?.uploader || videoInfo.uploader || '',
+				title:
+					firstEntry?.playlist_title || videoInfo.playlist_title || "Playlist",
+				count:
+					firstEntry?.n_entries ||
+					firstEntry?.playlist_count ||
+					playlistData.length,
+				uploader: firstEntry?.uploader || videoInfo.uploader || "",
 			};
 		} else {
 			const result = await execPromise(

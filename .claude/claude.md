@@ -216,9 +216,6 @@ bunx shadcn-svelte@latest init            # Initialize
 ### Issue: Preview Loading Indefinitely
 **Solution**: Check console for API errors. Verify yt-dlp is installed and accessible.
 
-### Issue: Claude Code Hook Errors with Heredocs
-**Solution**: Don't use heredocs (`<< 'EOF'`) in hook commands that need stdin. Heredocs consume stdin, preventing JSON data from reaching the script. Use separate script files instead.
-
 ## API Integration
 
 ### yt-dlp Usage

@@ -33,3 +33,6 @@ downloads/
 
 # Local Claude settings (don't commit personal permissions)
 .claude/settings.local.json
+
+# Sentry Config File
+.env.sentry-build-plugin

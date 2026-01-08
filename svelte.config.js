@@ -12,6 +12,16 @@ const config = {
 			runtime: "nodejs20.x",
 			maxDuration: 300,
 		}),
+
+		experimental: {
+			tracing: {
+				server: true,
+			},
+
+			instrumentation: {
+				server: true,
+			},
+		},
 	},
 };
 

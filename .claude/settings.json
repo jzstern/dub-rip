@@ -22,16 +22,6 @@
 					}
 				]
 			}
-		],
-		"UserPromptSubmit": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": "python3 << 'EOF'\nimport json, sys, re\ndata = json.load(sys.stdin)\nprompt = data.get('prompt', '').lower()\ncontext_hints = []\nif any(word in prompt for word in ['test', 'e2e', 'playwright']):\n    context_hints.append('Consider running /e2e for full E2E test suite')\nif any(word in prompt for word in ['review', 'pr', 'check']):\n    context_hints.append('Consider running /review for comprehensive code review')\nif any(word in prompt for word in ['security', 'vuln', 'safe']):\n    context_hints.append('Consider running /security for security audit')\nif context_hints:\n    print(json.dumps({\n        'hookSpecificOutput': {\n            'hookEventName': 'UserPromptSubmit',\n            'additionalContext': ' | '.join(context_hints)\n        }\n    }))\nsys.exit(0)\nEOF"
-					}
-				]
-			}
 		]
 	}
 }

@@ -4,6 +4,16 @@
 			"type": "stdio",
 			"command": "npx",
 			"args": ["-y", "@anthropic-ai/mcp-server-playwright@latest"]
+		},
+		"github": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@modelcontextprotocol/server-github"]
+		},
+		"sentry": {
+			"type": "stdio",
+			"command": "npx",
+			"args": ["-y", "@sentry/mcp-server"]
 		}
 	}
 }

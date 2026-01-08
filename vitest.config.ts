@@ -8,5 +8,22 @@ export default defineConfig({
 		environment: "jsdom",
 		globals: true,
 		setupFiles: ["./tests/setup.ts"],
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "json", "html"],
+			exclude: [
+				"node_modules/**",
+				"tests/**",
+				"**/*.d.ts",
+				"**/*.config.*",
+				"src/lib/components/ui/**", // shadcn components
+			],
+			thresholds: {
+				statements: 50,
+				branches: 50,
+				functions: 50,
+				lines: 50,
+			},
+		},
 	},
 });

@@ -1,0 +1,53 @@
+{
+	"name": "dub-rip",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "biome check .",
+		"format": "biome format .",
+		"format:write": "biome format --write .",
+		"test": "vitest",
+		"test:run": "vitest run",
+		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test",
+		"test:e2e:ui": "playwright test --ui"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.11",
+		"@internationalized/date": "^3.10.0",
+		"@playwright/test": "^1.57.0",
+		"@sveltejs/adapter-auto": "^7.0.0",
+		"@sveltejs/adapter-vercel": "^6.2.0",
+		"@sveltejs/kit": "^2.49.1",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
+		"@tailwindcss/typography": "^0.5.19",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/svelte": "^5.3.1",
+		"autoprefixer": "^10.4.23",
+		"bits-ui": "^2.14.4",
+		"jsdom": "^27.4.0",
+		"postcss": "^8.5.6",
+		"svelte": "^5.45.6",
+		"svelte-check": "^4.3.4",
+		"tailwindcss": "^3",
+		"typescript": "^5.9.3",
+		"vite": "^7.2.6",
+		"vitest": "^4.0.16"
+	},
+	"dependencies": {
+		"@ffmpeg-installer/ffmpeg": "^1.1.0",
+		"clsx": "^2.1.1",
+		"lucide-svelte": "^0.562.0",
+		"node-id3": "^0.2.9",
+		"tailwind-merge": "^3.4.0",
+		"tailwind-variants": "^3.2.2",
+		"yt-dlp-wrap": "^2.3.12"
+	}
+}

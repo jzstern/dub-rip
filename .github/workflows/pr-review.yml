@@ -1,0 +1,66 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Run security checks
+        run: |
+          echo "## Security Scan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check for sensitive files
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(env|pem|key)$'; then
+            echo "::error::Sensitive files detected in PR"
+            echo "- :warning: Sensitive files detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- :white_check_mark: No sensitive files" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Check for console.log with sensitive data
+          if git diff origin/${{ github.base_ref }}...HEAD | grep -E 'console\.(log|debug|info).*\b(password|token|secret|key|api)\b'; then
+            echo "::warning::Potential sensitive data in logs"
+            echo "- :warning: Potential sensitive data logging detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- :white_check_mark: No sensitive data logging detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check code style
+        run: |
+          echo "## Code Style" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check for space indentation in TS/Svelte files
+          SPACE_INDENT=$(git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -E '\.(ts|svelte)$' | xargs -I {} sh -c 'grep -l "^  [^ ]" {} 2>/dev/null' || true)
+          if [ -n "$SPACE_INDENT" ]; then
+            echo "::warning::Files with space indentation (should use tabs): $SPACE_INDENT"
+            echo "- :warning: Space indentation detected (should use tabs)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- :white_check_mark: Correct tab indentation" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: PR Summary
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Changed Files" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          git diff --name-only origin/${{ github.base_ref }}...HEAD >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

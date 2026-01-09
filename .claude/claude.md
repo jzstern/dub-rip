@@ -27,7 +27,7 @@ Handles formatting/linting. Run `bun run lint` before committing.
 - shadcn: Import from `$lib/components/ui/*`, namespace imports for compound components
 - Import components as values, not types (`import { X }` not `import type { X }`)
 
-For full templates, see `skills/svelte-patterns/`
+For full templates, see `.claude/skills/svelte-patterns/`
 
 ### Error Handling
 - Server: Log full error to console, return user-friendly message

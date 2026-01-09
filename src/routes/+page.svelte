@@ -216,6 +216,7 @@ function handleDownload() {
 						placeholder="Paste YouTube URL"
 						disabled={loading}
 						autofocus
+						onkeydown={(e) => e.key === "Enter" && isValidUrl && !loading && handleDownload()}
 						class="h-11"
 					/>
 					<DownloadButton

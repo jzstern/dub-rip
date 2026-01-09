@@ -203,7 +203,7 @@ function handleDownload() {
 		<!-- Header -->
 		<div class="space-y-2 text-center">
 			<h1 class="text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with metadata</p>
+			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
 
 		<!-- Main Card -->
@@ -215,6 +215,8 @@ function handleDownload() {
 						bind:value={url}
 						placeholder="Paste YouTube URL"
 						disabled={loading}
+						autofocus
+						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
 						class="h-11"
 					/>
 					<DownloadButton
@@ -275,22 +277,6 @@ function handleDownload() {
 					</div>
 				{/if}
 
-				<!-- Info -->
-				{#if !loading && !status && !preview && !loadingPreview}
-					<div class="space-y-2 border-t pt-4">
-						<p class="text-xs text-muted-foreground">Includes metadata:</p>
-						<div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-							{#each ['Title', 'Artist', 'Album', 'Artwork'] as item}
-								<div class="flex items-center gap-1.5">
-									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-									</svg>
-									{item}
-								</div>
-							{/each}
-						</div>
-					</div>
-				{/if}
 			</Card.Content>
 		</Card.Root>
 	</div>

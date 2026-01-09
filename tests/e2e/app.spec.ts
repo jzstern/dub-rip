@@ -62,13 +62,18 @@ test.describe("Video Preview Flow", () => {
 });
 
 test.describe("Accessibility", () => {
+	test("should autofocus input on page load", async ({ page }) => {
+		await page.goto("/");
+
+		// Input should be focused immediately
+		const input = page.locator('input[data-slot="input"]');
+		await expect(input).toBeFocused();
+	});
+
 	test("should be keyboard navigable", async ({ page }) => {
 		await page.goto("/");
 
-		// Tab to input
-		await page.keyboard.press("Tab");
-
-		// Input should be focused
+		// Input should already be focused due to autofocus
 		const input = page.locator('input[data-slot="input"]');
 		await expect(input).toBeFocused();
 
@@ -86,6 +91,45 @@ test.describe("Accessibility", () => {
 
 		// Button should be focused
 		await expect(button).toBeFocused();
+	});
+
+	// Skip: Enter key download requires yt-dlp and has timing issues
+	test.skip("should trigger download on Enter key with valid URL", async ({
+		page,
+	}) => {
+		await page.goto("/");
+
+		const input = page.locator('input[data-slot="input"]');
+		await input.fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+
+		// Press Enter
+		await page.keyboard.press("Enter");
+
+		// Should show loading state (button text changes to "Downloading")
+		await expect(page.getByRole("button", { name: "Downloading" })).toBeVisible(
+			{ timeout: 5000 },
+		);
+	});
+
+	test("should NOT trigger download on Enter key with invalid URL", async ({
+		page,
+	}) => {
+		await page.goto("/");
+
+		const input = page.locator('input[data-slot="input"]');
+		await input.fill("not-a-valid-url");
+
+		// Press Enter
+		await page.keyboard.press("Enter");
+
+		// Download button should still show "Download" (not loading)
+		const button = page.getByRole("button", { name: "Download" });
+		await expect(button).toBeVisible();
+
+		// No loading indicator should appear
+		await expect(
+			page.getByRole("button", { name: "Downloading" }),
+		).not.toBeVisible();
 	});
 
 	test("should have proper contrast in dark mode", async ({ page }) => {

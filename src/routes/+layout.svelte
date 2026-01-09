@@ -5,20 +5,7 @@ import { onMount } from "svelte";
 const { children } = $props();
 
 onMount(() => {
-	// Check system theme preference
-	const prefersDark =
-		window.matchMedia &&
-		(window.matchMedia("(prefers-color-scheme: dark)").matches ||
-			!window.matchMedia("(prefers-color-scheme: light)").matches);
-
-	// Apply dark mode by default or based on system preference
-	if (prefersDark) {
-		document.documentElement.classList.add("dark");
-	} else {
-		document.documentElement.classList.remove("dark");
-	}
-
-	// Listen for system theme changes
+	// Listen for system theme changes (initial theme is set by blocking script in app.html)
 	const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 	const handleChange = (e: MediaQueryListEvent) => {
 		if (e.matches) {

@@ -1,6 +1,19 @@
 <!doctype html>
 <html lang="en">
 	<head>
+		<script>
+			// Blocking script to prevent dark mode flicker
+			// Runs synchronously before CSS paints
+			(() => {
+				var prefersDark = window.matchMedia && (
+					window.matchMedia('(prefers-color-scheme: dark)').matches ||
+					!window.matchMedia('(prefers-color-scheme: light)').matches
+				);
+				if (prefersDark) {
+					document.documentElement.classList.add('dark');
+				}
+			})();
+		</script>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		%sveltekit.head%

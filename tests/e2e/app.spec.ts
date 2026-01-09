@@ -4,35 +4,31 @@ test.describe("dub-rip App", () => {
 	test("should load the homepage", async ({ page }) => {
 		await page.goto("/");
 
-		// Check page loads
-		await expect(page).toHaveTitle(/dub-rip/i);
+		// Check page loads with correct heading
+		await expect(page.locator("h1")).toHaveText("dub-rip");
 
 		// Check main input is visible
-		await expect(
-			page.locator('input[type="text"], input[type="url"]').first(),
-		).toBeVisible();
+		await expect(page.locator('input[data-slot="input"]')).toBeVisible();
 	});
 
 	test("should show error for invalid URL", async ({ page }) => {
 		await page.goto("/");
 
 		// Enter invalid URL
-		const input = page.locator('input[type="text"], input[type="url"]').first();
+		const input = page.locator('input[data-slot="input"]');
 		await input.fill("not-a-valid-url");
 
-		// Submit form
-		await page.locator('button[type="submit"]').first().click();
-
-		// Should show some error indication (adjust selector based on your UI)
-		await expect(
-			page.locator('[data-testid="error"], .error, [role="alert"]').first(),
-		).toBeVisible({ timeout: 10000 });
+		// Error message appears automatically after preview API call fails
+		// (debounced 500ms + API call)
+		await expect(page.locator(".text-destructive")).toBeVisible({
+			timeout: 15000,
+		});
 	});
 
 	test("should accept valid YouTube URL format", async ({ page }) => {
 		await page.goto("/");
 
-		const input = page.locator('input[type="text"], input[type="url"]').first();
+		const input = page.locator('input[data-slot="input"]');
 
 		// Test various valid YouTube URL formats
 		const validUrls = [
@@ -57,24 +53,11 @@ test.describe("Video Preview Flow", () => {
 		await page.goto("/");
 
 		// Enter a known public video URL
-		const input = page.locator('input[type="text"], input[type="url"]').first();
+		const input = page.locator('input[data-slot="input"]');
 		await input.fill("https://www.youtube.com/watch?v=jNQXAC9IVRw"); // "Me at the zoo" - first YouTube video
 
-		// Submit
-		await page.locator('button[type="submit"]').first().click();
-
-		// Wait for loading to complete (skeleton or actual content)
-		await page.waitForSelector(
-			'[data-testid="video-preview"], [data-testid="preview-skeleton"]',
-			{
-				timeout: 30000,
-			},
-		);
-
-		// Eventually should show the preview
-		await expect(page.locator('[data-testid="video-preview"]')).toBeVisible({
-			timeout: 60000,
-		});
+		// Wait for preview to load (debounced 500ms + API call)
+		await expect(page.locator("img")).toBeVisible({ timeout: 30000 });
 	});
 });
 
@@ -86,14 +69,22 @@ test.describe("Accessibility", () => {
 		await page.keyboard.press("Tab");
 
 		// Input should be focused
-		const input = page.locator('input[type="text"], input[type="url"]').first();
+		const input = page.locator('input[data-slot="input"]');
 		await expect(input).toBeFocused();
 
-		// Tab to submit button
+		// Enter valid URL to enable the button (type instead of fill to maintain focus)
+		await input.pressSequentially(
+			"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+		);
+
+		// Wait for button to become enabled
+		const button = page.getByRole("button", { name: "Download" });
+		await expect(button).toBeEnabled({ timeout: 5000 });
+
+		// Tab to download button
 		await page.keyboard.press("Tab");
 
 		// Button should be focused
-		const button = page.locator('button[type="submit"]').first();
 		await expect(button).toBeFocused();
 	});
 

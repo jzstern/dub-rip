@@ -272,6 +272,11 @@ bunx shadcn-svelte@latest init            # Initialize
 - Downloaded MP3 files
 - Temporary files
 
+### PR Maintenance
+- **Always update PR description** when new commits are added
+- **Always generate tests** for new functionality before committing
+- Keep "How to test" section current with all testable changes
+
 ### Pull Request Template
 Always use this template when creating PRs with `gh pr create`:
 

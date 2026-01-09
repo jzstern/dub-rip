@@ -70,6 +70,10 @@ bun run test:e2e     # E2E tests (Playwright)
 - Test error cases: invalid URL, private video, playlist edge cases
 
 ## Git Workflow
+- **Always use git worktree** for new work: `git worktree add ../dub-rip-<branch> <branch>`
+- **Never commit to main** - always use branches
+- Clean up after merge: `git worktree remove ../dub-rip-<branch>`
+- Only share a branch with another Claude session if explicitly requested
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`
 - PR template: `.github/PULL_REQUEST_TEMPLATE.md`
 - **Always generate tests** for new functionality before committing

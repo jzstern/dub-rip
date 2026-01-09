@@ -11,9 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Workaround for Vercel adapter issue on GitHub Actions
+      # Prevents .NET from creating diagnostic socket files that @vercel/nft tries to read
+      DOTNET_EnableDiagnostics: 0
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: 1
     steps:
       - uses: actions/checkout@v4
+
+      - name: Clean up .NET diagnostic sockets
+        run: rm -f /tmp/dotnet-diagnostic-* 2>/dev/null || true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -28,6 +33,9 @@ jobs:
 
       - name: Lint
         run: bun run lint
+
+      - name: Clean up .NET diagnostic sockets before build
+        run: rm -f /tmp/dotnet-diagnostic-* 2>/dev/null || true
 
       - name: Build
         run: bun run build

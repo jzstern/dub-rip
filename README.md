@@ -107,7 +107,8 @@ Specialized agents available via the Task tool:
 | Skill | Description |
 |-------|-------------|
 | `planning-with-files` | Structured planning with todo files |
-| `svelte-patterns` | Svelte 5 component templates and patterns |
+| `svelte-code-writer` | Official Svelte 5 docs lookup and autofixer CLI |
+| `svelte-patterns` | Project-specific component templates and patterns |
 
 ### Hooks (Automatic)
 

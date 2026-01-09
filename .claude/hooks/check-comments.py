@@ -11,7 +11,7 @@ from pathlib import Path
 
 # Configuration
 MAX_COMMENT_RATIO = 0.25  # 25% comments triggers warning
-CODE_EXTENSIONS = {'.ts', '.tsx', '.js', '.jsx', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.sol'}
+CODE_EXTENSIONS = {'.ts', '.tsx', '.js', '.jsx', '.svelte', '.py', '.go', '.rs', '.java', '.cpp', '.c', '.sol'}
 
 # Patterns for valid comments (should not be flagged)
 VALID_PATTERNS = [
@@ -54,7 +54,7 @@ def is_comment_line(line: str, ext: str) -> bool:
 
     if ext in {'.py'}:
         return stripped.startswith('#')
-    elif ext in {'.ts', '.tsx', '.js', '.jsx', '.java', '.go', '.rs', '.cpp', '.c', '.sol'}:
+    elif ext in {'.ts', '.tsx', '.js', '.jsx', '.svelte', '.java', '.go', '.rs', '.cpp', '.c', '.sol'}:
         return stripped.startswith('//') or stripped.startswith('/*') or stripped.startswith('*')
 
     return False

@@ -31,7 +31,7 @@ if ! command -v jq &>/dev/null; then
 fi
 
 # Defer to ralph-wiggum when a loop is active
-[[ -f ".claude/ralph-loop.local.md" ]] && exit 0
+[[ -n "${CLAUDE_PROJECT_DIR:-}" && -f "${CLAUDE_PROJECT_DIR}/.claude/ralph-loop.local.md" ]] && exit 0
 
 load_config() {
   if [[ -f "$CONFIG_FILE" ]]; then

@@ -1,49 +1,10 @@
 import { json } from "@sveltejs/kit";
+import {
+	extractVideoId,
+	isPlaylistUrl,
+	parseArtistAndTitle,
+} from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
-
-function parseArtistAndTitle(videoTitle: string) {
-	// Common patterns: "Artist - Title", "Artist: Title", "Artist | Title"
-	const patterns = [
-		/^(.+?)\s*[-–—]\s*(.+)$/, // Artist - Title
-		/^(.+?)\s*:\s*(.+)$/, // Artist: Title
-		/^(.+?)\s*\|\s*(.+)$/, // Artist | Title
-	];
-
-	for (const pattern of patterns) {
-		const match = videoTitle.match(pattern);
-		if (match) {
-			const artist = match[1].trim();
-			let title = match[2].trim();
-
-			// Remove common suffixes from title
-			title = title.replace(/\s*\((?:Official\s+)?(?:Music\s+)?Video\)/gi, "");
-			title = title.replace(
-				/\s*\((?:Official\s+)?(?:Audio|Lyric(?:s)?)\)/gi,
-				"",
-			);
-			title = title.replace(/\s*\[(?:Official\s+)?(?:Music\s+)?Video\]/gi, "");
-
-			return { artist, title };
-		}
-	}
-
-	// If no pattern matches, return title as-is with no artist
-	return { artist: "", title: videoTitle };
-}
-
-// Extract video ID from various YouTube URL formats
-function extractVideoId(url: string): string | null {
-	const patterns = [
-		/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
-		/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-	];
-
-	for (const pattern of patterns) {
-		const match = url.match(pattern);
-		if (match) return match[1];
-	}
-	return null;
-}
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -76,7 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { artist, title } = parseArtistAndTitle(oembed.title);
 
 		// Check if URL contains playlist parameter
-		const isPlaylist = url.includes("list=") || url.includes("/playlist");
+		const isPlaylist = isPlaylistUrl(url);
 
 		return json({
 			success: true,

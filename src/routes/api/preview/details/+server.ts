@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { json } from "@sveltejs/kit";
+import { extractVideoId } from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -45,11 +46,17 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "URL is required" }, { status: 400 });
 		}
 
+		// Validate URL to prevent command injection
+		const videoId = extractVideoId(url);
+		if (!videoId && !url.includes("list=")) {
+			return json({ error: "Invalid YouTube URL" }, { status: 400 });
+		}
+
 		const _ytDlp = await getYTDlp();
 
-		const { exec } = require("node:child_process");
+		const { execFile } = require("node:child_process");
 		const { promisify } = require("node:util");
-		const execPromise = promisify(exec);
+		const execFilePromise = promisify(execFile);
 
 		const binaryPath = join(tmpdir(), "yt-dlp");
 
@@ -61,15 +68,31 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (isPlaylist) {
 			// Get playlist info (limit to first 10 entries to avoid buffer overflow)
-			const playlistResult = await execPromise(
-				`"${binaryPath}" --cookies-from-browser chrome --flat-playlist --dump-json --no-warnings --playlist-end 10 "${url}"`,
+			// Using execFile with array arguments prevents command injection
+			const playlistResult = await execFilePromise(
+				binaryPath,
+				[
+					"--cookies-from-browser",
+					"chrome",
+					"--flat-playlist",
+					"--dump-json",
+					"--no-warnings",
+					"--playlist-end",
+					"10",
+					url,
+				],
 				{ maxBuffer: 1024 * 1024 * 10 },
 			);
 
 			// Get the first video for duration
-			const videoResult = await execPromise(
-				`"${binaryPath}" --cookies-from-browser chrome --dump-json --no-warnings --no-playlist "${url}"`,
-			);
+			const videoResult = await execFilePromise(binaryPath, [
+				"--cookies-from-browser",
+				"chrome",
+				"--dump-json",
+				"--no-warnings",
+				"--no-playlist",
+				url,
+			]);
 
 			const videoInfo = JSON.parse(videoResult.stdout);
 			duration = videoInfo.duration;
@@ -90,9 +113,13 @@ export const POST: RequestHandler = async ({ request }) => {
 				uploader: firstEntry?.uploader || videoInfo.uploader || "",
 			};
 		} else {
-			const result = await execPromise(
-				`"${binaryPath}" --cookies-from-browser chrome --dump-json --no-warnings "${url}"`,
-			);
+			const result = await execFilePromise(binaryPath, [
+				"--cookies-from-browser",
+				"chrome",
+				"--dump-json",
+				"--no-warnings",
+				url,
+			]);
 			const videoInfo = JSON.parse(result.stdout);
 			duration = videoInfo.duration;
 		}

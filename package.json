@@ -45,6 +45,7 @@
 	},
 	"dependencies": {
 		"@ffmpeg-installer/ffmpeg": "^1.1.0",
+		"@sentry/sveltekit": "^10",
 		"clsx": "^2.1.1",
 		"lucide-svelte": "^0.562.0",
 		"node-id3": "^0.2.9",

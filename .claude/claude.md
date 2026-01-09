@@ -331,9 +331,7 @@ This PR:
 - `/compound` - Capture learnings to improve future work
 
 ### Hooks (Automatic)
-- **Auto-format**: TypeScript/Svelte files formatted with Biome after edits
-- **Protected files**: Blocks edits to `.env`, `bun.lock`, `.git/`, `node_modules/`
-- **Context hints**: Suggests relevant commands based on prompt keywords
+- **Auto-format & lint**: TypeScript/Svelte/JSON files are automatically checked and fixed with Biome after edits (removes unused imports, organizes imports, fixes formatting)
 
 ### Compound Engineering Philosophy
 Each unit of work should make subsequent work easier. After completing tasks:
@@ -341,6 +339,36 @@ Each unit of work should make subsequent work easier. After completing tasks:
 2. Document pitfalls discovered → add to Common Pitfalls section
 3. Create tests that catch the issue → add to test suite
 4. Update security notes if relevant
+
+### Documentation Maintenance (Required)
+**Always update documentation when making relevant changes.** This includes:
+
+1. **README.md** - Update when:
+   - Adding/removing features or commands
+   - Changing installation or setup steps
+   - Modifying environment requirements
+   - Adding new dependencies that require setup
+
+2. **CLAUDE.md** (this file) - Update when:
+   - Discovering new patterns or pitfalls
+   - Adding new commands, hooks, or agents
+   - Changing project structure or conventions
+   - Learning something that would help future development
+
+3. **Inline comments** - Update when:
+   - Changing complex logic that has explanatory comments
+   - Modifying workarounds that have "why" comments
+
+4. **Type definitions** - Update when:
+   - Adding/removing API fields
+   - Changing data structures
+
+**How to update**: After completing a task, ask yourself:
+- "Would a new developer need to know about this change?"
+- "Does this change any documented behavior?"
+- "Did I discover something that should be documented?"
+
+If yes to any, update the relevant docs before considering the task complete.
 
 ### Code Review Learnings
 <!-- Add learnings from code reviews here -->

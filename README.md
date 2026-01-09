@@ -74,7 +74,7 @@ This project uses Claude Code with custom configuration for streamlined developm
 | `/test` | Generate unit tests with Vitest |
 | `/e2e` | Run Playwright E2E tests with failure analysis |
 | `/compound` | Capture learnings to improve future development |
-| `/interview` | Technical interview practice with feedback |
+| `/interview` | Interactive planning and task breakdown |
 
 ### Plugins
 
@@ -83,7 +83,7 @@ These plugins are enabled for all contributors:
 | Plugin | Description |
 |--------|-------------|
 | `frontend-design` | High-quality frontend interface generation |
-| `code-review` | Automated code review for SvelteKit projects |
+| `code-review` | Automated code review for quality and standards |
 | `typescript-lsp` | TypeScript language server integration |
 | `code-simplifier` | Code clarity and maintainability improvements |
 
@@ -101,7 +101,6 @@ Specialized agents available via the Task tool:
 | `codebase-search` | Semantic code search across the project |
 | `media-interpreter` | Analyzes images, diagrams, and screenshots |
 | `open-source-librarian` | Finds and evaluates open source libraries |
-| `tech-docs-writer` | Generates technical documentation |
 
 ### Skills
 

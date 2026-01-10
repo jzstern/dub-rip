@@ -1,4 +1,37 @@
 {
+	"permissions": {
+		"allow": [
+			"Read",
+			"Write",
+			"Edit",
+			"Glob",
+			"Grep",
+			"WebFetch",
+			"WebSearch",
+			"Bash(git status:*)",
+			"Bash(git diff:*)",
+			"Bash(git log:*)",
+			"Bash(git branch:*)",
+			"Bash(git worktree:*)",
+			"Bash(git fetch:*)",
+			"Bash(git stash:*)",
+			"Bash(git add:*)",
+			"Bash(git commit:*)",
+			"Bash(git push:*)",
+			"Bash(git pull:*)",
+			"Bash(git merge:*)",
+			"Bash(git checkout:*)",
+			"Bash(git restore:*)",
+			"Bash(git reset:*)",
+			"Bash(gh:*)",
+			"Bash(bun run:*)",
+			"Bash(bun install:*)",
+			"Bash(bun add:*)",
+			"Bash(bunx:*)",
+			"Bash(biome:*)",
+			"Bash(bunx biome:*)"
+		]
+	},
 	"enabledPlugins": {
 		"frontend-design@claude-plugins-official": true,
 		"code-review@claude-plugins-official": true,

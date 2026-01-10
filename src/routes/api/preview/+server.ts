@@ -3,6 +3,7 @@ import {
 	extractVideoId,
 	isPlaylistUrl,
 	parseArtistAndTitle,
+	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
 
@@ -42,7 +43,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		return json({
 			success: true,
 			videoTitle: oembed.title,
-			artist: artist || oembed.author_name || "",
+			artist: artist || sanitizeUploaderAsArtist(oembed.author_name || ""),
 			title: title || oembed.title,
 			thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 			// Duration and playlist info will be lazy-loaded via /api/preview/details

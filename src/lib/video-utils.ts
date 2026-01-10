@@ -39,6 +39,14 @@ export function parseArtistAndTitle(videoTitle: string): {
 }
 
 /**
+ * Sanitize YouTube uploader/channel name for use as artist fallback
+ * Strips " - Topic" suffix used by YouTube Music auto-generated channels
+ */
+export function sanitizeUploaderAsArtist(uploader: string): string {
+	return uploader.replace(/\s*-\s*Topic$/i, "").trim();
+}
+
+/**
  * Extract video ID from various YouTube URL formats
  */
 export function extractVideoId(url: string): string | null {

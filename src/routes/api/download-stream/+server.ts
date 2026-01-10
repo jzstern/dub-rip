@@ -3,7 +3,11 @@ import { existsSync, unlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { extractVideoId } from "$lib/video-utils";
+import {
+	extractVideoId,
+	parseArtistAndTitle,
+	sanitizeUploaderAsArtist,
+} from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -37,36 +41,6 @@ async function getYTDlp() {
 	} finally {
 		isInitializing = false;
 	}
-}
-
-function parseArtistAndTitle(videoTitle: string) {
-	// Common patterns: "Artist - Title", "Artist: Title", "Artist | Title"
-	const patterns = [
-		/^(.+?)\s*[-–—]\s*(.+)$/, // Artist - Title
-		/^(.+?)\s*:\s*(.+)$/, // Artist: Title
-		/^(.+?)\s*\|\s*(.+)$/, // Artist | Title
-	];
-
-	for (const pattern of patterns) {
-		const match = videoTitle.match(pattern);
-		if (match) {
-			const artist = match[1].trim();
-			let title = match[2].trim();
-
-			// Remove common suffixes from title
-			title = title.replace(/\s*\((?:Official\s+)?(?:Music\s+)?Video\)/gi, "");
-			title = title.replace(
-				/\s*\((?:Official\s+)?(?:Audio|Lyric(?:s)?)\)/gi,
-				"",
-			);
-			title = title.replace(/\s*\[(?:Official\s+)?(?:Music\s+)?Video\]/gi, "");
-
-			return { artist, title };
-		}
-	}
-
-	// If no pattern matches, return title as-is with no artist
-	return { artist: "", title: videoTitle };
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -131,6 +105,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				let videoTitle = "";
 				let artist = "";
 				let trackTitle = "";
+				let uploader = "";
 
 				try {
 					const result = await execFilePromise(
@@ -139,18 +114,27 @@ export const GET: RequestHandler = async ({ url }) => {
 							"--cookies-from-browser",
 							"chrome",
 							"--print",
-							"%(title)s",
+							"%(title)s\n%(uploader)s",
 							"--no-warnings",
 							videoUrl,
 						],
 						{ timeout: 30000 },
 					);
-					videoTitle = result.stdout.trim();
+					const lines = result.stdout.trim().split("\n");
+					videoTitle = lines[0] || "";
+					uploader = lines[1] || "";
 					console.log("Got video title from yt-dlp:", videoTitle);
+					console.log("Got uploader from yt-dlp:", uploader);
 
 					const parsed = parseArtistAndTitle(videoTitle);
 					artist = parsed.artist;
 					trackTitle = parsed.title;
+
+					if (!artist && uploader) {
+						artist = sanitizeUploaderAsArtist(uploader);
+						console.log("Using uploader as artist fallback:", artist);
+					}
+
 					console.log("Parsed - Artist:", artist, "Title:", trackTitle);
 
 					send({
@@ -244,6 +228,12 @@ export const GET: RequestHandler = async ({ url }) => {
 								const parsed = parseArtistAndTitle(videoTitle);
 								artist = parsed.artist;
 								trackTitle = parsed.title;
+
+								if (!artist && uploader) {
+									artist = sanitizeUploaderAsArtist(uploader);
+									console.log("Using uploader as artist fallback:", artist);
+								}
+
 								console.log("Parsed - Artist:", artist, "Title:", trackTitle);
 								send({
 									type: "info",

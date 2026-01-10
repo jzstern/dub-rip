@@ -4,6 +4,7 @@ import {
 	isPlaylistUrl,
 	isValidYouTubeUrl,
 	parseArtistAndTitle,
+	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
 
 describe("extractVideoId", () => {
@@ -260,5 +261,66 @@ describe("parseArtistAndTitle", () => {
 			expect(result.artist).toBe("AC/DC");
 			expect(result.title).toBe("Back in Black");
 		});
+	});
+});
+
+describe("sanitizeUploaderAsArtist", () => {
+	// #given
+	// YouTube Music auto-generated channels use " - Topic" suffix
+
+	it("should strip ' - Topic' suffix from uploader name", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("Queen - Topic");
+
+		// #then
+		expect(result).toBe("Queen");
+	});
+
+	it("should handle different dash types with Topic suffix", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("The Beatles - Topic");
+
+		// #then
+		expect(result).toBe("The Beatles");
+	});
+
+	it("should be case-insensitive for Topic suffix", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("Artist - TOPIC");
+
+		// #then
+		expect(result).toBe("Artist");
+	});
+
+	it("should return uploader as-is when no Topic suffix", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("Queen Official");
+
+		// #then
+		expect(result).toBe("Queen Official");
+	});
+
+	it("should handle empty string", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("");
+
+		// #then
+		expect(result).toBe("");
+	});
+
+	it("should handle uploader with spaces around dash", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("Artist Name   -   Topic");
+
+		// #then
+		expect(result).toBe("Artist Name");
+	});
+
+	it("should not strip Topic if not at the end", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("Topic Music Channel");
+
+		// #then
+		expect(result).toBe("Topic Music Channel");
 	});
 });

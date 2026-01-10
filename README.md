@@ -63,7 +63,7 @@ The project uses:
 
 ## AI-Assisted Development
 
-This project uses Claude Code with custom commands for streamlined development.
+This project uses Claude Code with custom configuration for streamlined development.
 
 ### Commands
 
@@ -74,6 +74,50 @@ This project uses Claude Code with custom commands for streamlined development.
 | `/test` | Generate unit tests with Vitest |
 | `/e2e` | Run Playwright E2E tests with failure analysis |
 | `/compound` | Capture learnings to improve future development |
+| `/interview` | Interactive planning and task breakdown |
+
+### Plugins
+
+These plugins are enabled for all contributors:
+
+| Plugin | Description |
+|--------|-------------|
+| `frontend-design` | High-quality frontend interface generation |
+| `code-review` | Automated code review for quality and standards |
+| `typescript-lsp` | TypeScript language server integration |
+| `code-simplifier` | Code clarity and maintainability improvements |
+
+### Agents
+
+Specialized agents available via the Task tool:
+
+| Agent | Description |
+|-------|-------------|
+| `code-reviewer` | Reviews changed files for quality and security |
+| `debugger` | Investigates errors and traces issues |
+| `test-generator` | Generates Vitest unit tests |
+| `e2e-runner` | Runs Playwright E2E tests |
+| `security-auditor` | OWASP Top 10 vulnerability scanning |
+| `codebase-search` | Semantic code search across the project |
+| `media-interpreter` | Analyzes images, diagrams, and screenshots |
+| `open-source-librarian` | Finds and evaluates open source libraries |
+
+### Skills
+
+| Skill | Description |
+|-------|-------------|
+| `planning-with-files` | Structured planning with todo files |
+| `svelte-code-writer` | Official Svelte 5 docs lookup and autofixer CLI |
+| `svelte-patterns` | Project-specific component templates and patterns |
+
+### Hooks (Automatic)
+
+| Hook | Trigger | Description |
+|------|---------|-------------|
+| `format-on-save` | PostToolUse (Edit/Write) | Auto-formats with Biome |
+| `keyword-detector` | UserPromptSubmit | Suggests relevant commands |
+| `check-comments` | PostToolUse (Edit/Write) | Validates code comments |
+| `todo-enforcer` | Stop | Blocks exit with incomplete todos |
 
 ### Testing
 
@@ -82,12 +126,6 @@ bun run test        # Run unit tests
 bun run test:e2e    # Run E2E tests
 bun run test:e2e:ui # Run E2E tests with interactive UI
 ```
-
-### Automated Hooks
-
-- **Auto-format**: Files are formatted with Biome on save
-- **Protected files**: Prevents accidental edits to `.env`, `bun.lock`, etc.
-- **Context hints**: Suggests relevant commands based on your prompts
 
 ## License
 

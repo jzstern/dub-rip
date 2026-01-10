@@ -262,18 +262,16 @@ function handleDownload() {
 
 						<p class="text-xs text-muted-foreground">{status}</p>
 
-						{#if progress > 0}
-							<div class="space-y-2">
-								<Progress value={progress} class="h-2" />
-								<div class="flex justify-between text-xs text-muted-foreground">
-									<span>{progress}%</span>
-									<div class="flex gap-2">
-										{#if speed}<span>{speed}</span>{/if}
-										{#if eta}<span>ETA: {eta}</span>{/if}
-									</div>
+						<div class="space-y-2">
+							<Progress value={progress} class="h-2" />
+							<div class="flex justify-between text-xs text-muted-foreground">
+								<span>{progress}%</span>
+								<div class="flex gap-2">
+									{#if speed}<span>{speed}</span>{/if}
+									{#if eta}<span>ETA: {eta}</span>{/if}
 								</div>
 							</div>
-						{/if}
+						</div>
 					</div>
 				{/if}
 

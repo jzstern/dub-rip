@@ -11,6 +11,15 @@ YouTube audio downloader with rich metadata. Built with SvelteKit 5, TypeScript,
 
 ## Critical Rules
 
+### Git Worktree (MUST DO FIRST)
+**BEFORE writing ANY code**, check if on main branch and create a worktree:
+```bash
+git branch --show-current  # If "main", create worktree first!
+git worktree add -b feat/feature-name ../dub-rip-feat-feature-name main
+cd ../dub-rip-feat-feature-name
+```
+Do NOT write code, create files, or edit files while on main. This is non-negotiable.
+
 ### Indentation
 - **TABS only** (not spaces) - tab size 2 for display
 - Always Read before Edit; match indentation exactly
@@ -70,8 +79,8 @@ bun run test:e2e     # E2E tests (Playwright)
 - Test error cases: invalid URL, private video, playlist edge cases
 
 ## Git Workflow
-- **Always use git worktree** for new work: `git worktree add ../dub-rip-<branch> <branch>`
-- **Never commit to main** - always use branches
+- **Worktree requirement**: See "Critical Rules" above - create worktree BEFORE any code changes
+- **Never commit to main** - always use feature branches
 - Clean up after merge: `git worktree remove ../dub-rip-<branch>`
 - Only share a branch with another Claude session if explicitly requested
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`

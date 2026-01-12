@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -150,6 +154,7 @@ jobs:
             COMMENT="${COMMENT}- No sensitive files or credentials detected\n"
             COMMENT="${COMMENT}- No sensitive data logging\n"
             COMMENT="${COMMENT}- Code style follows project conventions\n"
+            COMMENT="${COMMENT}- No unresolved TODO/FIXME comments\n"
             COMMENT="${COMMENT}- No oversized files\n\n"
             COMMENT="${COMMENT}_${FILE_COUNT} file(s) reviewed_"
           else

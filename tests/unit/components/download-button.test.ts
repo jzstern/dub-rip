@@ -120,18 +120,18 @@ describe("DownloadButton", () => {
 			expect(button).not.toBeDisabled();
 		});
 
-		it("is disabled during loading even if disabled prop is false", () => {
+		it("loading state does not automatically disable the button", () => {
 			// #given
 			const onClick = vi.fn();
 
 			// #when
 			render(DownloadButton, {
-				props: { loading: true, disabled: true, onClick },
+				props: { loading: true, disabled: false, onClick },
 			});
 
 			// #then
 			const button = screen.getByRole("button");
-			expect(button).toBeDisabled();
+			expect(button).not.toBeDisabled();
 		});
 	});
 

@@ -16,28 +16,41 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Initialize review
+        run: |
+          mkdir -p /tmp/review
+          echo "" > /tmp/review/errors.md
+          echo "" > /tmp/review/warnings.md
+          echo "" > /tmp/review/suggestions.md
+
       - name: Get changed files
         id: changed-files
         run: |
-          echo "files=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')" >> $GITHUB_OUTPUT
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
 
       - name: Run security checks
         run: |
           echo "## Security Scan" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check for sensitive files
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(env|pem|key)$'; then
+          SENSITIVE_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(env|pem|key)$' || true)
+          if [ -n "$SENSITIVE_FILES" ]; then
             echo "::error::Sensitive files detected in PR"
-            echo "- :warning: Sensitive files detected" >> $GITHUB_STEP_SUMMARY
+            echo "- :x: Sensitive files detected" >> $GITHUB_STEP_SUMMARY
+            echo "- **Sensitive files committed**: \`$SENSITIVE_FILES\` - these should never be in version control" >> /tmp/review/errors.md
           else
             echo "- :white_check_mark: No sensitive files" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Check for console.log with sensitive data
-          if git diff origin/${{ github.base_ref }}...HEAD | grep -E 'console\.(log|debug|info).*\b(password|token|secret|key|api)\b'; then
+          SENSITIVE_LOGS=$(git diff origin/${{ github.base_ref }}...HEAD | grep -E 'console\.(log|debug|info).*\b(password|token|secret|key|api)\b' || true)
+          if [ -n "$SENSITIVE_LOGS" ]; then
             echo "::warning::Potential sensitive data in logs"
             echo "- :warning: Potential sensitive data logging detected" >> $GITHUB_STEP_SUMMARY
+            echo "- **Potential sensitive data in logs**: Found console statements that may log credentials or secrets" >> /tmp/review/warnings.md
           else
             echo "- :white_check_mark: No sensitive data logging detected" >> $GITHUB_STEP_SUMMARY
           fi
@@ -47,13 +60,46 @@ jobs:
           echo "## Code Style" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check for space indentation in TS/Svelte files
-          SPACE_INDENT=$(git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -E '\.(ts|svelte)$' | xargs -I {} sh -c 'grep -l "^  [^ ]" {} 2>/dev/null' || true)
-          if [ -n "$SPACE_INDENT" ]; then
-            echo "::warning::Files with space indentation (should use tabs): $SPACE_INDENT"
-            echo "- :warning: Space indentation detected (should use tabs)" >> $GITHUB_STEP_SUMMARY
+          CHANGED_TS_SVELTE=$(git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -E '\.(ts|svelte)$' || true)
+          if [ -n "$CHANGED_TS_SVELTE" ]; then
+            SPACE_INDENT=""
+            for file in $CHANGED_TS_SVELTE; do
+              if [ -f "$file" ] && grep -q "^  [^ ]" "$file" 2>/dev/null; then
+                SPACE_INDENT="$SPACE_INDENT $file"
+              fi
+            done
+
+            if [ -n "$SPACE_INDENT" ]; then
+              echo "::warning::Files with space indentation (should use tabs):$SPACE_INDENT"
+              echo "- :warning: Space indentation detected (should use tabs)" >> $GITHUB_STEP_SUMMARY
+              echo "- **Inconsistent indentation**: Use tabs instead of spaces in:\`$SPACE_INDENT\`" >> /tmp/review/suggestions.md
+            else
+              echo "- :white_check_mark: Correct tab indentation" >> $GITHUB_STEP_SUMMARY
+            fi
           else
-            echo "- :white_check_mark: Correct tab indentation" >> $GITHUB_STEP_SUMMARY
+            echo "- :white_check_mark: No TypeScript/Svelte files changed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check for TODO/FIXME comments
+        run: |
+          TODO_LINES=$(git diff origin/${{ github.base_ref }}...HEAD | grep -E '^\+.*\b(TODO|FIXME|HACK|XXX)\b' || true)
+          if [ -n "$TODO_LINES" ]; then
+            echo "- **New TODO/FIXME comments added**: Consider resolving these before merging or creating tracking issues" >> /tmp/review/suggestions.md
+          fi
+
+      - name: Check for large files
+        run: |
+          LARGE_FILES=""
+          for file in $(git diff --name-only origin/${{ github.base_ref }}...HEAD); do
+            if [ -f "$file" ]; then
+              SIZE=$(wc -c < "$file" 2>/dev/null || echo "0")
+              if [ "$SIZE" -gt 500000 ]; then
+                LARGE_FILES="$LARGE_FILES $file ($(numfmt --to=iec $SIZE 2>/dev/null || echo "${SIZE}B"))"
+              fi
+            fi
+          done
+          if [ -n "$LARGE_FILES" ]; then
+            echo "- **Large files detected**:$LARGE_FILES - consider if these need to be in the repo" >> /tmp/review/warnings.md
           fi
 
       - name: PR Summary
@@ -64,3 +110,51 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           git diff --name-only origin/${{ github.base_ref }}...HEAD >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Post PR comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ERRORS=$(cat /tmp/review/errors.md | grep -v '^$' || true)
+          WARNINGS=$(cat /tmp/review/warnings.md | grep -v '^$' || true)
+          SUGGESTIONS=$(cat /tmp/review/suggestions.md | grep -v '^$' || true)
+
+          COMMENT="## 🔍 Automated PR Review\n\n"
+
+          HAS_ISSUES=false
+
+          if [ -n "$ERRORS" ]; then
+            HAS_ISSUES=true
+            COMMENT="${COMMENT}### ❌ Issues (must fix)\n\n${ERRORS}\n\n"
+          fi
+
+          if [ -n "$WARNINGS" ]; then
+            HAS_ISSUES=true
+            COMMENT="${COMMENT}### ⚠️ Warnings\n\n${WARNINGS}\n\n"
+          fi
+
+          if [ -n "$SUGGESTIONS" ]; then
+            HAS_ISSUES=true
+            COMMENT="${COMMENT}### 💡 Suggestions\n\n${SUGGESTIONS}\n\n"
+          fi
+
+          if [ "$HAS_ISSUES" = false ]; then
+            FILE_COUNT="${{ steps.changed-files.outputs.count }}"
+            COMMENT="${COMMENT}✅ **No issues found**\n\n"
+            COMMENT="${COMMENT}This PR passes all automated checks:\n"
+            COMMENT="${COMMENT}- No sensitive files or credentials detected\n"
+            COMMENT="${COMMENT}- No sensitive data logging\n"
+            COMMENT="${COMMENT}- Code style follows project conventions\n"
+            COMMENT="${COMMENT}- No oversized files\n\n"
+            COMMENT="${COMMENT}_${FILE_COUNT} file(s) reviewed_"
+          else
+            COMMENT="${COMMENT}---\n_Please address the issues above before merging._"
+          fi
+
+          EXISTING_COMMENT=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments[] | select(.author.login == "github-actions[bot]" or .author.login == "github-actions") | select(.body | contains("Automated PR Review")) | .id' | head -1 || true)
+
+          if [ -n "$EXISTING_COMMENT" ]; then
+            echo -e "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --edit-last --body-file -
+          else
+            echo -e "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --body-file -
+          fi

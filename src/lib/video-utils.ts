@@ -39,6 +39,19 @@ export function parseArtistAndTitle(videoTitle: string): {
 }
 
 /**
+ * Sanitize YouTube uploader/channel name for use as artist fallback
+ * Strips " - Topic" suffix used by YouTube Music auto-generated channels
+ * Returns empty string for yt-dlp's "NA" placeholder (used when uploader is unavailable)
+ */
+export function sanitizeUploaderAsArtist(uploader: string): string {
+	const trimmed = uploader.trim();
+	if (trimmed.toUpperCase() === "NA") {
+		return "";
+	}
+	return trimmed.replace(/\s*-\s*Topic$/i, "").trim();
+}
+
+/**
  * Extract video ID from various YouTube URL formats
  */
 export function extractVideoId(url: string): string | null {

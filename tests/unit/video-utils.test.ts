@@ -323,4 +323,40 @@ describe("sanitizeUploaderAsArtist", () => {
 		// #then
 		expect(result).toBe("Topic Music Channel");
 	});
+
+	it("should return empty string for yt-dlp NA placeholder", () => {
+		// #given yt-dlp outputs "NA" when uploader is unavailable
+
+		// #when
+		const result = sanitizeUploaderAsArtist("NA");
+
+		// #then
+		expect(result).toBe("");
+	});
+
+	it("should handle NA placeholder case-insensitively", () => {
+		// #when
+		const lowercase = sanitizeUploaderAsArtist("na");
+		const mixedCase = sanitizeUploaderAsArtist("Na");
+
+		// #then
+		expect(lowercase).toBe("");
+		expect(mixedCase).toBe("");
+	});
+
+	it("should handle NA placeholder with surrounding whitespace", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("  NA  ");
+
+		// #then
+		expect(result).toBe("");
+	});
+
+	it("should not treat NA as placeholder when part of a name", () => {
+		// #when
+		const result = sanitizeUploaderAsArtist("NANA");
+
+		// #then
+		expect(result).toBe("NANA");
+	});
 });

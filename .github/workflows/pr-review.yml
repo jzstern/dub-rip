@@ -41,7 +41,8 @@ jobs:
           if [ -n "$SENSITIVE_FILES" ]; then
             echo "::error::Sensitive files detected in PR"
             echo "- :x: Sensitive files detected" >> $GITHUB_STEP_SUMMARY
-            echo "- **Sensitive files committed**: \`$SENSITIVE_FILES\` - these should never be in version control" >> /tmp/review/errors.md
+            SENSITIVE_LIST=$(echo "$SENSITIVE_FILES" | tr '\n' ',' | sed 's/,$//')
+            echo "- **Sensitive files committed**: \`$SENSITIVE_LIST\` - these should never be in version control" >> /tmp/review/errors.md
           else
             echo "- :white_check_mark: No sensitive files" >> $GITHUB_STEP_SUMMARY
           fi
@@ -151,10 +152,10 @@ jobs:
             COMMENT="${COMMENT}---\n_Please address the issues above before merging._"
           fi
 
-          EXISTING_COMMENT=$(gh pr view ${{ github.event.pull_request.number }} --json comments --jq '.comments[] | select(.author.login == "github-actions[bot]" or .author.login == "github-actions") | select(.body | contains("Automated PR Review")) | .id' | head -1 || true)
+          EXISTING_COMMENT=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("Automated PR Review")) | .id' | head -1 || true)
 
           if [ -n "$EXISTING_COMMENT" ]; then
-            echo -e "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --edit-last --body-file -
+            echo -e "$COMMENT" | gh api "repos/${{ github.repository }}/issues/comments/$EXISTING_COMMENT" -X PATCH -F body=@-
           else
             echo -e "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --body-file -
           fi

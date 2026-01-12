@@ -30,7 +30,11 @@ jobs:
           echo "files<<EOF" >> $GITHUB_OUTPUT
           echo "$FILES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "count=$(echo "$FILES" | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
+          if [ -z "$FILES" ]; then
+            echo "count=0" >> $GITHUB_OUTPUT
+          else
+            echo "count=$(echo "$FILES" | grep -c .)" >> $GITHUB_OUTPUT
+          fi
 
       - name: Run security checks
         run: |
@@ -152,7 +156,7 @@ jobs:
             COMMENT="${COMMENT}---\n_Please address the issues above before merging._"
           fi
 
-          EXISTING_COMMENT=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("Automated PR Review")) | .id' | head -1 || true)
+          EXISTING_COMMENT=$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("Automated PR Review")) | .id' | head -1 || true)
 
           if [ -n "$EXISTING_COMMENT" ]; then
             echo -e "$COMMENT" | gh api "repos/${{ github.repository }}/issues/comments/$EXISTING_COMMENT" -X PATCH -F body=@-

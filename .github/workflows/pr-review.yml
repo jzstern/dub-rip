@@ -131,43 +131,59 @@ jobs:
           WARNINGS=$(cat /tmp/review/warnings.md | grep -v '^$' || true)
           SUGGESTIONS=$(cat /tmp/review/suggestions.md | grep -v '^$' || true)
 
-          COMMENT="## 🔍 Automated PR Review\n\n"
+          COMMENT_FILE=/tmp/review/comment.md
+          echo "## 🔍 Automated PR Review" > "$COMMENT_FILE"
+          echo "" >> "$COMMENT_FILE"
 
           HAS_ISSUES=false
 
           if [ -n "$ERRORS" ]; then
             HAS_ISSUES=true
-            COMMENT="${COMMENT}### ❌ Issues (must fix)\n\n${ERRORS}\n\n"
+            echo "### ❌ Issues (must fix)" >> "$COMMENT_FILE"
+            echo "" >> "$COMMENT_FILE"
+            echo "$ERRORS" >> "$COMMENT_FILE"
+            echo "" >> "$COMMENT_FILE"
           fi
 
           if [ -n "$WARNINGS" ]; then
             HAS_ISSUES=true
-            COMMENT="${COMMENT}### ⚠️ Warnings\n\n${WARNINGS}\n\n"
+            echo "### ⚠️ Warnings" >> "$COMMENT_FILE"
+            echo "" >> "$COMMENT_FILE"
+            echo "$WARNINGS" >> "$COMMENT_FILE"
+            echo "" >> "$COMMENT_FILE"
           fi
 
           if [ -n "$SUGGESTIONS" ]; then
             HAS_ISSUES=true
-            COMMENT="${COMMENT}### 💡 Suggestions\n\n${SUGGESTIONS}\n\n"
+            echo "### 💡 Suggestions" >> "$COMMENT_FILE"
+            echo "" >> "$COMMENT_FILE"
+            echo "$SUGGESTIONS" >> "$COMMENT_FILE"
+            echo "" >> "$COMMENT_FILE"
           fi
 
           if [ "$HAS_ISSUES" = false ]; then
             FILE_COUNT="${{ steps.changed-files.outputs.count }}"
-            COMMENT="${COMMENT}✅ **No issues found**\n\n"
-            COMMENT="${COMMENT}This PR passes all automated checks:\n"
-            COMMENT="${COMMENT}- No sensitive files or credentials detected\n"
-            COMMENT="${COMMENT}- No sensitive data logging\n"
-            COMMENT="${COMMENT}- Code style follows project conventions\n"
-            COMMENT="${COMMENT}- No unresolved TODO/FIXME comments\n"
-            COMMENT="${COMMENT}- No oversized files\n\n"
-            COMMENT="${COMMENT}_${FILE_COUNT} file(s) reviewed_"
+            cat >> "$COMMENT_FILE" << 'SUCCESSEOF'
+✅ **No issues found**
+
+This PR passes all automated checks:
+- No sensitive files or credentials detected
+- No sensitive data logging
+- Code style follows project conventions
+- No unresolved TODO/FIXME comments
+- No oversized files
+
+SUCCESSEOF
+            echo "_${FILE_COUNT} file(s) reviewed_" >> "$COMMENT_FILE"
           else
-            COMMENT="${COMMENT}---\n_Please address the issues above before merging._"
+            echo "---" >> "$COMMENT_FILE"
+            echo "_Please address the issues above before merging._" >> "$COMMENT_FILE"
           fi
 
           EXISTING_COMMENT=$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" --jq '.[] | select(.user.login == "github-actions[bot]") | select(.body | contains("Automated PR Review")) | .id' | head -1 || true)
 
           if [ -n "$EXISTING_COMMENT" ]; then
-            echo -e "$COMMENT" | gh api "repos/${{ github.repository }}/issues/comments/$EXISTING_COMMENT" -X PATCH -F body=@-
+            gh api "repos/${{ github.repository }}/issues/comments/$EXISTING_COMMENT" -X PATCH -F body=@"$COMMENT_FILE"
           else
-            echo -e "$COMMENT" | gh pr comment ${{ github.event.pull_request.number }} --body-file -
+            gh pr comment ${{ github.event.pull_request.number }} --body-file "$COMMENT_FILE"
           fi

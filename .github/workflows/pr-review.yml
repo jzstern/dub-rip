@@ -170,7 +170,7 @@ This PR passes all automated checks:
 - No sensitive files or credentials detected
 - No sensitive data logging
 - Code style follows project conventions
-- No unresolved TODO/FIXME comments
+- No new TODO/FIXME comments added
 - No oversized files
 
 SUCCESSEOF

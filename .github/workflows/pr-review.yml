@@ -27,18 +27,11 @@ jobs:
           echo "" > /tmp/review/warnings.md
           echo "" > /tmp/review/suggestions.md
 
-      - name: Get changed files
+      - name: Get changed files count
         id: changed-files
         run: |
-          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$FILES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          if [ -z "$FILES" ]; then
-            echo "count=0" >> $GITHUB_OUTPUT
-          else
-            echo "count=$(echo "$FILES" | grep -c .)" >> $GITHUB_OUTPUT
-          fi
+          COUNT=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -c . || echo "0")
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
 
       - name: Run security checks
         run: |

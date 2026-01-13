@@ -72,11 +72,14 @@ jobs:
           CHANGED_TS_SVELTE=$(git diff origin/${{ github.base_ref }}...HEAD --name-only | grep -E '\.(ts|svelte)$' || true)
           if [ -n "$CHANGED_TS_SVELTE" ]; then
             SPACE_INDENT=""
-            for file in $CHANGED_TS_SVELTE; do
+            echo "$CHANGED_TS_SVELTE" | while IFS= read -r file; do
               if [ -f "$file" ] && grep -q "^  [^ ]" "$file" 2>/dev/null; then
-                SPACE_INDENT="$SPACE_INDENT $file"
+                echo "$file" >> /tmp/review/space_indent.txt
               fi
             done
+            if [ -f /tmp/review/space_indent.txt ]; then
+              SPACE_INDENT=$(tr '\n' ',' < /tmp/review/space_indent.txt | sed 's/,$//')
+            fi
 
             if [ -n "$SPACE_INDENT" ]; then
               echo "::warning::Files with space indentation (should use tabs):$SPACE_INDENT"
@@ -98,17 +101,17 @@ jobs:
 
       - name: Check for large files
         run: |
-          LARGE_FILES=""
-          for file in $(git diff --name-only origin/${{ github.base_ref }}...HEAD); do
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | while IFS= read -r file; do
             if [ -f "$file" ]; then
               SIZE=$(wc -c < "$file" 2>/dev/null || echo "0")
               if [ "$SIZE" -gt 500000 ]; then
-                LARGE_FILES="$LARGE_FILES $file ($(numfmt --to=iec $SIZE 2>/dev/null || echo "${SIZE}B"))"
+                echo "$file ($(numfmt --to=iec $SIZE 2>/dev/null || echo "${SIZE}B"))" >> /tmp/review/large_files.txt
               fi
             fi
           done
-          if [ -n "$LARGE_FILES" ]; then
-            echo "- **Large files detected**:$LARGE_FILES - consider if these need to be in the repo" >> /tmp/review/warnings.md
+          if [ -f /tmp/review/large_files.txt ]; then
+            LARGE_FILES=$(tr '\n' ',' < /tmp/review/large_files.txt | sed 's/,$//')
+            echo "- **Large files detected**: $LARGE_FILES - consider if these need to be in the repo" >> /tmp/review/warnings.md
           fi
 
       - name: PR Summary

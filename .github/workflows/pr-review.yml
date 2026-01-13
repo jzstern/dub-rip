@@ -87,7 +87,7 @@ jobs:
 
       - name: Check for TODO/FIXME comments
         run: |
-          TODO_LINES=$(git diff origin/${{ github.base_ref }}...HEAD | grep -E '^\+.*\b(TODO|FIXME|HACK|XXX)\b' || true)
+          TODO_LINES=$(git diff origin/${{ github.base_ref }}...HEAD | grep -E '^\+[^+].*\b(TODO|FIXME|HACK|XXX)\b' || true)
           if [ -n "$TODO_LINES" ]; then
             echo "- **New TODO/FIXME comments added**: Consider resolving these before merging or creating tracking issues" >> /tmp/review/suggestions.md
           fi

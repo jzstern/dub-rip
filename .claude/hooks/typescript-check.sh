@@ -14,7 +14,7 @@ if [ -z "$FILE_PATH" ]; then
 fi
 
 case "$FILE_PATH" in
-	*.ts|*.tsx|*.svelte|*.d.ts|tsconfig.json)
+	*.ts|*.tsx|*.svelte|*.d.ts|*tsconfig*.json)
 		cd "$CLAUDE_PROJECT_DIR" || exit 0
 
 		output=$(bunx tsc --noEmit 2>&1)

@@ -9,13 +9,24 @@
 const COBALT_API_URL =
 	process.env.COBALT_API_URL || "https://api.cobalt.tools/";
 const DEFAULT_TIMEOUT = 30000;
+const MAX_REDIRECTS = 5;
 
-const ALLOWED_DOWNLOAD_HOSTS = [
+const DEFAULT_ALLOWED_DOWNLOAD_HOSTS = [
 	"cobalt.tools",
 	"api.cobalt.tools",
 	"download.cobalt.tools",
 	"cdn.cobalt.tools",
 ];
+
+function getAllowedDownloadHosts(): Set<string> {
+	const hosts = new Set(DEFAULT_ALLOWED_DOWNLOAD_HOSTS);
+	try {
+		hosts.add(new URL(COBALT_API_URL).hostname);
+	} catch {
+		// ignore invalid env value
+	}
+	return hosts;
+}
 
 function isAllowedDownloadUrl(url: string): boolean {
 	try {
@@ -23,7 +34,8 @@ function isAllowedDownloadUrl(url: string): boolean {
 		if (parsed.protocol !== "https:") {
 			return false;
 		}
-		return ALLOWED_DOWNLOAD_HOSTS.some(
+		const allowedHosts = getAllowedDownloadHosts();
+		return Array.from(allowedHosts).some(
 			(host) =>
 				parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
 		);
@@ -191,17 +203,41 @@ export async function fetchCobaltAudio(
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
 
 	try {
-		const response = await fetch(downloadUrl, {
-			signal: controller.signal,
-		});
+		let currentUrl = downloadUrl;
+		let redirectCount = 0;
 
-		if (!response.ok) {
-			throw new CobaltError(
-				`Failed to download from Cobalt: ${response.status}`,
-			);
+		while (redirectCount < MAX_REDIRECTS) {
+			const response = await fetch(currentUrl, {
+				signal: controller.signal,
+				redirect: "manual",
+			});
+
+			if (response.status >= 300 && response.status < 400) {
+				const location = response.headers.get("location");
+				if (!location) {
+					throw new CobaltError("Redirect without location header");
+				}
+
+				const redirectUrl = new URL(location, currentUrl).href;
+				if (!isAllowedDownloadUrl(redirectUrl)) {
+					throw new CobaltError("Redirect to disallowed URL blocked");
+				}
+
+				currentUrl = redirectUrl;
+				redirectCount++;
+				continue;
+			}
+
+			if (!response.ok) {
+				throw new CobaltError(
+					`Failed to download from Cobalt: ${response.status}`,
+				);
+			}
+
+			return await response.arrayBuffer();
 		}
 
-		return await response.arrayBuffer();
+		throw new CobaltError("Too many redirects");
 	} catch (error) {
 		if (error instanceof CobaltError) {
 			throw error;

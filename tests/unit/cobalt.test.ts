@@ -32,7 +32,7 @@ describe("Cobalt API Integration", () => {
 			// #then
 			expect(result).toBe(mockDownloadUrl);
 			expect(fetch).toHaveBeenCalledWith(
-				"https://api.cobalt.tools/",
+				expect.stringMatching(/^https:\/\/.*cobalt/),
 				expect.objectContaining({
 					method: "POST",
 					headers: {
@@ -216,6 +216,7 @@ describe("Cobalt API Integration", () => {
 			const mockAudioData = new ArrayBuffer(1024);
 			vi.mocked(fetch).mockResolvedValue({
 				ok: true,
+				status: 200,
 				arrayBuffer: () => Promise.resolve(mockAudioData),
 			} as Response);
 
@@ -263,6 +264,7 @@ describe("Cobalt API Integration", () => {
 			const mockAudioData = new ArrayBuffer(512);
 			vi.mocked(fetch).mockResolvedValue({
 				ok: true,
+				status: 200,
 				arrayBuffer: () => Promise.resolve(mockAudioData),
 			} as Response);
 
@@ -271,6 +273,43 @@ describe("Cobalt API Integration", () => {
 
 			// #then
 			expect(result).toBeInstanceOf(ArrayBuffer);
+		});
+
+		it("follows redirects to allowed hosts", async () => {
+			// #given
+			const mockAudioData = new ArrayBuffer(512);
+			vi.mocked(fetch)
+				.mockResolvedValueOnce({
+					status: 302,
+					headers: new Headers({
+						location: "https://cdn.cobalt.tools/audio2.mp3",
+					}),
+				} as Response)
+				.mockResolvedValueOnce({
+					ok: true,
+					status: 200,
+					arrayBuffer: () => Promise.resolve(mockAudioData),
+				} as Response);
+
+			// #when
+			const result = await fetchCobaltAudio(mockDownloadUrl);
+
+			// #then
+			expect(result).toBeInstanceOf(ArrayBuffer);
+			expect(fetch).toHaveBeenCalledTimes(2);
+		});
+
+		it("blocks redirects to disallowed hosts (SSRF protection)", async () => {
+			// #given
+			vi.mocked(fetch).mockResolvedValueOnce({
+				status: 302,
+				headers: new Headers({ location: "https://localhost:3000/internal" }),
+			} as Response);
+
+			// #when / #then
+			await expect(fetchCobaltAudio(mockDownloadUrl)).rejects.toThrow(
+				"Redirect to disallowed URL blocked",
+			);
 		});
 
 		it("throws CobaltError on download failure", async () => {

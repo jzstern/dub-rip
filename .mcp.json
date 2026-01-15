@@ -1,8 +1,3 @@
 {
-	"mcpServers": {
-		"Sentry": {
-			"type": "sse",
-			"url": "https://mcp.sentry.dev/mcp/jzs-yw/dub-rip"
-		}
-	}
+	"mcpServers": {}
 }

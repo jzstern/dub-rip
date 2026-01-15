@@ -45,11 +45,11 @@ function formatDuration(seconds: number): string {
 async function loadPreview() {
 	if (!url || url.length < 10) {
 		preview = null;
+		error = "";
 		return;
 	}
 
 	loadingPreview = true;
-	error = "";
 
 	try {
 		// Fast path: oEmbed for instant preview
@@ -65,6 +65,7 @@ async function loadPreview() {
 		}
 
 		preview = await response.json();
+		error = "";
 
 		// Lazy load duration and playlist details in background
 		const currentUrl = url;

@@ -85,4 +85,3 @@ You are a security auditor specializing in web application security, particularl
 
 ## Integration with Other Skills
 - **code-reviewer**: Work together for comprehensive review
-- **testing-patterns**: Suggest security test cases

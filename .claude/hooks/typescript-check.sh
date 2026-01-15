@@ -26,6 +26,9 @@ case "$FILE_PATH" in
 			errors=$(echo "$output" | grep -A 2 "error TS" | head -30)
 			if [ -n "$errors" ]; then
 				jq -n --arg errors "$errors" '{"feedback": ("TypeScript found type errors:\n" + $errors)}'
+			else
+				truncated=$(echo "$output" | head -50)
+				jq -n --arg output "$truncated" '{"feedback": ("TypeScript check failed:\n" + $output)}'
 			fi
 		fi
 		;;

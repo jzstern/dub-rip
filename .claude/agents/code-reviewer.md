@@ -67,5 +67,4 @@ Run `bun run check` and `bun run lint` to catch additional issues.
 
 ## Integration with Other Skills
 - **svelte-patterns**: Ensure Svelte 5 runes are used correctly
-- **testing-patterns**: Verify tests exist for new functionality
 - **security-auditor**: Defer to security specialist for deep security review

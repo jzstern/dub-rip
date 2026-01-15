@@ -87,5 +87,4 @@ git diff HEAD~3
 - Any lint errors? (`bun run lint`)
 
 ## Integration with Other Skills
-- **testing-patterns**: Write regression test after fix
 - **code-reviewer**: Review fix for quality

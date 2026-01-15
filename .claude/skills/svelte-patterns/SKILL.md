@@ -114,6 +114,5 @@ try {
 ```
 
 ## Integration with Other Skills
-- **testing-patterns**: Test all UI states (loading, error, empty, success)
 - **svelte-code-writer**: Use CLI tools for documentation lookup
 - **code-reviewer**: Validate against project standards after implementation

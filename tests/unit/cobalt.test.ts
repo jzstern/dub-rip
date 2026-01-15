@@ -4,7 +4,7 @@ import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 describe("Cobalt API Integration", () => {
 	// #given
 	const mockYouTubeUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-	const mockDownloadUrl = "https://download.cobalt.example/audio.mp3";
+	const mockDownloadUrl = "https://download.cobalt.tools/audio.mp3";
 
 	beforeEach(() => {
 		vi.stubGlobal("fetch", vi.fn());
@@ -68,17 +68,17 @@ describe("Cobalt API Integration", () => {
 				status: 429,
 			} as Response);
 
-			// #when / #then
-			await expect(requestCobaltAudio(mockYouTubeUrl)).rejects.toThrow(
-				CobaltError,
-			);
-
+			// #when
+			let caughtError: CobaltError | undefined;
 			try {
 				await requestCobaltAudio(mockYouTubeUrl);
-			} catch (error) {
-				expect(error).toBeInstanceOf(CobaltError);
-				expect((error as CobaltError).isRateLimit).toBe(true);
+			} catch (e) {
+				caughtError = e as CobaltError;
 			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.isRateLimit).toBe(true);
 		});
 
 		it("throws CobaltError with isUnavailable for 5xx server errors", async () => {
@@ -88,17 +88,17 @@ describe("Cobalt API Integration", () => {
 				status: 500,
 			} as Response);
 
-			// #when / #then
-			await expect(requestCobaltAudio(mockYouTubeUrl)).rejects.toThrow(
-				CobaltError,
-			);
-
+			// #when
+			let caughtError: CobaltError | undefined;
 			try {
 				await requestCobaltAudio(mockYouTubeUrl);
-			} catch (error) {
-				expect(error).toBeInstanceOf(CobaltError);
-				expect((error as CobaltError).isUnavailable).toBe(true);
+			} catch (e) {
+				caughtError = e as CobaltError;
 			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.isUnavailable).toBe(true);
 		});
 
 		it("throws CobaltError when response has error status", async () => {
@@ -161,7 +161,7 @@ describe("Cobalt API Integration", () => {
 	});
 
 	describe("fetchCobaltAudio()", () => {
-		it("returns ArrayBuffer on successful download", async () => {
+		it("returns ArrayBuffer on successful download from allowed host", async () => {
 			// #given
 			const mockAudioData = new ArrayBuffer(1024);
 			vi.mocked(fetch).mockResolvedValue({
@@ -175,6 +175,52 @@ describe("Cobalt API Integration", () => {
 			// #then
 			expect(result).toBeInstanceOf(ArrayBuffer);
 			expect(result.byteLength).toBe(1024);
+		});
+
+		it("throws CobaltError for non-HTTPS URLs", async () => {
+			// #given
+			const httpUrl = "http://download.cobalt.tools/audio.mp3";
+
+			// #when / #then
+			await expect(fetchCobaltAudio(httpUrl)).rejects.toThrow(
+				"Invalid download URL",
+			);
+		});
+
+		it("throws CobaltError for disallowed host (SSRF protection)", async () => {
+			// #given
+			const maliciousUrl = "https://169.254.169.254/latest/meta-data/";
+
+			// #when / #then
+			await expect(fetchCobaltAudio(maliciousUrl)).rejects.toThrow(
+				"Invalid download URL",
+			);
+		});
+
+		it("throws CobaltError for localhost (SSRF protection)", async () => {
+			// #given
+			const localhostUrl = "https://localhost:3000/admin";
+
+			// #when / #then
+			await expect(fetchCobaltAudio(localhostUrl)).rejects.toThrow(
+				"Invalid download URL",
+			);
+		});
+
+		it("allows subdomain of cobalt.tools", async () => {
+			// #given
+			const subdomainUrl = "https://cdn.cobalt.tools/audio.mp3";
+			const mockAudioData = new ArrayBuffer(512);
+			vi.mocked(fetch).mockResolvedValue({
+				ok: true,
+				arrayBuffer: () => Promise.resolve(mockAudioData),
+			} as Response);
+
+			// #when
+			const result = await fetchCobaltAudio(subdomainUrl);
+
+			// #then
+			expect(result).toBeInstanceOf(ArrayBuffer);
 		});
 
 		it("throws CobaltError on download failure", async () => {

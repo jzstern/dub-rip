@@ -3,8 +3,31 @@
  * Handles bot detection bypass that yt-dlp cannot handle in serverless environments
  */
 
-const COBALT_API_URL = "https://api.cobalt.tools/api/json";
+const COBALT_API_URL =
+	process.env.COBALT_API_URL || "https://api.cobalt.tools/api/json";
 const DEFAULT_TIMEOUT = 30000;
+
+const ALLOWED_DOWNLOAD_HOSTS = [
+	"cobalt.tools",
+	"api.cobalt.tools",
+	"download.cobalt.tools",
+	"cdn.cobalt.tools",
+];
+
+function isAllowedDownloadUrl(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		if (parsed.protocol !== "https:") {
+			return false;
+		}
+		return ALLOWED_DOWNLOAD_HOSTS.some(
+			(host) =>
+				parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
+		);
+	} catch {
+		return false;
+	}
+}
 
 export interface CobaltRequest {
 	url: string;
@@ -105,6 +128,10 @@ export async function fetchCobaltAudio(
 	downloadUrl: string,
 	timeout: number = 60000,
 ): Promise<ArrayBuffer> {
+	if (!isAllowedDownloadUrl(downloadUrl)) {
+		throw new CobaltError("Invalid download URL from Cobalt");
+	}
+
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
 

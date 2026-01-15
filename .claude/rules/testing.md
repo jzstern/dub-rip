@@ -38,3 +38,8 @@ describe("UserService.getUser()", () => {
   });
 });
 ```
+
+## Integration with Other Skills
+- **svelte-patterns**: Follow Svelte component testing conventions
+- **security-auditor**: Include security test cases for user input handling
+- **debugger**: Write regression tests when fixing bugs

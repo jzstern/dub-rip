@@ -49,7 +49,6 @@ async function loadPreview() {
 	}
 
 	loadingPreview = true;
-	error = "";
 
 	try {
 		// Fast path: oEmbed for instant preview
@@ -65,6 +64,7 @@ async function loadPreview() {
 		}
 
 		preview = await response.json();
+		error = "";
 
 		// Lazy load duration and playlist details in background
 		const currentUrl = url;

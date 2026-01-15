@@ -122,7 +122,7 @@ export async function requestCobaltAudio(
 		};
 
 		if (COBALT_API_KEY) {
-			headers["Authorization"] = `Api-Key ${COBALT_API_KEY}`;
+			headers.Authorization = `Api-Key ${COBALT_API_KEY}`;
 		}
 
 		const response = await fetch(COBALT_API_URL, {

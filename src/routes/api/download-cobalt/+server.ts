@@ -21,17 +21,24 @@ async function ensureYtDlpBinary(): Promise<string> {
 		return YTDLP_BINARY_PATH;
 	}
 
-	while (isDownloading) {
-		await new Promise((resolve) => setTimeout(resolve, 100));
+	if (isDownloading) {
+		while (isDownloading) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
 		if (existsSync(YTDLP_BINARY_PATH)) {
 			return YTDLP_BINARY_PATH;
 		}
 	}
 
 	isDownloading = true;
-	const tempPath = `${YTDLP_BINARY_PATH}.${process.pid}.tmp`;
 
 	try {
+		if (existsSync(YTDLP_BINARY_PATH)) {
+			return YTDLP_BINARY_PATH;
+		}
+
+		const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
+
 		console.log("[Cobalt] Downloading yt-dlp binary...");
 		const YTDlpWrapModule = require("yt-dlp-wrap");
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
@@ -41,6 +48,10 @@ async function ensureYtDlpBinary(): Promise<string> {
 			renameSync(tempPath, YTDLP_BINARY_PATH);
 		} catch {
 			if (existsSync(tempPath)) unlinkSync(tempPath);
+			if (existsSync(YTDLP_BINARY_PATH)) {
+				return YTDLP_BINARY_PATH;
+			}
+			throw new Error("Failed to install yt-dlp binary");
 		}
 
 		return YTDLP_BINARY_PATH;

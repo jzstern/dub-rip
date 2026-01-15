@@ -425,7 +425,7 @@ describe("Cobalt API Key Authentication", () => {
 		// #then
 		const callArgs = vi.mocked(fetch).mock.calls[0];
 		const headers = callArgs[1]?.headers as Record<string, string>;
-		expect(headers["Authorization"]).toBe("Api-Key test-api-key-123");
+		expect(headers.Authorization).toBe("Api-Key test-api-key-123");
 	});
 
 	it("omits Authorization header when COBALT_API_KEY is not set", async () => {
@@ -445,6 +445,6 @@ describe("Cobalt API Key Authentication", () => {
 		// #then
 		const callArgs = vi.mocked(fetch).mock.calls[0];
 		const headers = callArgs[1]?.headers as Record<string, string>;
-		expect(headers["Authorization"]).toBeUndefined();
+		expect(headers.Authorization).toBeUndefined();
 	});
 });

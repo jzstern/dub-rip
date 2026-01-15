@@ -45,6 +45,7 @@ function formatDuration(seconds: number): string {
 async function loadPreview() {
 	if (!url || url.length < 10) {
 		preview = null;
+		error = "";
 		return;
 	}
 

@@ -1,10 +1,13 @@
 /**
  * Cobalt API integration for YouTube audio downloads
  * Handles bot detection bypass that yt-dlp cannot handle in serverless environments
+ *
+ * Note: The public Cobalt API requires authentication (Turnstile captcha).
+ * For production use, set COBALT_API_URL to a self-hosted instance.
  */
 
 const COBALT_API_URL =
-	process.env.COBALT_API_URL || "https://api.cobalt.tools/api/json";
+	process.env.COBALT_API_URL || "https://api.cobalt.tools/";
 const DEFAULT_TIMEOUT = 30000;
 
 const ALLOWED_DOWNLOAD_HOSTS = [
@@ -31,19 +34,23 @@ function isAllowedDownloadUrl(url: string): boolean {
 
 export interface CobaltRequest {
 	url: string;
-	isAudioOnly: true;
-	aFormat: "mp3";
-	filenameStyle?: "basic" | "pretty" | "nerdy";
+	downloadMode: "auto" | "audio" | "mute";
+	audioFormat: "best" | "mp3" | "ogg" | "wav" | "opus";
+	audioBitrate?: "320" | "256" | "128" | "96" | "64" | "8";
 }
 
 export interface CobaltSuccessResponse {
-	status: "stream" | "redirect";
+	status: "tunnel" | "redirect";
 	url: string;
+	filename?: string;
 }
 
 export interface CobaltErrorResponse {
 	status: "error";
-	text: string;
+	error: {
+		code: string;
+		context?: Record<string, unknown>;
+	};
 }
 
 export type CobaltResponse = CobaltSuccessResponse | CobaltErrorResponse;
@@ -53,10 +60,38 @@ export class CobaltError extends Error {
 		message: string,
 		public readonly isRateLimit: boolean = false,
 		public readonly isUnavailable: boolean = false,
+		public readonly isAuthRequired: boolean = false,
 	) {
 		super(message);
 		this.name = "CobaltError";
 	}
+}
+
+function parseErrorCode(code: string): {
+	message: string;
+	isAuth: boolean;
+	isRateLimit: boolean;
+} {
+	if (code.includes("auth")) {
+		return {
+			message:
+				"Cobalt requires authentication. Set COBALT_API_URL to a self-hosted instance.",
+			isAuth: true,
+			isRateLimit: false,
+		};
+	}
+	if (code.includes("rate")) {
+		return {
+			message: "Cobalt rate limit exceeded",
+			isAuth: false,
+			isRateLimit: true,
+		};
+	}
+	return {
+		message: `Cobalt error: ${code}`,
+		isAuth: false,
+		isRateLimit: false,
+	};
 }
 
 export async function requestCobaltAudio(
@@ -75,14 +110,24 @@ export async function requestCobaltAudio(
 			},
 			body: JSON.stringify({
 				url: youtubeUrl,
-				isAudioOnly: true,
-				aFormat: "mp3",
+				downloadMode: "audio",
+				audioFormat: "mp3",
+				audioBitrate: "128",
 			} satisfies CobaltRequest),
 			signal: controller.signal,
 		});
 
 		if (response.status === 429) {
-			throw new CobaltError("Cobalt rate limit exceeded", true, false);
+			throw new CobaltError("Cobalt rate limit exceeded", true, false, false);
+		}
+
+		if (response.status === 401 || response.status === 403) {
+			throw new CobaltError(
+				"Cobalt requires authentication. Set COBALT_API_URL to a self-hosted instance.",
+				false,
+				false,
+				true,
+			);
 		}
 
 		if (!response.ok) {
@@ -90,35 +135,45 @@ export async function requestCobaltAudio(
 				`Cobalt API returned status ${response.status}`,
 				false,
 				response.status >= 500,
+				false,
 			);
 		}
 
 		const data = (await response.json()) as CobaltResponse;
 
 		if (data.status === "error") {
-			throw new CobaltError(data.text || "Unknown Cobalt error");
+			const parsed = parseErrorCode(data.error.code);
+			throw new CobaltError(
+				parsed.message,
+				parsed.isRateLimit,
+				false,
+				parsed.isAuth,
+			);
 		}
 
-		if (data.status === "stream" || data.status === "redirect") {
+		if (data.status === "tunnel" || data.status === "redirect") {
 			return data.url;
 		}
 
-		throw new CobaltError(`Unexpected Cobalt response status: ${data.status}`);
+		throw new CobaltError(
+			`Unexpected Cobalt response status: ${(data as { status: string }).status}`,
+		);
 	} catch (error) {
 		if (error instanceof CobaltError) {
 			throw error;
 		}
 		if (error instanceof Error) {
 			if (error.name === "AbortError") {
-				throw new CobaltError("Cobalt request timed out", false, true);
+				throw new CobaltError("Cobalt request timed out", false, true, false);
 			}
 			throw new CobaltError(
 				`Cobalt request failed: ${error.message}`,
 				false,
 				true,
+				false,
 			);
 		}
-		throw new CobaltError("Unknown Cobalt error", false, true);
+		throw new CobaltError("Unknown Cobalt error", false, true, false);
 	} finally {
 		clearTimeout(timeoutId);
 	}
@@ -153,7 +208,7 @@ export async function fetchCobaltAudio(
 		}
 		if (error instanceof Error) {
 			if (error.name === "AbortError") {
-				throw new CobaltError("Cobalt download timed out", false, true);
+				throw new CobaltError("Cobalt download timed out", false, true, false);
 			}
 			throw new CobaltError(`Cobalt download failed: ${error.message}`);
 		}

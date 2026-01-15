@@ -15,10 +15,10 @@ describe("Cobalt API Integration", () => {
 	});
 
 	describe("requestCobaltAudio()", () => {
-		it("returns download URL when Cobalt responds with stream status", async () => {
+		it("returns download URL when Cobalt responds with tunnel status", async () => {
 			// #given
 			const mockResponse = {
-				status: "stream",
+				status: "tunnel",
 				url: mockDownloadUrl,
 			};
 			vi.mocked(fetch).mockResolvedValue({
@@ -32,7 +32,7 @@ describe("Cobalt API Integration", () => {
 			// #then
 			expect(result).toBe(mockDownloadUrl);
 			expect(fetch).toHaveBeenCalledWith(
-				"https://api.cobalt.tools/api/json",
+				"https://api.cobalt.tools/",
 				expect.objectContaining({
 					method: "POST",
 					headers: {
@@ -81,6 +81,53 @@ describe("Cobalt API Integration", () => {
 			expect(caughtError?.isRateLimit).toBe(true);
 		});
 
+		it("throws CobaltError with isAuthRequired when receiving 401 status", async () => {
+			// #given
+			vi.mocked(fetch).mockResolvedValue({
+				ok: false,
+				status: 401,
+			} as Response);
+
+			// #when
+			let caughtError: CobaltError | undefined;
+			try {
+				await requestCobaltAudio(mockYouTubeUrl);
+			} catch (e) {
+				caughtError = e as CobaltError;
+			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.isAuthRequired).toBe(true);
+			expect(caughtError?.message).toContain("authentication");
+		});
+
+		it("throws CobaltError with isAuthRequired when error code contains auth", async () => {
+			// #given
+			const mockResponse = {
+				status: "error",
+				error: {
+					code: "error.api.auth.jwt.missing",
+				},
+			};
+			vi.mocked(fetch).mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve(mockResponse),
+			} as Response);
+
+			// #when
+			let caughtError: CobaltError | undefined;
+			try {
+				await requestCobaltAudio(mockYouTubeUrl);
+			} catch (e) {
+				caughtError = e as CobaltError;
+			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.isAuthRequired).toBe(true);
+		});
+
 		it("throws CobaltError with isUnavailable for 5xx server errors", async () => {
 			// #given
 			vi.mocked(fetch).mockResolvedValue({
@@ -105,7 +152,9 @@ describe("Cobalt API Integration", () => {
 			// #given
 			const mockResponse = {
 				status: "error",
-				text: "Video is private",
+				error: {
+					code: "error.fetch.fail",
+				},
 			};
 			vi.mocked(fetch).mockResolvedValue({
 				ok: true,
@@ -114,7 +163,7 @@ describe("Cobalt API Integration", () => {
 
 			// #when / #then
 			await expect(requestCobaltAudio(mockYouTubeUrl)).rejects.toThrow(
-				"Video is private",
+				"error.fetch.fail",
 			);
 		});
 
@@ -135,10 +184,10 @@ describe("Cobalt API Integration", () => {
 			);
 		});
 
-		it("sends correct request body with audio-only settings", async () => {
+		it("sends correct request body with new v10 API format", async () => {
 			// #given
 			const mockResponse = {
-				status: "stream",
+				status: "tunnel",
 				url: mockDownloadUrl,
 			};
 			vi.mocked(fetch).mockResolvedValue({
@@ -154,8 +203,9 @@ describe("Cobalt API Integration", () => {
 			const body = JSON.parse(callArgs[1]?.body as string);
 			expect(body).toEqual({
 				url: mockYouTubeUrl,
-				isAudioOnly: true,
-				aFormat: "mp3",
+				downloadMode: "audio",
+				audioFormat: "mp3",
+				audioBitrate: "128",
 			});
 		});
 	});
@@ -275,20 +325,32 @@ describe("Cobalt API Integration", () => {
 
 		it("preserves isRateLimit flag", () => {
 			// #when
-			const error = new CobaltError("Rate limited", true, false);
+			const error = new CobaltError("Rate limited", true, false, false);
 
 			// #then
 			expect(error.isRateLimit).toBe(true);
 			expect(error.isUnavailable).toBe(false);
+			expect(error.isAuthRequired).toBe(false);
 		});
 
 		it("preserves isUnavailable flag", () => {
 			// #when
-			const error = new CobaltError("Service down", false, true);
+			const error = new CobaltError("Service down", false, true, false);
 
 			// #then
 			expect(error.isRateLimit).toBe(false);
 			expect(error.isUnavailable).toBe(true);
+			expect(error.isAuthRequired).toBe(false);
+		});
+
+		it("preserves isAuthRequired flag", () => {
+			// #when
+			const error = new CobaltError("Auth required", false, false, true);
+
+			// #then
+			expect(error.isRateLimit).toBe(false);
+			expect(error.isUnavailable).toBe(false);
+			expect(error.isAuthRequired).toBe(true);
 		});
 	});
 });

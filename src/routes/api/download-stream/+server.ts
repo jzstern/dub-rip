@@ -330,9 +330,7 @@ export const GET: RequestHandler = async ({ url }) => {
 							.replace(/_+/g, "_")}.mp3`;
 					}
 				} else if (videoTitle) {
-					finalFilename =
-						videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_") +
-						".mp3";
+					finalFilename = `${videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_")}.mp3`;
 				} else {
 					finalFilename = "audio.mp3";
 				}

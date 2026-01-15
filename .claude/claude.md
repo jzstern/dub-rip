@@ -43,11 +43,30 @@ For full templates, see `.claude/skills/svelte-patterns/`
 - Client: Log to console, show friendly message via state
 - Never expose raw command output to users
 
-## File Organization
+## Architecture
+
+### Data Flow
+1. User enters YouTube URL → `+page.svelte` debounces input
+2. Fast preview via `/api/preview` (oEmbed API, no auth needed)
+3. Lazy-load duration/playlist via `/api/preview/details` (yt-dlp)
+4. Download via `/api/download-stream` (Server-Sent Events):
+   - yt-dlp downloads audio → ffmpeg converts to MP3
+   - node-id3 writes metadata tags
+   - Base64-encoded file streamed to client
+5. Client decodes and triggers browser download
+
+### Key Files
+- `src/routes/+page.svelte` - Main UI with state management
+- `src/routes/api/download-stream/+server.ts` - Core download logic with SSE
+- `src/lib/video-utils.ts` - URL parsing, artist/title extraction
+- `src/lib/types.ts` - Shared TypeScript interfaces
+
+### File Organization
 - Components: `src/lib/components/` (PascalCase.svelte)
 - UI components: `src/lib/components/ui/` (shadcn)
 - Types: `src/lib/types.ts`
 - API routes: `src/routes/api/` (kebab-case)
+- Tests: `tests/unit/` (Vitest), `tests/e2e/` (Playwright)
 
 ## yt-dlp Integration
 - Always use `--cookies-from-browser chrome` (bot detection)
@@ -67,8 +86,10 @@ bun run dev          # Dev server
 bun run build        # Production build
 bun run check        # TypeScript check
 bun run lint         # Biome lint
-bun run test         # Unit tests (Vitest)
+bun run test         # Unit tests (Vitest, watch mode)
+bun run test:run     # Unit tests (single run)
 bun run test:e2e     # E2E tests (Playwright)
+bun run test:e2e:ui  # E2E tests with interactive UI
 ```
 
 ## Before Committing

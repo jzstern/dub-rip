@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,34 +13,39 @@ import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
 
-let ytDlpWrap: unknown = null;
-let isInitializing = false;
+const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
+let isDownloading = false;
 
-async function getYTDlp(): Promise<unknown> {
-	if (ytDlpWrap) return ytDlpWrap;
-
-	while (isInitializing) {
-		await new Promise((resolve) => setTimeout(resolve, 100));
+async function ensureYtDlpBinary(): Promise<string> {
+	if (existsSync(YTDLP_BINARY_PATH)) {
+		return YTDLP_BINARY_PATH;
 	}
 
-	if (ytDlpWrap) return ytDlpWrap;
+	while (isDownloading) {
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		if (existsSync(YTDLP_BINARY_PATH)) {
+			return YTDLP_BINARY_PATH;
+		}
+	}
 
-	isInitializing = true;
+	isDownloading = true;
+	const tempPath = `${YTDLP_BINARY_PATH}.${process.pid}.tmp`;
+
 	try {
+		console.log("[Cobalt] Downloading yt-dlp binary...");
 		const YTDlpWrapModule = require("yt-dlp-wrap");
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-		const binaryPath = join(tmpdir(), "yt-dlp");
+		await YTDlpWrap.downloadFromGithub(tempPath);
 
-		ytDlpWrap = new YTDlpWrap(binaryPath);
-
-		if (!existsSync(binaryPath)) {
-			console.log("Downloading yt-dlp binary...");
-			await YTDlpWrap.downloadFromGithub(binaryPath);
+		try {
+			renameSync(tempPath, YTDLP_BINARY_PATH);
+		} catch {
+			if (existsSync(tempPath)) unlinkSync(tempPath);
 		}
 
-		return ytDlpWrap;
+		return YTDLP_BINARY_PATH;
 	} finally {
-		isInitializing = false;
+		isDownloading = false;
 	}
 }
 
@@ -91,13 +96,12 @@ export const GET: RequestHandler = async ({ url }) => {
 			try {
 				send({ type: "status", message: "Initializing..." });
 
-				await getYTDlp();
+				const binaryPath = await ensureYtDlpBinary();
 				send({ type: "status", message: "Getting video info..." });
 
 				const { execFile } = require("node:child_process");
 				const { promisify } = require("node:util");
 				const execFilePromise = promisify(execFile);
-				const binaryPath = join(tmpdir(), "yt-dlp");
 
 				let videoTitle = "";
 				let artist = "";

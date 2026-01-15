@@ -73,13 +73,25 @@ services:
     image: ghcr.io/imputnet/cobalt:latest
     restart: unless-stopped
     ports:
-      - "443:9000"
+      - "9000:9000"
     environment:
-      - API_AUTH_REQUIRED=true
-      - API_KEY_URL=your-api-key-here
+      - API_URL=http://localhost:9000/
+      - API_PORT=9000
     volumes:
-      - ./cookies:/cookies  # Optional: for premium features
+      - ./keys.json:/keys.json:ro  # API keys for authentication
 ```
+
+**API Keys File (`keys.json`):**
+```json
+{
+  "your-api-key-uuid-here": {
+    "name": "dub-rip",
+    "limit": 100
+  }
+}
+```
+
+**Note:** Generate a UUID for your API key (e.g., `uuidgen` on macOS/Linux). The client sends this key via `Authorization: Api-Key <uuid>` header.
 
 ### 2. Railway - dub-rip App
 

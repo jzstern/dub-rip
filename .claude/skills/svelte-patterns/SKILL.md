@@ -112,3 +112,7 @@ try {
 	error = err instanceof Error ? err.message : "Operation failed";
 }
 ```
+
+## Integration with Other Skills
+- **svelte-code-writer**: Use CLI tools for documentation lookup
+- **code-reviewer**: Validate against project standards after implementation

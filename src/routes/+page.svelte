@@ -1,4 +1,5 @@
 <script lang="ts">
+import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PlaylistPreview from "$lib/components/PlaylistPreview.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
@@ -201,7 +202,8 @@ function handleDownload() {
 <div class="flex min-h-screen items-center justify-center p-4">
 	<div class="w-full max-w-md space-y-6">
 		<!-- Header -->
-		<div class="space-y-2 text-center">
+		<div class="flex flex-col items-center space-y-2 text-center">
+			<AsciiVinyl />
 			<h1 class="text-4xl font-bold tracking-tight">dub-rip</h1>
 			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>

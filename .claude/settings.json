@@ -32,12 +32,6 @@
 			"Bash(bunx biome:*)"
 		]
 	},
-	"enabledPlugins": {
-		"frontend-design@claude-plugins-official": true,
-		"code-review@claude-plugins-official": true,
-		"typescript-lsp@claude-plugins-official": true,
-		"code-simplifier@claude-plugins-official": true
-	},
 	"hooks": {
 		"UserPromptSubmit": [
 			{
@@ -80,5 +74,17 @@
 				]
 			}
 		]
+	},
+	"enabledPlugins": {
+		"frontend-design@claude-plugins-official": true,
+		"code-review@claude-plugins-official": true,
+		"typescript-lsp@claude-plugins-official": true,
+		"code-simplifier@claude-plugins-official": true,
+		"javascript-typescript@claude-code-workflows": true,
+		"unit-testing@claude-code-workflows": true,
+		"security-scanning@claude-code-workflows": true,
+		"pr-review-toolkit@claude-plugins-official": true,
+		"comprehensive-review@claude-code-workflows": true,
+		"codebase-cleanup@claude-code-workflows": true
 	}
 }

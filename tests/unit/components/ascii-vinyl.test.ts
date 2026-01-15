@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
@@ -241,6 +242,38 @@ describe("AsciiVinyl", () => {
 
 			// #then
 			expect(button).toHaveClass("cursor-pointer");
+		});
+
+		it("toggles pause state with Enter key", async () => {
+			// #given
+			const user = userEvent.setup({
+				advanceTimers: vi.advanceTimersByTime,
+			});
+			render(AsciiVinyl);
+			const button = screen.getByRole("button");
+
+			// #when
+			await button.focus();
+			await user.keyboard("{Enter}");
+
+			// #then
+			expect(button).toHaveAttribute("aria-label", "Play animation");
+		});
+
+		it("toggles pause state with Space key", async () => {
+			// #given
+			const user = userEvent.setup({
+				advanceTimers: vi.advanceTimersByTime,
+			});
+			render(AsciiVinyl);
+			const button = screen.getByRole("button");
+
+			// #when
+			await button.focus();
+			await user.keyboard(" ");
+
+			// #then
+			expect(button).toHaveAttribute("aria-label", "Play animation");
 		});
 	});
 });

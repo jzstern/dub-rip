@@ -33,12 +33,12 @@ function generateVinyl(): string[] {
 			} else if (distance <= CENTER - 1) {
 				const grooveIndex = Math.floor(distance) % 2;
 				const charSet = grooveIndex === 0 ? VINYL_CHARS : GROOVE_CHARS;
+				const rawIndex = Math.floor(
+					((angle + Math.PI) / (Math.PI * 2)) * charSet.length + distance * 0.5,
+				);
 				const angleIndex =
-					Math.floor(
-						((angle + Math.PI) / (Math.PI * 2)) * charSet.length +
-							distance * 0.5,
-					) % charSet.length;
-				line += charSet[Math.abs(angleIndex)];
+					((rawIndex % charSet.length) + charSet.length) % charSet.length;
+				line += charSet[angleIndex];
 			} else if (distance <= CENTER) {
 				line += "○";
 			} else {
@@ -52,10 +52,10 @@ function generateVinyl(): string[] {
 }
 
 let animationFrame: number;
-let lastTime = 0;
+let lastTime: number | null = null;
 
 function animate(time: number) {
-	if (!isPaused) {
+	if (lastTime !== null) {
 		const delta = time - lastTime;
 		const speed = isHovering ? 0.003 : 0.001;
 		rotation += delta * speed;
@@ -65,6 +65,10 @@ function animate(time: number) {
 }
 
 $effect(() => {
+	if (isPaused) {
+		lastTime = null;
+		return;
+	}
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });

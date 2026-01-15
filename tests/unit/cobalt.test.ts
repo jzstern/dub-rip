@@ -35,10 +35,10 @@ describe("Cobalt API Integration", () => {
 				expect.stringMatching(/^https:\/\/.*cobalt/),
 				expect.objectContaining({
 					method: "POST",
-					headers: {
+					headers: expect.objectContaining({
 						"Content-Type": "application/json",
 						Accept: "application/json",
-					},
+					}),
 				}),
 			);
 		});
@@ -391,5 +391,60 @@ describe("Cobalt API Integration", () => {
 			expect(error.isUnavailable).toBe(false);
 			expect(error.isAuthRequired).toBe(true);
 		});
+	});
+});
+
+describe("Cobalt API Key Authentication", () => {
+	const mockYouTubeUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+	const mockDownloadUrl = "https://download.cobalt.tools/audio.mp3";
+
+	beforeEach(() => {
+		vi.resetModules();
+		vi.stubGlobal("fetch", vi.fn());
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.unstubAllEnvs();
+	});
+
+	it("includes Authorization header when COBALT_API_KEY is set", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_KEY", "test-api-key-123");
+		const { requestCobaltAudio } = await import("$lib/cobalt");
+
+		const mockResponse = { status: "tunnel", url: mockDownloadUrl };
+		vi.mocked(fetch).mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockResponse),
+		} as Response);
+
+		// #when
+		await requestCobaltAudio(mockYouTubeUrl);
+
+		// #then
+		const callArgs = vi.mocked(fetch).mock.calls[0];
+		const headers = callArgs[1]?.headers as Record<string, string>;
+		expect(headers["Authorization"]).toBe("Api-Key test-api-key-123");
+	});
+
+	it("omits Authorization header when COBALT_API_KEY is not set", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_KEY", "");
+		const { requestCobaltAudio } = await import("$lib/cobalt");
+
+		const mockResponse = { status: "tunnel", url: mockDownloadUrl };
+		vi.mocked(fetch).mockResolvedValue({
+			ok: true,
+			json: () => Promise.resolve(mockResponse),
+		} as Response);
+
+		// #when
+		await requestCobaltAudio(mockYouTubeUrl);
+
+		// #then
+		const callArgs = vi.mocked(fetch).mock.calls[0];
+		const headers = callArgs[1]?.headers as Record<string, string>;
+		expect(headers["Authorization"]).toBeUndefined();
 	});
 });

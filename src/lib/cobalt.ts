@@ -2,12 +2,14 @@
  * Cobalt API integration for YouTube audio downloads
  * Handles bot detection bypass that yt-dlp cannot handle in serverless environments
  *
- * Note: The public Cobalt API requires authentication (Turnstile captcha).
- * For production use, set COBALT_API_URL to a self-hosted instance.
+ * Environment variables:
+ * - COBALT_API_URL: URL of your Cobalt instance (default: public API)
+ * - COBALT_API_KEY: API key for authenticated requests to self-hosted instances
  */
 
 const COBALT_API_URL =
 	process.env.COBALT_API_URL || "https://api.cobalt.tools/";
+const COBALT_API_KEY = process.env.COBALT_API_KEY;
 const DEFAULT_TIMEOUT = 30000;
 const MAX_REDIRECTS = 5;
 
@@ -114,12 +116,18 @@ export async function requestCobaltAudio(
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
 
 	try {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		};
+
+		if (COBALT_API_KEY) {
+			headers["Authorization"] = `Api-Key ${COBALT_API_KEY}`;
+		}
+
 		const response = await fetch(COBALT_API_URL, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
+			headers,
 			body: JSON.stringify({
 				url: youtubeUrl,
 				downloadMode: "audio",

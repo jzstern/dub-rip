@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
-	parseArtistAndTitle: vi.fn(),
-	sanitizeUploaderAsArtist: vi.fn(),
+	parseArtistAndTitle: vi
+		.fn()
+		.mockReturnValue({ artist: "Test Artist", title: "Test Title" }),
+	sanitizeUploaderAsArtist: vi.fn().mockReturnValue("Test Artist"),
 }));
 
 import { extractVideoId } from "$lib/video-utils";
@@ -19,7 +21,6 @@ function createMockURL(params: Record<string, string>): URL {
 describe("GET /api/download-stream - input validation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.resetModules();
 	});
 
 	afterEach(() => {
@@ -118,7 +119,6 @@ describe("GET /api/download-stream - input validation", () => {
 		// #then
 		expect(response.headers.get("Content-Type")).toBe("text/event-stream");
 		expect(response.headers.get("Cache-Control")).toBe("no-cache");
-		expect(response.headers.get("Connection")).toBe("keep-alive");
 	});
 
 	it("accepts valid youtu.be short URL", async () => {

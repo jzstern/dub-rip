@@ -6,16 +6,17 @@ vi.mock("$lib/video-utils", () => ({
 
 import { extractVideoId } from "$lib/video-utils";
 
-function createMockRequest(body: Record<string, unknown>): Request {
-	return {
-		json: () => Promise.resolve(body),
-	} as unknown as Request;
+function createMockRequest(body: unknown): Request {
+	return new Request("http://localhost/api/download", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(body),
+	});
 }
 
 describe("POST /api/download - input validation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.resetModules();
 	});
 
 	afterEach(() => {

@@ -1,6 +1,10 @@
 #!/bin/bash
 # TypeScript Type Checking Hook
-# Runs tsc --noEmit after TypeScript file edits to catch type errors early
+# Runs tsc --noEmit after TypeScript/Svelte file edits to catch type errors early
+
+if ! command -v jq &> /dev/null; then
+	exit 0
+fi
 
 INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
@@ -10,7 +14,7 @@ if [ -z "$FILE_PATH" ]; then
 fi
 
 case "$FILE_PATH" in
-	*.ts|*.tsx)
+	*.ts|*.tsx|*.svelte|*.d.ts|tsconfig.json)
 		cd "$CLAUDE_PROJECT_DIR" || exit 0
 
 		output=$(bunx tsc --noEmit 2>&1)
@@ -21,7 +25,7 @@ case "$FILE_PATH" in
 		else
 			errors=$(echo "$output" | grep -A 2 "error TS" | head -30)
 			if [ -n "$errors" ]; then
-				echo "{\"feedback\": \"TypeScript found type errors:\\n$errors\"}" >&2
+				jq -n --arg errors "$errors" '{"feedback": ("TypeScript found type errors:\n" + $errors)}'
 			fi
 		fi
 		;;

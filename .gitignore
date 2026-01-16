@@ -36,3 +36,6 @@ downloads/
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Git worktrees
+.worktrees/

@@ -1,14 +1,18 @@
-import adapterAuto from "@sveltejs/adapter-auto";
+import adapterNode from "@sveltejs/adapter-node";
 import adapterVercel from "@sveltejs/adapter-vercel";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 
-// Use Vercel adapter on Vercel, adapter-auto elsewhere (avoids @vercel/nft issues on GitHub runners)
-const adapter = process.env.VERCEL
-	? adapterVercel({
+function getAdapter() {
+	if (process.env.VERCEL) {
+		return adapterVercel({
 			runtime: "nodejs20.x",
 			maxDuration: 300,
-		})
-	: adapterAuto();
+		});
+	}
+	return adapterNode();
+}
+
+const adapter = getAdapter();
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {

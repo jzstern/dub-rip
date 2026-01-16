@@ -290,10 +290,6 @@ export const GET: RequestHandler = async ({ url }) => {
 
 					downloadProcess.on("error", (error: Error) => {
 						console.error("Download process error:", error);
-						Sentry.captureException(error, {
-							tags: { service: "yt-dlp", operation: "download" },
-							extra: { videoUrl },
-						});
 						send({ type: "error", message: error.message });
 					});
 
@@ -388,9 +384,13 @@ export const GET: RequestHandler = async ({ url }) => {
 				closeStream();
 			} catch (error: unknown) {
 				console.error("Download error:", error);
-				Sentry.captureException(error, {
+				const normalizedError =
+					error instanceof Error
+						? error
+						: new Error(`Unknown download error: ${String(error)}`);
+				Sentry.captureException(normalizedError, {
 					tags: { service: "download-stream", operation: "download" },
-					extra: { videoUrl },
+					extra: { videoId },
 				});
 				const message =
 					error instanceof Error ? error.message : "Unknown error";

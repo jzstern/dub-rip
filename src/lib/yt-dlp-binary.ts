@@ -8,15 +8,27 @@ import {
 } from "node:fs";
 import { platform, tmpdir } from "node:os";
 import { join } from "node:path";
+import { env } from "$env/dynamic/private";
 
 const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
-let isDownloading = false;
+const API_TIMEOUT_MS = 15_000;
+const BINARY_DOWNLOAD_TIMEOUT_MS = 120_000;
+
+let downloadPromise: Promise<string> | null = null;
 
 function getYtDlpBinaryName(): string {
 	const os = platform();
 	if (os === "darwin") return "yt-dlp_macos";
 	if (os === "win32") return "yt-dlp.exe";
-	return "yt-dlp";
+	return "yt-dlp_linux";
+}
+
+function getGitHubHeaders(): HeadersInit {
+	const headers: HeadersInit = { Accept: "application/vnd.github.v3+json" };
+	if (env.GITHUB_TOKEN) {
+		headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+	}
+	return headers;
 }
 
 export async function downloadYtDlpBinary(destPath: string): Promise<void> {
@@ -25,12 +37,14 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 		"https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
 
 	const releaseRes = await fetch(releaseUrl, {
-		headers: { Accept: "application/vnd.github.v3+json" },
+		headers: getGitHubHeaders(),
+		signal: AbortSignal.timeout(API_TIMEOUT_MS),
 	});
 
 	if (!releaseRes.ok) {
+		const body = await releaseRes.text().catch(() => "");
 		throw new Error(
-			`Failed to fetch yt-dlp release info: ${releaseRes.status}`,
+			`Failed to fetch yt-dlp release info: ${releaseRes.status} ${releaseRes.statusText}${body ? ` - ${body}` : ""}`,
 		);
 	}
 
@@ -45,9 +59,15 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 
 	console.log(`Downloading ${binaryName} from ${asset.browser_download_url}`);
 
-	const binaryRes = await fetch(asset.browser_download_url);
+	const binaryRes = await fetch(asset.browser_download_url, {
+		signal: AbortSignal.timeout(BINARY_DOWNLOAD_TIMEOUT_MS),
+	});
+
 	if (!binaryRes.ok) {
-		throw new Error(`Failed to download yt-dlp binary: ${binaryRes.status}`);
+		const body = await binaryRes.text().catch(() => "");
+		throw new Error(
+			`Failed to download yt-dlp binary: ${binaryRes.status} ${binaryRes.statusText}${body ? ` - ${body}` : ""}`,
+		);
 	}
 
 	const buffer = Buffer.from(await binaryRes.arrayBuffer());
@@ -60,41 +80,38 @@ export async function ensureYtDlpBinary(): Promise<string> {
 		return YTDLP_BINARY_PATH;
 	}
 
-	if (isDownloading) {
-		while (isDownloading) {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-		}
-		if (existsSync(YTDLP_BINARY_PATH)) {
-			return YTDLP_BINARY_PATH;
-		}
+	if (downloadPromise) {
+		return downloadPromise;
 	}
 
-	isDownloading = true;
-
-	try {
-		if (existsSync(YTDLP_BINARY_PATH)) {
-			return YTDLP_BINARY_PATH;
-		}
-
-		const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
-
-		console.log("Downloading yt-dlp binary...");
-		await downloadYtDlpBinary(tempPath);
-
+	downloadPromise = (async () => {
 		try {
-			renameSync(tempPath, YTDLP_BINARY_PATH);
-		} catch {
-			if (existsSync(tempPath)) unlinkSync(tempPath);
 			if (existsSync(YTDLP_BINARY_PATH)) {
 				return YTDLP_BINARY_PATH;
 			}
-			throw new Error("Failed to install yt-dlp binary");
-		}
 
-		return YTDLP_BINARY_PATH;
-	} finally {
-		isDownloading = false;
-	}
+			const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
+
+			console.log("Downloading yt-dlp binary...");
+			await downloadYtDlpBinary(tempPath);
+
+			try {
+				renameSync(tempPath, YTDLP_BINARY_PATH);
+			} catch {
+				if (existsSync(tempPath)) unlinkSync(tempPath);
+				if (existsSync(YTDLP_BINARY_PATH)) {
+					return YTDLP_BINARY_PATH;
+				}
+				throw new Error("Failed to install yt-dlp binary");
+			}
+
+			return YTDLP_BINARY_PATH;
+		} finally {
+			downloadPromise = null;
+		}
+	})();
+
+	return downloadPromise;
 }
 
 export function getYtDlpBinaryPath(): string {

@@ -3,6 +3,7 @@ import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
@@ -289,6 +290,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 					downloadProcess.on("error", (error: Error) => {
 						console.error("Download process error:", error);
+						Sentry.captureException(error, {
+							tags: { service: "yt-dlp", operation: "download" },
+							extra: { videoUrl },
+						});
 						send({ type: "error", message: error.message });
 					});
 
@@ -383,6 +388,10 @@ export const GET: RequestHandler = async ({ url }) => {
 				closeStream();
 			} catch (error: unknown) {
 				console.error("Download error:", error);
+				Sentry.captureException(error, {
+					tags: { service: "download-stream", operation: "download" },
+					extra: { videoUrl },
+				});
 				const message =
 					error instanceof Error ? error.message : "Unknown error";
 				send({ type: "error", message });

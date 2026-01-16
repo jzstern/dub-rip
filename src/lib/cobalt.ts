@@ -7,6 +7,8 @@
  * - COBALT_API_KEY: API key for authenticated requests to self-hosted instances
  */
 
+import * as Sentry from "@sentry/sveltekit";
+
 const COBALT_API_URL =
 	process.env.COBALT_API_URL || "https://api.cobalt.tools/";
 const COBALT_API_KEY = process.env.COBALT_API_KEY;
@@ -19,6 +21,15 @@ const DEFAULT_ALLOWED_DOWNLOAD_HOSTS = [
 	"download.cobalt.tools",
 	"cdn.cobalt.tools",
 ];
+
+function isPrivateCobaltInstance(): boolean {
+	try {
+		const parsed = new URL(COBALT_API_URL);
+		return parsed.protocol === "http:";
+	} catch {
+		return false;
+	}
+}
 
 function getAllowedDownloadHosts(): Set<string> {
 	const hosts = new Set(DEFAULT_ALLOWED_DOWNLOAD_HOSTS);
@@ -33,7 +44,15 @@ function getAllowedDownloadHosts(): Set<string> {
 function isAllowedDownloadUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url);
-		if (parsed.protocol !== "https:") {
+		const isPrivate = isPrivateCobaltInstance();
+		if (!isPrivate && parsed.protocol !== "https:") {
+			return false;
+		}
+		if (
+			isPrivate &&
+			parsed.protocol !== "http:" &&
+			parsed.protocol !== "https:"
+		) {
 			return false;
 		}
 		const allowedHosts = getAllowedDownloadHosts();
@@ -180,9 +199,21 @@ export async function requestCobaltAudio(
 		);
 	} catch (error) {
 		if (error instanceof CobaltError) {
+			Sentry.captureException(error, {
+				tags: { service: "cobalt", operation: "request" },
+				extra: {
+					youtubeUrl,
+					isRateLimit: error.isRateLimit,
+					isAuthRequired: error.isAuthRequired,
+				},
+			});
 			throw error;
 		}
 		if (error instanceof Error) {
+			Sentry.captureException(error, {
+				tags: { service: "cobalt", operation: "request" },
+				extra: { youtubeUrl },
+			});
 			if (error.name === "AbortError") {
 				throw new CobaltError("Cobalt request timed out", false, true, false);
 			}
@@ -193,6 +224,11 @@ export async function requestCobaltAudio(
 				false,
 			);
 		}
+		Sentry.captureMessage("Unknown Cobalt error during request", {
+			level: "error",
+			tags: { service: "cobalt", operation: "request" },
+			extra: { youtubeUrl, error },
+		});
 		throw new CobaltError("Unknown Cobalt error", false, true, false);
 	} finally {
 		clearTimeout(timeoutId);
@@ -204,7 +240,16 @@ export async function fetchCobaltAudio(
 	timeout: number = 60000,
 ): Promise<ArrayBuffer> {
 	if (!isAllowedDownloadUrl(downloadUrl)) {
-		throw new CobaltError("Invalid download URL from Cobalt");
+		const error = new CobaltError("Invalid download URL from Cobalt");
+		Sentry.captureException(error, {
+			tags: { service: "cobalt", operation: "validation" },
+			extra: {
+				downloadUrl,
+				isPrivate: isPrivateCobaltInstance(),
+				allowedHosts: Array.from(getAllowedDownloadHosts()),
+			},
+		});
+		throw error;
 	}
 
 	const controller = new AbortController();
@@ -248,14 +293,27 @@ export async function fetchCobaltAudio(
 		throw new CobaltError("Too many redirects");
 	} catch (error) {
 		if (error instanceof CobaltError) {
+			Sentry.captureException(error, {
+				tags: { service: "cobalt", operation: "download" },
+				extra: { downloadUrl },
+			});
 			throw error;
 		}
 		if (error instanceof Error) {
+			Sentry.captureException(error, {
+				tags: { service: "cobalt", operation: "download" },
+				extra: { downloadUrl },
+			});
 			if (error.name === "AbortError") {
 				throw new CobaltError("Cobalt download timed out", false, true, false);
 			}
 			throw new CobaltError(`Cobalt download failed: ${error.message}`);
 		}
+		Sentry.captureMessage("Unknown Cobalt error during download", {
+			level: "error",
+			tags: { service: "cobalt", operation: "download" },
+			extra: { downloadUrl, error },
+		});
 		throw new CobaltError("Unknown download error");
 	} finally {
 		clearTimeout(timeoutId);

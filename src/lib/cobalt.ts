@@ -7,9 +7,16 @@
  * - COBALT_API_KEY: API key for authenticated requests to self-hosted instances
  */
 
-const COBALT_API_URL =
-	process.env.COBALT_API_URL || "https://api.cobalt.tools/";
-const COBALT_API_KEY = process.env.COBALT_API_KEY;
+import { env } from "$env/dynamic/private";
+
+function getCobaltApiUrl(): string {
+	return env.COBALT_API_URL || "https://api.cobalt.tools/";
+}
+
+function getCobaltApiKey(): string | undefined {
+	return env.COBALT_API_KEY;
+}
+
 const DEFAULT_TIMEOUT = 30000;
 const MAX_REDIRECTS = 5;
 
@@ -23,7 +30,7 @@ const DEFAULT_ALLOWED_DOWNLOAD_HOSTS = [
 function getAllowedDownloadHosts(): Set<string> {
 	const hosts = new Set(DEFAULT_ALLOWED_DOWNLOAD_HOSTS);
 	try {
-		hosts.add(new URL(COBALT_API_URL).hostname);
+		hosts.add(new URL(getCobaltApiUrl()).hostname);
 	} catch {
 		// ignore invalid env value
 	}
@@ -33,7 +40,8 @@ function getAllowedDownloadHosts(): Set<string> {
 function isAllowedDownloadUrl(url: string): boolean {
 	try {
 		const parsed = new URL(url);
-		if (parsed.protocol !== "https:") {
+		const isInternalRailway = parsed.hostname.endsWith(".railway.internal");
+		if (parsed.protocol !== "https:" && !isInternalRailway) {
 			return false;
 		}
 		const allowedHosts = getAllowedDownloadHosts();
@@ -121,11 +129,12 @@ export async function requestCobaltAudio(
 			Accept: "application/json",
 		};
 
-		if (COBALT_API_KEY) {
-			headers.Authorization = `Api-Key ${COBALT_API_KEY}`;
+		const apiKey = getCobaltApiKey();
+		if (apiKey) {
+			headers.Authorization = `Api-Key ${apiKey}`;
 		}
 
-		const response = await fetch(COBALT_API_URL, {
+		const response = await fetch(getCobaltApiUrl(), {
 			method: "POST",
 			headers,
 			body: JSON.stringify({

@@ -22,6 +22,11 @@ function getYtDlpBinaryName(): string {
 	if (os === "darwin") return "yt-dlp_macos";
 	if (os === "win32") return "yt-dlp.exe";
 	if (os === "linux" && architecture === "arm64") return "yt-dlp_linux_aarch64";
+	if (os === "linux" && architecture === "arm") {
+		throw new Error(
+			"Unsupported architecture: ARMv7/armhf. yt-dlp no longer publishes armv7 binaries. Install yt-dlp via pip or use the portable distribution.",
+		);
+	}
 	return "yt-dlp_linux";
 }
 

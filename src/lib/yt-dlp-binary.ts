@@ -6,11 +6,10 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { platform, tmpdir } from "node:os";
+import { arch, platform, tmpdir } from "node:os";
 import { join } from "node:path";
 import { env } from "$env/dynamic/private";
 
-const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
 const API_TIMEOUT_MS = 15_000;
 const BINARY_DOWNLOAD_TIMEOUT_MS = 120_000;
 
@@ -18,9 +17,18 @@ let downloadPromise: Promise<string> | null = null;
 
 function getYtDlpBinaryName(): string {
 	const os = platform();
+	const architecture = arch();
+
 	if (os === "darwin") return "yt-dlp_macos";
 	if (os === "win32") return "yt-dlp.exe";
+	if (os === "linux" && architecture === "arm64") return "yt-dlp_linux_aarch64";
 	return "yt-dlp_linux";
+}
+
+function getYtDlpStoragePath(): string {
+	const os = platform();
+	const baseName = os === "win32" ? "yt-dlp.exe" : "yt-dlp";
+	return join(tmpdir(), baseName);
 }
 
 function getGitHubHeaders(): HeadersInit {
@@ -76,8 +84,10 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 }
 
 export async function ensureYtDlpBinary(): Promise<string> {
-	if (existsSync(YTDLP_BINARY_PATH)) {
-		return YTDLP_BINARY_PATH;
+	const binaryPath = getYtDlpStoragePath();
+
+	if (existsSync(binaryPath)) {
+		return binaryPath;
 	}
 
 	if (downloadPromise) {
@@ -86,26 +96,26 @@ export async function ensureYtDlpBinary(): Promise<string> {
 
 	downloadPromise = (async () => {
 		try {
-			if (existsSync(YTDLP_BINARY_PATH)) {
-				return YTDLP_BINARY_PATH;
+			if (existsSync(binaryPath)) {
+				return binaryPath;
 			}
 
-			const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
+			const tempPath = `${binaryPath}.${randomBytes(8).toString("hex")}.tmp`;
 
 			console.log("Downloading yt-dlp binary...");
 			await downloadYtDlpBinary(tempPath);
 
 			try {
-				renameSync(tempPath, YTDLP_BINARY_PATH);
+				renameSync(tempPath, binaryPath);
 			} catch {
 				if (existsSync(tempPath)) unlinkSync(tempPath);
-				if (existsSync(YTDLP_BINARY_PATH)) {
-					return YTDLP_BINARY_PATH;
+				if (existsSync(binaryPath)) {
+					return binaryPath;
 				}
 				throw new Error("Failed to install yt-dlp binary");
 			}
 
-			return YTDLP_BINARY_PATH;
+			return binaryPath;
 		} finally {
 			downloadPromise = null;
 		}
@@ -115,5 +125,5 @@ export async function ensureYtDlpBinary(): Promise<string> {
 }
 
 export function getYtDlpBinaryPath(): string {
-	return YTDLP_BINARY_PATH;
+	return getYtDlpStoragePath();
 }

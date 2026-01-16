@@ -1,7 +1,6 @@
 import { json } from "@sveltejs/kit";
 import {
 	extractVideoId,
-	isPlaylistUrl,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
@@ -37,18 +36,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		const oembed = await response.json();
 		const { artist, title } = parseArtistAndTitle(oembed.title);
 
-		// Check if URL contains playlist parameter
-		const isPlaylist = isPlaylistUrl(url);
-
 		return json({
 			success: true,
 			videoTitle: oembed.title,
 			artist: artist || sanitizeUploaderAsArtist(oembed.author_name || ""),
 			title: title || oembed.title,
 			thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-			// Duration and playlist info will be lazy-loaded via /api/preview/details
 			duration: null,
-			playlist: isPlaylist ? { pending: true } : null,
 		});
 	} catch (error: any) {
 		console.error("Preview error:", error.message);

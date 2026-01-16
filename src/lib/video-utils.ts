@@ -68,13 +68,6 @@ export function extractVideoId(url: string): string | null {
 }
 
 /**
- * Check if a URL contains playlist parameters
- */
-export function isPlaylistUrl(url: string): boolean {
-	return url.includes("list=") || url.includes("/playlist");
-}
-
-/**
  * Validate a YouTube URL
  */
 export function isValidYouTubeUrl(url: string): boolean {

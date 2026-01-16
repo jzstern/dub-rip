@@ -47,15 +47,13 @@ async function getYTDlp() {
 
 export const GET: RequestHandler = async ({ url }) => {
 	const videoUrl = url.searchParams.get("url");
-	const downloadPlaylist = url.searchParams.get("playlist") === "true";
 
 	if (!videoUrl) {
 		return new Response("URL parameter required", { status: 400 });
 	}
 
-	// Validate URL to prevent command injection
 	const videoId = extractVideoId(videoUrl);
-	if (!videoId && !videoUrl.includes("list=")) {
+	if (!videoId) {
 		return new Response("Invalid YouTube URL", { status: 400 });
 	}
 
@@ -97,8 +95,6 @@ export const GET: RequestHandler = async ({ url }) => {
 				const ytDlp = await getYTDlp();
 				send({ type: "status", message: "Getting video info..." });
 
-				// Get video info first to extract title
-				// Using execFile with array arguments prevents command injection
 				const { execFile } = require("node:child_process");
 				const { promisify } = require("node:util");
 				const execFilePromise = promisify(execFile);
@@ -153,42 +149,39 @@ export const GET: RequestHandler = async ({ url }) => {
 				let downloadMethod: DownloadMethod = "yt-dlp";
 				let cobaltFailed = false;
 
-				if (!downloadPlaylist) {
-					send({ type: "status", message: "Trying fast download..." });
+				send({ type: "status", message: "Trying fast download..." });
 
-					try {
-						const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
-						console.log("[Cobalt] Got download URL");
+				try {
+					const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
+					console.log("[Cobalt] Got download URL");
 
-						send({ type: "progress", percent: 10 });
+					send({ type: "progress", percent: 10 });
 
-						const audioBuffer = await fetchCobaltAudio(downloadUrl, 55000);
+					const audioBuffer = await fetchCobaltAudio(downloadUrl, 55000);
+					console.log(
+						"[Cobalt] Downloaded audio, size:",
+						audioBuffer.byteLength,
+					);
+
+					send({ type: "progress", percent: 80 });
+
+					writeFileSync(actualFilePath, Buffer.from(audioBuffer));
+					downloadMethod = "cobalt";
+					console.log("[Cobalt] Download successful");
+				} catch (err) {
+					cobaltFailed = true;
+					if (err instanceof CobaltError) {
 						console.log(
-							"[Cobalt] Downloaded audio, size:",
-							audioBuffer.byteLength,
+							"[Cobalt] Failed, falling back to yt-dlp:",
+							err.message,
 						);
-
-						send({ type: "progress", percent: 80 });
-
-						writeFileSync(actualFilePath, Buffer.from(audioBuffer));
-						downloadMethod = "cobalt";
-						console.log("[Cobalt] Download successful");
-					} catch (err) {
-						cobaltFailed = true;
-						if (err instanceof CobaltError) {
-							console.log(
-								"[Cobalt] Failed, falling back to yt-dlp:",
-								err.message,
-							);
-						} else {
-							const errMsg =
-								err instanceof Error ? err.message : "Unknown error";
-							console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
-						}
+					} else {
+						const errMsg = err instanceof Error ? err.message : "Unknown error";
+						console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
 					}
 				}
 
-				if (downloadPlaylist || cobaltFailed) {
+				if (cobaltFailed) {
 					send({ type: "status", message: "Starting download..." });
 
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
@@ -212,13 +205,10 @@ export const GET: RequestHandler = async ({ url }) => {
 						"%(title)s:%(meta_title)s",
 						"--parse-metadata",
 						"%(artist)s:%(meta_artist)s",
+						"--no-playlist",
+						"-o",
+						`${outputPath}.%(ext)s`,
 					];
-
-					if (!downloadPlaylist) {
-						args.push("--no-playlist");
-					}
-
-					args.push("-o", `${outputPath}.%(ext)s`);
 
 					const downloadProcess = ytDlp.exec(args);
 
@@ -320,7 +310,6 @@ export const GET: RequestHandler = async ({ url }) => {
 
 				send({ type: "status", message: "Processing metadata..." });
 
-				// Use node-id3 to set proper metadata
 				const NodeID3 = require("node-id3");
 
 				try {
@@ -336,7 +325,6 @@ export const GET: RequestHandler = async ({ url }) => {
 					console.log("ID3 write success:", success);
 				} catch (err) {
 					console.error("Metadata processing error:", err);
-					// Continue with original file if metadata processing fails
 				}
 
 				send({ type: "status", message: "Preparing download..." });
@@ -345,7 +333,6 @@ export const GET: RequestHandler = async ({ url }) => {
 				const stats = await fs.stat(actualFilePath);
 				const fileContent = await fs.readFile(actualFilePath);
 
-				// Format filename as "Artist - Title.mp3"
 				let finalFilename;
 				if (artist && trackTitle) {
 					const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
@@ -375,7 +362,6 @@ export const GET: RequestHandler = async ({ url }) => {
 					downloadMethod,
 				});
 
-				// Clean up
 				try {
 					unlinkSync(actualFilePath);
 				} catch {}
@@ -386,7 +372,6 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "error", message: error.message || "Unknown error" });
 				closeStream();
 
-				// Clean up
 				try {
 					const possibleFiles = [
 						`${outputPath}.mp3`,

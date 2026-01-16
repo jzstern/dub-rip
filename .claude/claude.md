@@ -44,7 +44,7 @@ For full templates, see `.claude/skills/svelte-patterns/`
 Required environment variables for production:
 - `COBALT_API_URL` - Internal Cobalt service URL (e.g., `http://cobalt.railway.internal:9000`)
 - `COBALT_API_KEY` - API key for authenticated Cobalt requests
-- `RAILPACK_DEPLOY_APT_PACKAGES=python3` - **Required** for yt-dlp fallback to work
+- `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp fallback (Railway doesn't include Python by default)
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
 
 ## yt-dlp Integration

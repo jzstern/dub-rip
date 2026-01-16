@@ -14,6 +14,7 @@ import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
+import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -52,15 +53,9 @@ async function getYTDlp(): Promise<YtDlpInstance> {
 	try {
 		const YTDlpWrapModule = require("yt-dlp-wrap");
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-		const binaryPath = join(tmpdir(), "yt-dlp");
 
+		const binaryPath = await ensureYtDlpBinary();
 		ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
-
-		if (!existsSync(binaryPath)) {
-			console.log("Downloading yt-dlp binary...");
-			await YTDlpWrap.downloadFromGithub(binaryPath);
-		}
-
 		return ytDlpWrap;
 	} finally {
 		isInitializing = false;

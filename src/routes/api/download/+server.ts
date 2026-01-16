@@ -5,14 +5,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { json } from "@sveltejs/kit";
 import { extractVideoId } from "$lib/video-utils";
+import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- external library interface
 let ytDlpWrap: any = null;
 let isInitializing = false;
 
-async function getYTDlp() {
+async function getYTDlp(): Promise<any> {
 	if (ytDlpWrap) return ytDlpWrap;
 
 	while (isInitializing) {
@@ -23,18 +25,11 @@ async function getYTDlp() {
 
 	isInitializing = true;
 	try {
-		// Use require for CommonJS module
 		const YTDlpWrapModule = require("yt-dlp-wrap");
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-		const binaryPath = join(tmpdir(), "yt-dlp");
 
+		const binaryPath = await ensureYtDlpBinary();
 		ytDlpWrap = new YTDlpWrap(binaryPath);
-
-		if (!existsSync(binaryPath)) {
-			console.log("Downloading yt-dlp binary...");
-			await YTDlpWrap.downloadFromGithub(binaryPath);
-		}
-
 		return ytDlpWrap;
 	} catch (err) {
 		console.error("Error initializing yt-dlp:", err);

@@ -1,17 +1,15 @@
-import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { json } from "@sveltejs/kit";
 import { extractVideoId } from "$lib/video-utils";
+import { ensureYtDlpBinary, getYtDlpBinaryPath } from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
 
-let ytDlpWrap: any = null;
+let ytDlpWrap: unknown = null;
 let isInitializing = false;
 
-async function getYTDlp() {
+async function getYTDlp(): Promise<unknown> {
 	if (ytDlpWrap) return ytDlpWrap;
 
 	while (isInitializing) {
@@ -24,14 +22,9 @@ async function getYTDlp() {
 	try {
 		const YTDlpWrapModule = require("yt-dlp-wrap");
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-		const binaryPath = join(tmpdir(), "yt-dlp");
 
+		const binaryPath = await ensureYtDlpBinary();
 		ytDlpWrap = new YTDlpWrap(binaryPath);
-
-		if (!existsSync(binaryPath)) {
-			await YTDlpWrap.downloadFromGithub(binaryPath);
-		}
-
 		return ytDlpWrap;
 	} finally {
 		isInitializing = false;
@@ -57,7 +50,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		const { promisify } = require("node:util");
 		const execFilePromise = promisify(execFile);
 
-		const binaryPath = join(tmpdir(), "yt-dlp");
+		const binaryPath = getYtDlpBinaryPath();
 		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
 		const result = await execFilePromise(binaryPath, [

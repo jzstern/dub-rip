@@ -1,10 +1,9 @@
 import { json } from "@sveltejs/kit";
+import { extractVideoId, isPlaylistUrl } from "$lib/video-utils";
 import {
-	extractVideoId,
-	isPlaylistUrl,
-	parseArtistAndTitle,
-	sanitizeUploaderAsArtist,
-} from "$lib/video-utils";
+	fetchYouTubeMetadata,
+	YouTubeMetadataError,
+} from "$lib/youtube-metadata";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -20,44 +19,32 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "Invalid YouTube URL" }, { status: 400 });
 		}
 
-		// Use YouTube oEmbed API for fast metadata (no API key needed)
-		const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-		const response = await fetch(oembedUrl);
+		const metadata = await fetchYouTubeMetadata(videoId);
+		const isPlaylist = isPlaylistUrl(url);
 
-		if (!response.ok) {
-			if (response.status === 401 || response.status === 403) {
+		return json({
+			success: true,
+			videoTitle: metadata.videoTitle,
+			artist: metadata.artist,
+			title: metadata.trackTitle,
+			thumbnail: metadata.thumbnailUrl,
+			duration: null,
+			playlist: isPlaylist ? { pending: true } : null,
+		});
+	} catch (error) {
+		if (error instanceof YouTubeMetadataError) {
+			console.error("Preview error:", error.message);
+			if (error.isNotFound) {
 				return json(
 					{ error: "Video is unavailable or private" },
 					{ status: 404 },
 				);
 			}
-			throw new Error(`oEmbed failed: ${response.status}`);
+		} else {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			console.error("Preview error:", message);
 		}
 
-		const oembed = await response.json();
-		const { artist, title } = parseArtistAndTitle(oembed.title);
-
-		// Check if URL contains playlist parameter
-		const isPlaylist = isPlaylistUrl(url);
-
-		return json({
-			success: true,
-			videoTitle: oembed.title,
-			artist: artist || sanitizeUploaderAsArtist(oembed.author_name || ""),
-			title: title || oembed.title,
-			thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-			// Duration and playlist info will be lazy-loaded via /api/preview/details
-			duration: null,
-			playlist: isPlaylist ? { pending: true } : null,
-		});
-	} catch (error: any) {
-		console.error("Preview error:", error.message);
-
-		return json(
-			{
-				error: "Failed to load preview",
-			},
-			{ status: 500 },
-		);
+		return json({ error: "Failed to load preview" }, { status: 500 });
 	}
 };

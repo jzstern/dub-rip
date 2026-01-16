@@ -1,21 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
 	isPlaylistUrl: vi.fn(),
-	parseArtistAndTitle: vi.fn(),
-	sanitizeUploaderAsArtist: vi.fn(),
 }));
 
+vi.mock("$lib/youtube-metadata", () => ({
+	fetchYouTubeMetadata: vi.fn(),
+	YouTubeMetadataError: class YouTubeMetadataError extends Error {
+		constructor(
+			message: string,
+			public readonly isNotFound: boolean = false,
+		) {
+			super(message);
+			this.name = "YouTubeMetadataError";
+		}
+	},
+}));
+
+import { extractVideoId, isPlaylistUrl } from "$lib/video-utils";
 import {
-	extractVideoId,
-	isPlaylistUrl,
-	parseArtistAndTitle,
-	sanitizeUploaderAsArtist,
-} from "$lib/video-utils";
+	fetchYouTubeMetadata,
+	YouTubeMetadataError,
+} from "$lib/youtube-metadata";
 import { POST } from "../../../src/routes/api/preview/+server";
 
 function createMockRequest(body: Record<string, unknown>): Request {
@@ -86,19 +93,12 @@ describe("POST /api/preview", () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
 			vi.mocked(isPlaylistUrl).mockReturnValue(false);
-			vi.mocked(parseArtistAndTitle).mockReturnValue({
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
 				artist: "Rick Astley",
-				title: "Never Gonna Give You Up",
-			});
-			vi.mocked(sanitizeUploaderAsArtist).mockReturnValue("RickAstleyVEVO");
-
-			mockFetch.mockResolvedValue({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						title: "Rick Astley - Never Gonna Give You Up",
-						author_name: "RickAstleyVEVO",
-					}),
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			});
 
 			const event = createMockEvent({
@@ -122,23 +122,16 @@ describe("POST /api/preview", () => {
 			expect(data.playlist).toBeNull();
 		});
 
-		it("falls back to uploader name when artist is empty", async () => {
+		it("uses artist from metadata (uploader fallback handled by utility)", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("abc123XYZ12");
 			vi.mocked(isPlaylistUrl).mockReturnValue(false);
-			vi.mocked(parseArtistAndTitle).mockReturnValue({
-				artist: "",
-				title: "Some Video Title",
-			});
-			vi.mocked(sanitizeUploaderAsArtist).mockReturnValue("Channel Name");
-
-			mockFetch.mockResolvedValue({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						title: "Some Video Title",
-						author_name: "Channel Name - Topic",
-					}),
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Some Video Title",
+				artist: "Channel Name",
+				trackTitle: "Some Video Title",
+				uploader: "Channel Name - Topic",
+				thumbnailUrl: "https://i.ytimg.com/vi/abc123XYZ12/hqdefault.jpg",
 			});
 
 			const event = createMockEvent({
@@ -157,18 +150,12 @@ describe("POST /api/preview", () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
 			vi.mocked(isPlaylistUrl).mockReturnValue(true);
-			vi.mocked(parseArtistAndTitle).mockReturnValue({
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Artist - Title",
 				artist: "Artist",
-				title: "Title",
-			});
-
-			mockFetch.mockResolvedValue({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						title: "Artist - Title",
-						author_name: "Artist",
-					}),
+				trackTitle: "Title",
+				uploader: "Artist",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			});
 
 			const event = createMockEvent({
@@ -185,14 +172,12 @@ describe("POST /api/preview", () => {
 	});
 
 	describe("oEmbed API errors", () => {
-		it("returns 404 for private videos (401 from oEmbed)", async () => {
+		it("returns 404 for private videos", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("privateVideo1");
-
-			mockFetch.mockResolvedValue({
-				ok: false,
-				status: 401,
-			});
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("Video is unavailable or private", true),
+			);
 
 			const event = createMockEvent({
 				url: "https://youtube.com/watch?v=privateVideo1",
@@ -207,36 +192,12 @@ describe("POST /api/preview", () => {
 			expect(data.error).toBe("Video is unavailable or private");
 		});
 
-		it("returns 404 for unavailable videos (403 from oEmbed)", async () => {
-			// #given
-			vi.mocked(extractVideoId).mockReturnValue("unavailable1");
-
-			mockFetch.mockResolvedValue({
-				ok: false,
-				status: 403,
-			});
-
-			const event = createMockEvent({
-				url: "https://youtube.com/watch?v=unavailable1",
-			});
-
-			// #when
-			const response = await POST(event);
-			const data = await response.json();
-
-			// #then
-			expect(response.status).toBe(404);
-			expect(data.error).toBe("Video is unavailable or private");
-		});
-
 		it("returns 500 for other oEmbed failures", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("serverError1");
-
-			mockFetch.mockResolvedValue({
-				ok: false,
-				status: 500,
-			});
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("oEmbed request failed: 500", false),
+			);
 
 			const event = createMockEvent({
 				url: "https://youtube.com/watch?v=serverError1",
@@ -254,8 +215,9 @@ describe("POST /api/preview", () => {
 		it("returns 500 when fetch throws", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("networkError1");
-
-			mockFetch.mockRejectedValue(new Error("Network error"));
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new Error("Network error"),
+			);
 
 			const event = createMockEvent({
 				url: "https://youtube.com/watch?v=networkError1",
@@ -283,22 +245,19 @@ describe("POST /api/preview", () => {
 			await POST(event);
 
 			// #then
-			expect(mockFetch).not.toHaveBeenCalled();
+			expect(fetchYouTubeMetadata).not.toHaveBeenCalled();
 		});
 
-		it("constructs oEmbed URL with extracted video ID only", async () => {
+		it("passes extracted video ID to metadata function", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("safeVideoId1");
 			vi.mocked(isPlaylistUrl).mockReturnValue(false);
-			vi.mocked(parseArtistAndTitle).mockReturnValue({
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Test",
 				artist: "",
-				title: "Test",
-			});
-			vi.mocked(sanitizeUploaderAsArtist).mockReturnValue("");
-
-			mockFetch.mockResolvedValue({
-				ok: true,
-				json: () => Promise.resolve({ title: "Test", author_name: "" }),
+				trackTitle: "Test",
+				uploader: "",
+				thumbnailUrl: "https://i.ytimg.com/vi/safeVideoId1/hqdefault.jpg",
 			});
 
 			const event = createMockEvent({
@@ -309,9 +268,7 @@ describe("POST /api/preview", () => {
 			await POST(event);
 
 			// #then
-			expect(mockFetch).toHaveBeenCalledWith(
-				"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=safeVideoId1&format=json",
-			);
+			expect(fetchYouTubeMetadata).toHaveBeenCalledWith("safeVideoId1");
 		});
 	});
 });

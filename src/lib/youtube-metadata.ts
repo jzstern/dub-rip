@@ -13,7 +13,7 @@ export interface YouTubeMetadata {
 export class YouTubeMetadataError extends Error {
 	constructor(
 		message: string,
-		public readonly isNotFound: boolean = false,
+		public readonly isUnavailable: boolean = false,
 	) {
 		super(message);
 		this.name = "YouTubeMetadataError";
@@ -44,21 +44,22 @@ export async function fetchYouTubeMetadata(
 		}
 
 		const oembed = (await response.json()) as {
-			title: string;
-			author_name: string;
+			title?: string;
+			author_name?: string;
 			thumbnail_url?: string;
 		};
 
-		const { artist, title } = parseArtistAndTitle(oembed.title);
-		const uploader = oembed.author_name || "";
+		const videoTitle = oembed.title ?? "";
+		const { artist, title } = parseArtistAndTitle(videoTitle);
+		const uploader = oembed.author_name ?? "";
 
 		return {
-			videoTitle: oembed.title,
+			videoTitle,
 			artist: artist || sanitizeUploaderAsArtist(uploader),
-			trackTitle: title || oembed.title,
+			trackTitle: title || videoTitle,
 			uploader,
 			thumbnailUrl:
-				oembed.thumbnail_url ||
+				oembed.thumbnail_url ??
 				`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 		};
 	} catch (error) {

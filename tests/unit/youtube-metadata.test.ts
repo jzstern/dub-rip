@@ -108,7 +108,7 @@ describe("fetchYouTubeMetadata", () => {
 			);
 		});
 
-		it("encodes video ID in request URL", async () => {
+		it("encodes special characters in video ID", async () => {
 			// #given
 			vi.mocked(parseArtistAndTitle).mockReturnValue({ artist: "", title: "" });
 			vi.mocked(sanitizeUploaderAsArtist).mockReturnValue("");
@@ -119,18 +119,18 @@ describe("fetchYouTubeMetadata", () => {
 			});
 
 			// #when
-			await fetchYouTubeMetadata("test-id_123");
+			await fetchYouTubeMetadata("test&id=abc");
 
 			// #then
 			expect(mockFetch).toHaveBeenCalledWith(
-				expect.stringContaining("test-id_123"),
+				expect.stringContaining("test%26id%3Dabc"),
 				expect.any(Object),
 			);
 		});
 	});
 
 	describe("error handling", () => {
-		it("throws YouTubeMetadataError with isNotFound for 401", async () => {
+		it("throws YouTubeMetadataError with isUnavailable for 401", async () => {
 			// #given
 			mockFetch.mockResolvedValue({
 				ok: false,
@@ -138,19 +138,13 @@ describe("fetchYouTubeMetadata", () => {
 			});
 
 			// #when/#then
-			await expect(fetchYouTubeMetadata("private123")).rejects.toThrow(
-				YouTubeMetadataError,
-			);
-
-			try {
-				await fetchYouTubeMetadata("private123");
-			} catch (err) {
-				expect(err).toBeInstanceOf(YouTubeMetadataError);
-				expect((err as YouTubeMetadataError).isNotFound).toBe(true);
-			}
+			await expect(fetchYouTubeMetadata("private123")).rejects.toMatchObject({
+				name: "YouTubeMetadataError",
+				isUnavailable: true,
+			});
 		});
 
-		it("throws YouTubeMetadataError with isNotFound for 403", async () => {
+		it("throws YouTubeMetadataError with isUnavailable for 403", async () => {
 			// #given
 			mockFetch.mockResolvedValue({
 				ok: false,
@@ -158,15 +152,13 @@ describe("fetchYouTubeMetadata", () => {
 			});
 
 			// #when/#then
-			try {
-				await fetchYouTubeMetadata("blocked123");
-			} catch (err) {
-				expect(err).toBeInstanceOf(YouTubeMetadataError);
-				expect((err as YouTubeMetadataError).isNotFound).toBe(true);
-			}
+			await expect(fetchYouTubeMetadata("blocked123")).rejects.toMatchObject({
+				name: "YouTubeMetadataError",
+				isUnavailable: true,
+			});
 		});
 
-		it("throws YouTubeMetadataError with isNotFound for 404", async () => {
+		it("throws YouTubeMetadataError with isUnavailable for 404", async () => {
 			// #given
 			mockFetch.mockResolvedValue({
 				ok: false,
@@ -174,15 +166,13 @@ describe("fetchYouTubeMetadata", () => {
 			});
 
 			// #when/#then
-			try {
-				await fetchYouTubeMetadata("notfound123");
-			} catch (err) {
-				expect(err).toBeInstanceOf(YouTubeMetadataError);
-				expect((err as YouTubeMetadataError).isNotFound).toBe(true);
-			}
+			await expect(fetchYouTubeMetadata("notfound123")).rejects.toMatchObject({
+				name: "YouTubeMetadataError",
+				isUnavailable: true,
+			});
 		});
 
-		it("throws YouTubeMetadataError without isNotFound for 500", async () => {
+		it("throws YouTubeMetadataError without isUnavailable for 500", async () => {
 			// #given
 			mockFetch.mockResolvedValue({
 				ok: false,
@@ -190,12 +180,10 @@ describe("fetchYouTubeMetadata", () => {
 			});
 
 			// #when/#then
-			try {
-				await fetchYouTubeMetadata("server500");
-			} catch (err) {
-				expect(err).toBeInstanceOf(YouTubeMetadataError);
-				expect((err as YouTubeMetadataError).isNotFound).toBe(false);
-			}
+			await expect(fetchYouTubeMetadata("server500")).rejects.toMatchObject({
+				name: "YouTubeMetadataError",
+				isUnavailable: false,
+			});
 		});
 
 		it("throws YouTubeMetadataError on network failure", async () => {
@@ -215,12 +203,12 @@ describe("fetchYouTubeMetadata", () => {
 			mockFetch.mockRejectedValue(abortError);
 
 			// #when/#then
-			try {
-				await fetchYouTubeMetadata("slowVideo", 100);
-			} catch (err) {
-				expect(err).toBeInstanceOf(YouTubeMetadataError);
-				expect((err as YouTubeMetadataError).message).toContain("timed out");
-			}
+			await expect(
+				fetchYouTubeMetadata("slowVideo", 100),
+			).rejects.toMatchObject({
+				name: "YouTubeMetadataError",
+				message: expect.stringContaining("timed out"),
+			});
 		});
 	});
 

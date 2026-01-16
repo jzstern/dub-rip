@@ -10,7 +10,7 @@ vi.mock("$lib/youtube-metadata", () => ({
 	YouTubeMetadataError: class YouTubeMetadataError extends Error {
 		constructor(
 			message: string,
-			public readonly isNotFound: boolean = false,
+			public readonly isUnavailable: boolean = false,
 		) {
 			super(message);
 			this.name = "YouTubeMetadataError";

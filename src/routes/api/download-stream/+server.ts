@@ -18,10 +18,28 @@ import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
 
-let ytDlpWrap: ReturnType<typeof Object> | null = null;
+interface YtDlpProcess {
+	on(
+		event: "progress",
+		callback: (progress: Record<string, unknown>) => void,
+	): void;
+	on(
+		event: "ytDlpEvent",
+		callback: (eventType: string, eventData: string) => void,
+	): void;
+	on(event: "error", callback: (error: Error) => void): void;
+	on(event: "close", callback: (code: number) => void): void;
+	stderr?: { on(event: string, callback: (data: Buffer) => void): void };
+}
+
+interface YtDlpInstance {
+	exec(args: string[]): YtDlpProcess;
+}
+
+let ytDlpWrap: YtDlpInstance | null = null;
 let isInitializing = false;
 
-async function getYTDlp(): Promise<ReturnType<typeof Object>> {
+async function getYTDlp(): Promise<YtDlpInstance> {
 	if (ytDlpWrap) return ytDlpWrap;
 
 	while (isInitializing) {
@@ -36,7 +54,7 @@ async function getYTDlp(): Promise<ReturnType<typeof Object>> {
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
 		const binaryPath = join(tmpdir(), "yt-dlp");
 
-		ytDlpWrap = new YTDlpWrap(binaryPath);
+		ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
 
 		if (!existsSync(binaryPath)) {
 			console.log("Downloading yt-dlp binary...");
@@ -126,7 +144,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					} catch (err) {
 						if (err instanceof YouTubeMetadataError) {
 							console.log("oEmbed metadata failed:", err.message);
-							if (err.isNotFound) {
+							if (err.isUnavailable) {
 								send({
 									type: "error",
 									message: "Video not found or unavailable",

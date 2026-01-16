@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch (error) {
 		if (error instanceof YouTubeMetadataError) {
 			console.error("Preview error:", error.message);
-			if (error.isNotFound) {
+			if (error.isUnavailable) {
 				return json(
 					{ error: "Video is unavailable or private" },
 					{ status: 404 },

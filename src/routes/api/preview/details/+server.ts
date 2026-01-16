@@ -46,9 +46,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "URL is required" }, { status: 400 });
 		}
 
-		// Validate URL to prevent command injection
 		const videoId = extractVideoId(url);
-		if (!videoId && !url.includes("list=")) {
+		if (!videoId) {
 			return json({ error: "Invalid YouTube URL" }, { status: 400 });
 		}
 
@@ -59,75 +58,21 @@ export const POST: RequestHandler = async ({ request }) => {
 		const execFilePromise = promisify(execFile);
 
 		const binaryPath = join(tmpdir(), "yt-dlp");
+		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-		// Check if URL is a playlist
-		const isPlaylist = url.includes("list=") || url.includes("/playlist");
-
-		let playlistInfo = null;
-		let duration = null;
-
-		if (isPlaylist) {
-			// Get playlist info (limit to first 10 entries to avoid buffer overflow)
-			// Using execFile with array arguments prevents command injection
-			const playlistResult = await execFilePromise(
-				binaryPath,
-				[
-					"--cookies-from-browser",
-					"chrome",
-					"--flat-playlist",
-					"--dump-json",
-					"--no-warnings",
-					"--playlist-end",
-					"10",
-					url,
-				],
-				{ maxBuffer: 1024 * 1024 * 10 },
-			);
-
-			// Get the first video for duration
-			const videoResult = await execFilePromise(binaryPath, [
-				"--cookies-from-browser",
-				"chrome",
-				"--dump-json",
-				"--no-warnings",
-				"--no-playlist",
-				url,
-			]);
-
-			const videoInfo = JSON.parse(videoResult.stdout);
-			duration = videoInfo.duration;
-
-			// Parse playlist entries
-			const entries = playlistResult.stdout.trim().split("\n").filter(Boolean);
-			const playlistData = entries.map((line: string) => JSON.parse(line));
-
-			const firstEntry = playlistData[0];
-
-			playlistInfo = {
-				title:
-					firstEntry?.playlist_title || videoInfo.playlist_title || "Playlist",
-				count:
-					firstEntry?.n_entries ||
-					firstEntry?.playlist_count ||
-					playlistData.length,
-				uploader: firstEntry?.uploader || videoInfo.uploader || "",
-			};
-		} else {
-			const result = await execFilePromise(binaryPath, [
-				"--cookies-from-browser",
-				"chrome",
-				"--dump-json",
-				"--no-warnings",
-				url,
-			]);
-			const videoInfo = JSON.parse(result.stdout);
-			duration = videoInfo.duration;
-		}
+		const result = await execFilePromise(binaryPath, [
+			"--cookies-from-browser",
+			"chrome",
+			"--dump-json",
+			"--no-warnings",
+			"--no-playlist",
+			normalizedUrl,
+		]);
+		const videoInfo = JSON.parse(result.stdout);
 
 		return json({
 			success: true,
-			duration,
-			playlist: playlistInfo,
+			duration: videoInfo.duration,
 		});
 	} catch (error: any) {
 		console.error("Preview details error:", error.message);

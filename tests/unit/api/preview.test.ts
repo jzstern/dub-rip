@@ -5,14 +5,12 @@ vi.stubGlobal("fetch", mockFetch);
 
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
-	isPlaylistUrl: vi.fn(),
 	parseArtistAndTitle: vi.fn(),
 	sanitizeUploaderAsArtist: vi.fn(),
 }));
 
 import {
 	extractVideoId,
-	isPlaylistUrl,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
@@ -85,7 +83,6 @@ describe("POST /api/preview", () => {
 		it("returns video preview for valid URL", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
-			vi.mocked(isPlaylistUrl).mockReturnValue(false);
 			vi.mocked(parseArtistAndTitle).mockReturnValue({
 				artist: "Rick Astley",
 				title: "Never Gonna Give You Up",
@@ -119,13 +116,11 @@ describe("POST /api/preview", () => {
 				"https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			);
 			expect(data.duration).toBeNull();
-			expect(data.playlist).toBeNull();
 		});
 
 		it("falls back to uploader name when artist is empty", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("abc123XYZ12");
-			vi.mocked(isPlaylistUrl).mockReturnValue(false);
 			vi.mocked(parseArtistAndTitle).mockReturnValue({
 				artist: "",
 				title: "Some Video Title",
@@ -151,36 +146,6 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(data.artist).toBe("Channel Name");
-		});
-
-		it("marks playlist URLs with pending flag", async () => {
-			// #given
-			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
-			vi.mocked(isPlaylistUrl).mockReturnValue(true);
-			vi.mocked(parseArtistAndTitle).mockReturnValue({
-				artist: "Artist",
-				title: "Title",
-			});
-
-			mockFetch.mockResolvedValue({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						title: "Artist - Title",
-						author_name: "Artist",
-					}),
-			});
-
-			const event = createMockEvent({
-				url: "https://youtube.com/watch?v=dQw4w9WgXcQ&list=PLtest123",
-			});
-
-			// #when
-			const response = await POST(event);
-			const data = await response.json();
-
-			// #then
-			expect(data.playlist).toEqual({ pending: true });
 		});
 	});
 
@@ -289,7 +254,6 @@ describe("POST /api/preview", () => {
 		it("constructs oEmbed URL with extracted video ID only", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("safeVideoId1");
-			vi.mocked(isPlaylistUrl).mockReturnValue(false);
 			vi.mocked(parseArtistAndTitle).mockReturnValue({
 				artist: "",
 				title: "Test",

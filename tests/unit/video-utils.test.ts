@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
 	extractVideoId,
-	isPlaylistUrl,
 	isValidYouTubeUrl,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
@@ -94,32 +93,6 @@ describe("extractVideoId", () => {
 				"abc_123-XYZ",
 			);
 		});
-	});
-});
-
-describe("isPlaylistUrl", () => {
-	it("should detect list= parameter", () => {
-		expect(
-			isPlaylistUrl(
-				"https://youtube.com/watch?v=dQw4w9WgXcQ&list=PLrAXtmErZgOeiKm4sg",
-			),
-		).toBe(true);
-	});
-
-	it("should detect /playlist path", () => {
-		expect(
-			isPlaylistUrl("https://youtube.com/playlist?list=PLrAXtmErZgOeiKm4sg"),
-		).toBe(true);
-	});
-
-	it("should return false for non-playlist URLs", () => {
-		expect(isPlaylistUrl("https://youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
-			false,
-		);
-	});
-
-	it("should return false for empty string", () => {
-		expect(isPlaylistUrl("")).toBe(false);
 	});
 });
 
@@ -265,9 +238,6 @@ describe("parseArtistAndTitle", () => {
 });
 
 describe("sanitizeUploaderAsArtist", () => {
-	// #given
-	// YouTube Music auto-generated channels use " - Topic" suffix
-
 	it("should strip ' - Topic' suffix from uploader name", () => {
 		// #when
 		const result = sanitizeUploaderAsArtist("Queen - Topic");
@@ -325,8 +295,6 @@ describe("sanitizeUploaderAsArtist", () => {
 	});
 
 	it("should return empty string for yt-dlp NA placeholder", () => {
-		// #given yt-dlp outputs "NA" when uploader is unavailable
-
 		// #when
 		const result = sanitizeUploaderAsArtist("NA");
 

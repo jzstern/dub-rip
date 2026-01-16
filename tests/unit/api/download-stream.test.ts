@@ -45,7 +45,7 @@ describe("GET /api/download-stream - input validation", () => {
 		expect(text).toBe("URL parameter required");
 	});
 
-	it("returns 400 for invalid YouTube URL without playlist", async () => {
+	it("returns 400 for invalid YouTube URL", async () => {
 		// #given
 		vi.mocked(extractVideoId).mockReturnValue(null);
 		const { GET } = await import(
@@ -83,26 +83,6 @@ describe("GET /api/download-stream - input validation", () => {
 		expect(text).toBe("Invalid YouTube URL");
 	});
 
-	it("accepts playlist URL even without video ID", async () => {
-		// #given
-		vi.mocked(extractVideoId).mockReturnValue(null);
-		const { GET } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
-		const event = {
-			url: createMockURL({
-				url: "https://youtube.com/playlist?list=PLtest123",
-			}),
-		} as unknown as Parameters<typeof GET>[0];
-
-		// #when
-		const response = await GET(event);
-
-		// #then - passes validation, returns SSE stream
-		expect(response.status).toBe(200);
-		expect(response.headers.get("Content-Type")).toBe("text/event-stream");
-	});
-
 	it("returns SSE headers for valid YouTube URL", async () => {
 		// #given
 		vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
@@ -134,28 +114,8 @@ describe("GET /api/download-stream - input validation", () => {
 		// #when
 		const response = await GET(event);
 
-		// #then - passes validation
+		// #then
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toBe("text/event-stream");
-	});
-
-	it("accepts playlist parameter for playlist downloads", async () => {
-		// #given
-		vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
-		const { GET } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
-		const event = {
-			url: createMockURL({
-				url: "https://youtube.com/watch?v=dQw4w9WgXcQ&list=PLtest",
-				playlist: "true",
-			}),
-		} as unknown as Parameters<typeof GET>[0];
-
-		// #when
-		const response = await GET(event);
-
-		// #then - passes validation
-		expect(response.status).toBe(200);
 	});
 });

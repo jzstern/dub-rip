@@ -1,8 +1,10 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, unlinkSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
+import type { DownloadMethod } from "$lib/types";
 import {
 	extractVideoId,
 	parseArtistAndTitle,
@@ -145,137 +147,163 @@ export const GET: RequestHandler = async ({ url }) => {
 					});
 				} catch (err) {
 					console.error("Failed to get video title:", err);
-					// Continue anyway, we'll try to extract from events
 				}
 
-				send({ type: "status", message: "Starting download..." });
+				let actualFilePath = `${outputPath}.mp3`;
+				let downloadMethod: DownloadMethod = "yt-dlp";
+				let cobaltFailed = false;
 
-				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
-
-				const args = [
-					videoUrl,
-					"-x",
-					"--audio-format",
-					"mp3",
-					"--audio-quality",
-					"0",
-					"--embed-thumbnail",
-					"--add-metadata",
-					"--cookies-from-browser",
-					"chrome",
-					"--ffmpeg-location",
-					ffmpegInstaller.path,
-					"--newline",
-					"--no-warnings",
-					"--parse-metadata",
-					"%(title)s:%(meta_title)s",
-					"--parse-metadata",
-					"%(artist)s:%(meta_artist)s",
-				];
-
-				// Add --no-playlist flag if not downloading entire playlist
 				if (!downloadPlaylist) {
-					args.push("--no-playlist");
+					send({ type: "status", message: "Trying fast download..." });
+
+					try {
+						const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
+						console.log("[Cobalt] Got download URL");
+
+						send({ type: "progress", percent: 10 });
+
+						const audioBuffer = await fetchCobaltAudio(downloadUrl, 55000);
+						console.log(
+							"[Cobalt] Downloaded audio, size:",
+							audioBuffer.byteLength,
+						);
+
+						send({ type: "progress", percent: 80 });
+
+						writeFileSync(actualFilePath, Buffer.from(audioBuffer));
+						downloadMethod = "cobalt";
+						console.log("[Cobalt] Download successful");
+					} catch (err) {
+						cobaltFailed = true;
+						if (err instanceof CobaltError) {
+							console.log(
+								"[Cobalt] Failed, falling back to yt-dlp:",
+								err.message,
+							);
+						} else {
+							const errMsg =
+								err instanceof Error ? err.message : "Unknown error";
+							console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
+						}
+					}
 				}
 
-				args.push("-o", `${outputPath}.%(ext)s`);
+				if (downloadPlaylist || cobaltFailed) {
+					send({ type: "status", message: "Starting download..." });
 
-				const downloadProcess = ytDlp.exec(args);
+					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 
-				downloadProcess.on("progress", (progress: any) => {
-					send({
-						type: "progress",
-						percent: progress.percent || 0,
-						speed: progress.currentSpeed || "",
-						eta: progress.eta || "",
-					});
-				});
+					const args = [
+						videoUrl,
+						"-x",
+						"--audio-format",
+						"mp3",
+						"--audio-quality",
+						"0",
+						"--embed-thumbnail",
+						"--add-metadata",
+						"--cookies-from-browser",
+						"chrome",
+						"--ffmpeg-location",
+						ffmpegInstaller.path,
+						"--newline",
+						"--no-warnings",
+						"--parse-metadata",
+						"%(title)s:%(meta_title)s",
+						"--parse-metadata",
+						"%(artist)s:%(meta_artist)s",
+					];
 
-				downloadProcess.on(
-					"ytDlpEvent",
-					(eventType: string, eventData: string) => {
-						console.log("yt-dlp event:", eventType, "|", eventData);
-
-						// Extract title from destination event or other events
-						if (!videoTitle) {
-							// Try Destination event
-							if (eventType === "Destination") {
-								const match = eventData.match(/\/([^/]+)\.\w+$/);
-								if (match) {
-									videoTitle = match[1].replace(/_/g, " ");
-									console.log(
-										"Extracted videoTitle from Destination:",
-										videoTitle,
-									);
-								}
-							}
-							// Also try to extract from the output filename
-							else if (
-								eventData.includes(".mp3") ||
-								eventData.includes(".webm")
-							) {
-								const match = eventData.match(/([^/]+)\.\w+/);
-								if (match) {
-									videoTitle = match[1].replace(/_/g, " ");
-									console.log(
-										"Extracted videoTitle from event data:",
-										videoTitle,
-									);
-								}
-							}
-
-							if (videoTitle) {
-								const parsed = parseArtistAndTitle(videoTitle);
-								artist = parsed.artist;
-								trackTitle = parsed.title;
-
-								if (!artist && uploader) {
-									artist = sanitizeUploaderAsArtist(uploader);
-									console.log("Using uploader as artist fallback:", artist);
-								}
-
-								console.log("Parsed - Artist:", artist, "Title:", trackTitle);
-								send({
-									type: "info",
-									title: videoTitle,
-									artist: artist,
-									track: trackTitle,
-								});
-							}
-						}
-
-						send({ type: "event", eventType, eventData });
-					},
-				);
-
-				let errorMessage = "";
-				downloadProcess.stderr?.on("data", (data: Buffer) => {
-					const text = data.toString();
-					console.error("yt-dlp stderr:", text);
-					if (text.includes("ERROR:")) {
-						errorMessage += text;
+					if (!downloadPlaylist) {
+						args.push("--no-playlist");
 					}
-				});
 
-				downloadProcess.on("error", (error: Error) => {
-					console.error("Download process error:", error);
-					send({ type: "error", message: error.message });
-				});
+					args.push("-o", `${outputPath}.%(ext)s`);
 
-				await new Promise((resolve, reject) => {
-					downloadProcess.on("close", (code: number) => {
-						if (code === 0) {
-							resolve(code);
-						} else {
-							reject(
-								new Error(errorMessage || `Process exited with code ${code}`),
-							);
+					const downloadProcess = ytDlp.exec(args);
+
+					downloadProcess.on("progress", (progress: any) => {
+						send({
+							type: "progress",
+							percent: progress.percent || 0,
+							speed: progress.currentSpeed || "",
+							eta: progress.eta || "",
+						});
+					});
+
+					downloadProcess.on(
+						"ytDlpEvent",
+						(eventType: string, eventData: string) => {
+							console.log("yt-dlp event:", eventType, "|", eventData);
+
+							if (!videoTitle) {
+								if (eventType === "Destination") {
+									const match = eventData.match(/\/([^/]+)\.\w+$/);
+									if (match) {
+										videoTitle = match[1].replace(/_/g, " ");
+									}
+								} else if (
+									eventData.includes(".mp3") ||
+									eventData.includes(".webm")
+								) {
+									const match = eventData.match(/([^/]+)\.\w+/);
+									if (match) {
+										videoTitle = match[1].replace(/_/g, " ");
+									}
+								}
+
+								if (videoTitle) {
+									const parsed = parseArtistAndTitle(videoTitle);
+									artist = parsed.artist;
+									trackTitle = parsed.title;
+
+									if (!artist && uploader) {
+										artist = sanitizeUploaderAsArtist(uploader);
+									}
+
+									send({
+										type: "info",
+										title: videoTitle,
+										artist: artist,
+										track: trackTitle,
+									});
+								}
+							}
+
+							send({ type: "event", eventType, eventData });
+						},
+					);
+
+					let errorMessage = "";
+					downloadProcess.stderr?.on("data", (data: Buffer) => {
+						const text = data.toString();
+						console.error("yt-dlp stderr:", text);
+						if (text.includes("ERROR:")) {
+							errorMessage += text;
 						}
 					});
-					downloadProcess.on("error", reject);
-				});
 
-				const actualFilePath = `${outputPath}.mp3`;
+					downloadProcess.on("error", (error: Error) => {
+						console.error("Download process error:", error);
+						send({ type: "error", message: error.message });
+					});
+
+					await new Promise((resolve, reject) => {
+						downloadProcess.on("close", (code: number) => {
+							if (code === 0) {
+								resolve(code);
+							} else {
+								reject(
+									new Error(errorMessage || `Process exited with code ${code}`),
+								);
+							}
+						});
+						downloadProcess.on("error", reject);
+					});
+
+					actualFilePath = `${outputPath}.mp3`;
+					downloadMethod = "yt-dlp";
+				}
 
 				if (!existsSync(actualFilePath)) {
 					send({
@@ -344,6 +372,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					filename: finalFilename,
 					size: stats.size,
 					data: Buffer.from(fileContent).toString("base64"),
+					downloadMethod,
 				});
 
 				// Clean up

@@ -25,6 +25,8 @@ export interface DownloadProgress {
 	eta: string;
 }
 
+export type DownloadMethod = "cobalt" | "yt-dlp";
+
 export interface StreamEvent {
 	type: "status" | "info" | "progress" | "complete" | "error" | "event";
 	message?: string;
@@ -39,6 +41,7 @@ export interface StreamEvent {
 	data?: string;
 	eventType?: string;
 	eventData?: string;
+	downloadMethod?: DownloadMethod;
 }
 
 export interface ApiError {

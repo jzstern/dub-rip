@@ -10,14 +10,36 @@ import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
+import {
+	fetchYouTubeMetadata,
+	YouTubeMetadataError,
+} from "$lib/youtube-metadata";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
 
-let ytDlpWrap: any = null;
+interface YtDlpProcess {
+	on(
+		event: "progress",
+		callback: (progress: Record<string, unknown>) => void,
+	): void;
+	on(
+		event: "ytDlpEvent",
+		callback: (eventType: string, eventData: string) => void,
+	): void;
+	on(event: "error", callback: (error: Error) => void): void;
+	on(event: "close", callback: (code: number) => void): void;
+	stderr?: { on(event: string, callback: (data: Buffer) => void): void };
+}
+
+interface YtDlpInstance {
+	exec(args: string[]): YtDlpProcess;
+}
+
+let ytDlpWrap: YtDlpInstance | null = null;
 let isInitializing = false;
 
-async function getYTDlp() {
+async function getYTDlp(): Promise<YtDlpInstance> {
 	if (ytDlpWrap) return ytDlpWrap;
 
 	while (isInitializing) {
@@ -32,7 +54,7 @@ async function getYTDlp() {
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
 		const binaryPath = join(tmpdir(), "yt-dlp");
 
-		ytDlpWrap = new YTDlpWrap(binaryPath);
+		ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
 
 		if (!existsSync(binaryPath)) {
 			console.log("Downloading yt-dlp binary...");
@@ -62,7 +84,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			const encoder = new TextEncoder();
 			let isClosed = false;
 
-			const send = (data: any) => {
+			const send = (data: Record<string, unknown>) => {
 				if (!isClosed) {
 					try {
 						controller.enqueue(
@@ -90,59 +112,49 @@ export const GET: RequestHandler = async ({ url }) => {
 			const outputPath = join(tmpdir(), `${randomId}`);
 
 			try {
-				send({ type: "status", message: "Initializing..." });
-
-				const ytDlp = await getYTDlp();
 				send({ type: "status", message: "Getting video info..." });
-
-				const { execFile } = require("node:child_process");
-				const { promisify } = require("node:util");
-				const execFilePromise = promisify(execFile);
-				const binaryPath = join(tmpdir(), "yt-dlp");
 
 				let videoTitle = "";
 				let artist = "";
 				let trackTitle = "";
 				let uploader = "";
 
-				try {
-					const result = await execFilePromise(
-						binaryPath,
-						[
-							"--cookies-from-browser",
-							"chrome",
-							"--print",
-							"%(title)s\n%(uploader)s",
-							"--no-warnings",
-							videoUrl,
-						],
-						{ timeout: 30000 },
-					);
-					const lines = result.stdout.trim().split("\n");
-					videoTitle = lines[0] || "";
-					uploader = lines[1] || "";
-					console.log("Got video title from yt-dlp:", videoTitle);
-					console.log("Got uploader from yt-dlp:", uploader);
+				if (videoId) {
+					try {
+						const metadata = await fetchYouTubeMetadata(videoId);
+						videoTitle = metadata.videoTitle;
+						artist = metadata.artist;
+						trackTitle = metadata.trackTitle;
+						uploader = metadata.uploader;
 
-					const parsed = parseArtistAndTitle(videoTitle);
-					artist = parsed.artist;
-					trackTitle = parsed.title;
+						console.log("Got metadata from oEmbed:", {
+							videoTitle,
+							artist,
+							trackTitle,
+							uploader,
+						});
 
-					if (!artist && uploader) {
-						artist = sanitizeUploaderAsArtist(uploader);
-						console.log("Using uploader as artist fallback:", artist);
+						send({
+							type: "info",
+							title: videoTitle,
+							artist: artist,
+							track: trackTitle,
+						});
+					} catch (err) {
+						if (err instanceof YouTubeMetadataError) {
+							console.log("oEmbed metadata failed:", err.message);
+							if (err.isUnavailable) {
+								send({
+									type: "error",
+									message: "Video not found or unavailable",
+								});
+								closeStream();
+								return;
+							}
+						} else {
+							console.error("Metadata fetch error:", err);
+						}
 					}
-
-					console.log("Parsed - Artist:", artist, "Title:", trackTitle);
-
-					send({
-						type: "info",
-						title: videoTitle,
-						artist: artist,
-						track: trackTitle,
-					});
-				} catch (err) {
-					console.error("Failed to get video title:", err);
 				}
 
 				let actualFilePath = `${outputPath}.mp3`;
@@ -184,6 +196,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				if (cobaltFailed) {
 					send({ type: "status", message: "Starting download..." });
 
+					const ytDlp = await getYTDlp();
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 
 					const args = [
@@ -195,8 +208,6 @@ export const GET: RequestHandler = async ({ url }) => {
 						"0",
 						"--embed-thumbnail",
 						"--add-metadata",
-						"--cookies-from-browser",
-						"chrome",
 						"--ffmpeg-location",
 						ffmpegInstaller.path,
 						"--newline",
@@ -212,14 +223,17 @@ export const GET: RequestHandler = async ({ url }) => {
 
 					const downloadProcess = ytDlp.exec(args);
 
-					downloadProcess.on("progress", (progress: any) => {
-						send({
-							type: "progress",
-							percent: progress.percent || 0,
-							speed: progress.currentSpeed || "",
-							eta: progress.eta || "",
-						});
-					});
+					downloadProcess.on(
+						"progress",
+						(progress: Record<string, unknown>) => {
+							send({
+								type: "progress",
+								percent: (progress.percent as number) || 0,
+								speed: (progress.currentSpeed as string) || "",
+								eta: (progress.eta as string) || "",
+							});
+						},
+					);
 
 					downloadProcess.on(
 						"ytDlpEvent",
@@ -333,7 +347,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				const stats = await fs.stat(actualFilePath);
 				const fileContent = await fs.readFile(actualFilePath);
 
-				let finalFilename;
+				let finalFilename: string;
 				if (artist && trackTitle) {
 					const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
 					const safeTrack = trackTitle.replace(/[<>:"/\\|?*]/g, "").trim();
@@ -367,9 +381,11 @@ export const GET: RequestHandler = async ({ url }) => {
 				} catch {}
 
 				closeStream();
-			} catch (error: any) {
+			} catch (error: unknown) {
 				console.error("Download error:", error);
-				send({ type: "error", message: error.message || "Unknown error" });
+				const message =
+					error instanceof Error ? error.message : "Unknown error";
+				send({ type: "error", message });
 				closeStream();
 
 				try {

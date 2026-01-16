@@ -7,8 +7,8 @@
  * - COBALT_API_KEY: API key for authenticated requests to self-hosted instances
  */
 
-import { env } from "$env/dynamic/private";
 import * as Sentry from "@sentry/sveltekit";
+import { env } from "$env/dynamic/private";
 import { extractVideoId } from "$lib/video-utils";
 
 function getCobaltApiUrl(): string {

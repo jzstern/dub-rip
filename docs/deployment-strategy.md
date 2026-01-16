@@ -17,7 +17,7 @@ This document outlines the deployment architecture for dub-rip, addressing the C
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │              dub-rip SvelteKit App                    │  │
 │  │  • Git-push deployment                                │  │
-│  │  • Has Python available (yt-dlp fallback works)       │  │
+│  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)   │  │
 │  │  • COBALT_API_URL points to Oracle instance           │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -43,7 +43,7 @@ This document outlines the deployment architecture for dub-rip, addressing the C
 | Cobalt authentication | Self-hosted instance - no Turnstile captcha needed |
 | YouTube bot detection | Cobalt handles this internally |
 | No user cookies needed | Cobalt doesn't require user authentication |
-| Resilience | yt-dlp fallback on Railway (has Python) |
+| Resilience | yt-dlp fallback on Railway (Python via env var) |
 | Simple deployment | Git-push for app, Docker for Cobalt |
 | Private access | API key restricts Cobalt to dub-rip only |
 
@@ -98,12 +98,15 @@ services:
 **Resources (Free Tier):**
 - $5 credit/month (renews)
 - Sufficient for small audience (tens to hundreds of downloads/day)
-- Python available in runtime
+- Python available via `RAILPACK_DEPLOY_APT_PACKAGES=python3`
 
 **Environment Variables:**
 ```bash
 COBALT_API_URL=https://your-oracle-instance.com
 COBALT_API_KEY=your-api-key-here  # For authenticated requests
+
+# Required for yt-dlp fallback - installs Python3 in the runtime container
+RAILPACK_DEPLOY_APT_PACKAGES=python3
 ```
 
 **Setup Steps:**

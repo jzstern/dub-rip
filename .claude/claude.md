@@ -40,7 +40,16 @@ For full templates, see `.claude/skills/svelte-patterns/`
 - Types: `src/lib/types.ts`
 - API routes: `src/routes/api/` (kebab-case)
 
+## Railway Deployment
+Required environment variables for production:
+- `COBALT_API_URL` - Internal Cobalt service URL (e.g., `http://cobalt.railway.internal:9000`)
+- `COBALT_API_KEY` - API key for authenticated Cobalt requests
+- `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp fallback (Railway doesn't include Python by default)
+- `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
+
 ## yt-dlp Integration
+- yt-dlp is used as a **fallback** when Cobalt fails (primary download method is Cobalt)
+- Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)
 - Always use `--cookies-from-browser chrome` (bot detection)
 - Single video from playlist: `--no-playlist`
 - Playlist info: `--playlist-end 10` (avoid buffer overflow)

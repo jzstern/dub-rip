@@ -58,13 +58,15 @@ export const POST: RequestHandler = async ({ request }) => {
 		const execFilePromise = promisify(execFile);
 
 		const binaryPath = join(tmpdir(), "yt-dlp");
+		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
 		const result = await execFilePromise(binaryPath, [
 			"--cookies-from-browser",
 			"chrome",
 			"--dump-json",
 			"--no-warnings",
-			url,
+			"--no-playlist",
+			normalizedUrl,
 		]);
 		const videoInfo = JSON.parse(result.stdout);
 

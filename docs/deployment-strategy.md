@@ -104,6 +104,9 @@ services:
 ```bash
 COBALT_API_URL=https://your-oracle-instance.com
 COBALT_API_KEY=your-api-key-here  # For authenticated requests
+
+# Required for yt-dlp fallback - installs Python3 in the runtime container
+RAILPACK_DEPLOY_APT_PACKAGES=python3
 ```
 
 **Setup Steps:**

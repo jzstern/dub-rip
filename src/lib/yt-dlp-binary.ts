@@ -6,10 +6,25 @@ import {
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { arch, platform, tmpdir } from "node:os";
+import { platform, tmpdir } from "node:os";
 import { join } from "node:path";
 import { env } from "$env/dynamic/private";
 
+/**
+ * Platform support rationale:
+ * - macOS: Local development
+ * - Linux x64: Production (Railway) and CI
+ *
+ * Other platforms (Windows, ARM) are not supported because:
+ * 1. Cobalt is the primary download method; yt-dlp is only a fallback
+ * 2. Production runs on a fixed Linux x64 environment
+ * 3. Adding complexity for unused platforms increases maintenance burden
+ *
+ * PR review bots flagged edge cases (Windows .exe extension, ARM64, ARMv7),
+ * but these don't apply to our actual deployment context.
+ */
+
+const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
 const API_TIMEOUT_MS = 15_000;
 const BINARY_DOWNLOAD_TIMEOUT_MS = 120_000;
 
@@ -17,23 +32,8 @@ let downloadPromise: Promise<string> | null = null;
 
 function getYtDlpBinaryName(): string {
 	const os = platform();
-	const architecture = arch();
-
 	if (os === "darwin") return "yt-dlp_macos";
-	if (os === "win32") return "yt-dlp.exe";
-	if (os === "linux" && architecture === "arm64") return "yt-dlp_linux_aarch64";
-	if (os === "linux" && architecture === "arm") {
-		throw new Error(
-			"Unsupported architecture: ARMv7/armhf. yt-dlp no longer publishes armv7 binaries. Install yt-dlp via pip or use the portable distribution.",
-		);
-	}
 	return "yt-dlp_linux";
-}
-
-function getYtDlpStoragePath(): string {
-	const os = platform();
-	const baseName = os === "win32" ? "yt-dlp.exe" : "yt-dlp";
-	return join(tmpdir(), baseName);
 }
 
 function getGitHubHeaders(): HeadersInit {
@@ -89,10 +89,8 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 }
 
 export async function ensureYtDlpBinary(): Promise<string> {
-	const binaryPath = getYtDlpStoragePath();
-
-	if (existsSync(binaryPath)) {
-		return binaryPath;
+	if (existsSync(YTDLP_BINARY_PATH)) {
+		return YTDLP_BINARY_PATH;
 	}
 
 	if (downloadPromise) {
@@ -101,26 +99,26 @@ export async function ensureYtDlpBinary(): Promise<string> {
 
 	downloadPromise = (async () => {
 		try {
-			if (existsSync(binaryPath)) {
-				return binaryPath;
+			if (existsSync(YTDLP_BINARY_PATH)) {
+				return YTDLP_BINARY_PATH;
 			}
 
-			const tempPath = `${binaryPath}.${randomBytes(8).toString("hex")}.tmp`;
+			const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
 
 			console.log("Downloading yt-dlp binary...");
 			await downloadYtDlpBinary(tempPath);
 
 			try {
-				renameSync(tempPath, binaryPath);
+				renameSync(tempPath, YTDLP_BINARY_PATH);
 			} catch {
 				if (existsSync(tempPath)) unlinkSync(tempPath);
-				if (existsSync(binaryPath)) {
-					return binaryPath;
+				if (existsSync(YTDLP_BINARY_PATH)) {
+					return YTDLP_BINARY_PATH;
 				}
 				throw new Error("Failed to install yt-dlp binary");
 			}
 
-			return binaryPath;
+			return YTDLP_BINARY_PATH;
 		} finally {
 			downloadPromise = null;
 		}
@@ -130,5 +128,5 @@ export async function ensureYtDlpBinary(): Promise<string> {
 }
 
 export function getYtDlpBinaryPath(): string {
-	return getYtDlpStoragePath();
+	return YTDLP_BINARY_PATH;
 }

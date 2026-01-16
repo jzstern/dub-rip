@@ -1,4 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@sentry/sveltekit", () => ({
+	captureException: vi.fn(),
+	captureMessage: vi.fn(),
+}));
+
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 
 describe("Cobalt API Integration", () => {
@@ -391,6 +397,137 @@ describe("Cobalt API Integration", () => {
 			expect(error.isUnavailable).toBe(false);
 			expect(error.isAuthRequired).toBe(true);
 		});
+	});
+});
+
+describe("Private Cobalt Instance (HTTP)", () => {
+	beforeEach(() => {
+		vi.resetModules();
+		vi.stubGlobal("fetch", vi.fn());
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.unstubAllEnvs();
+	});
+
+	it("allows HTTP download URLs when COBALT_API_URL is HTTP", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_URL", "http://cobalt.railway.internal:9000");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const httpDownloadUrl = "http://cobalt.railway.internal:38639/audio.mp3";
+		const mockAudioData = new ArrayBuffer(1024);
+		vi.mocked(fetch).mockResolvedValue({
+			ok: true,
+			status: 200,
+			arrayBuffer: () => Promise.resolve(mockAudioData),
+		} as Response);
+
+		// #when
+		const result = await fetchCobaltAudio(httpDownloadUrl);
+
+		// #then
+		expect(result).toBeInstanceOf(ArrayBuffer);
+	});
+
+	it("allows HTTPS download URLs when COBALT_API_URL is HTTP", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_URL", "http://cobalt.railway.internal:9000");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const httpsDownloadUrl = "https://cobalt.railway.internal:38639/audio.mp3";
+		const mockAudioData = new ArrayBuffer(1024);
+		vi.mocked(fetch).mockResolvedValue({
+			ok: true,
+			status: 200,
+			arrayBuffer: () => Promise.resolve(mockAudioData),
+		} as Response);
+
+		// #when
+		const result = await fetchCobaltAudio(httpsDownloadUrl);
+
+		// #then
+		expect(result).toBeInstanceOf(ArrayBuffer);
+	});
+
+	it("still rejects disallowed hosts even with HTTP COBALT_API_URL", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_URL", "http://cobalt.railway.internal:9000");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const maliciousUrl = "http://169.254.169.254/latest/meta-data/";
+
+		// #when / #then
+		await expect(fetchCobaltAudio(maliciousUrl)).rejects.toThrow(
+			"Invalid download URL",
+		);
+	});
+
+	it("rejects HTTP URLs when COBALT_API_URL is HTTPS (public instance)", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_URL", "https://api.cobalt.tools/");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const httpUrl = "http://download.cobalt.tools/audio.mp3";
+
+		// #when / #then
+		await expect(fetchCobaltAudio(httpUrl)).rejects.toThrow(
+			"Invalid download URL",
+		);
+	});
+
+	it("rejects HTTP URLs when COBALT_API_URL is HTTP but not private hostname", async () => {
+		// #given - HTTP URL but public hostname should NOT allow HTTP downloads
+		vi.stubEnv("COBALT_API_URL", "http://api.cobalt.tools/");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const httpUrl = "http://api.cobalt.tools/audio.mp3";
+
+		// #when / #then
+		await expect(fetchCobaltAudio(httpUrl)).rejects.toThrow(
+			"Invalid download URL",
+		);
+	});
+
+	it("allows HTTP URLs when COBALT_API_URL is HTTP with RFC1918 IP (10.x.x.x)", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_URL", "http://10.0.0.5:9000");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const httpDownloadUrl = "http://10.0.0.5:38639/audio.mp3";
+		const mockAudioData = new ArrayBuffer(1024);
+		vi.mocked(fetch).mockResolvedValue({
+			ok: true,
+			status: 200,
+			arrayBuffer: () => Promise.resolve(mockAudioData),
+		} as Response);
+
+		// #when
+		const result = await fetchCobaltAudio(httpDownloadUrl);
+
+		// #then
+		expect(result).toBeInstanceOf(ArrayBuffer);
+	});
+
+	it("allows HTTP URLs when COBALT_API_URL is HTTP with localhost", async () => {
+		// #given
+		vi.stubEnv("COBALT_API_URL", "http://localhost:9000");
+		const { fetchCobaltAudio } = await import("$lib/cobalt");
+
+		const httpDownloadUrl = "http://localhost:38639/audio.mp3";
+		const mockAudioData = new ArrayBuffer(1024);
+		vi.mocked(fetch).mockResolvedValue({
+			ok: true,
+			status: 200,
+			arrayBuffer: () => Promise.resolve(mockAudioData),
+		} as Response);
+
+		// #when
+		const result = await fetchCobaltAudio(httpDownloadUrl);
+
+		// #then
+		expect(result).toBeInstanceOf(ArrayBuffer);
 	});
 });
 

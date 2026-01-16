@@ -3,6 +3,7 @@ import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
@@ -383,6 +384,14 @@ export const GET: RequestHandler = async ({ url }) => {
 				closeStream();
 			} catch (error: unknown) {
 				console.error("Download error:", error);
+				const normalizedError =
+					error instanceof Error
+						? error
+						: new Error(`Unknown download error: ${String(error)}`);
+				Sentry.captureException(normalizedError, {
+					tags: { service: "download-stream", operation: "download" },
+					extra: { videoId },
+				});
 				const message =
 					error instanceof Error ? error.message : "Unknown error";
 				send({ type: "error", message });

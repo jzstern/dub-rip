@@ -228,14 +228,12 @@ export async function requestCobaltAudio(
 	} catch (error) {
 		const videoId = safeVideoId(youtubeUrl);
 		if (error instanceof CobaltError) {
-			Sentry.captureException(error, {
-				tags: { service: "cobalt", operation: "request" },
-				extra: {
-					videoId,
-					isRateLimit: error.isRateLimit,
-					isAuthRequired: error.isAuthRequired,
-				},
-			});
+			if (!error.isRateLimit && !error.isAuthRequired) {
+				Sentry.captureException(error, {
+					tags: { service: "cobalt", operation: "request" },
+					extra: { videoId },
+				});
+			}
 			throw error;
 		}
 		if (error instanceof Error) {

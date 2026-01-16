@@ -1,7 +1,6 @@
 <script lang="ts">
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
-import PlaylistPreview from "$lib/components/PlaylistPreview.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
@@ -19,7 +18,6 @@ function isValidYouTubeUrl(input: string): boolean {
 		/^https?:\/\/youtu\.be\/[\w-]{11}/,
 		/^https?:\/\/(www\.)?youtube\.com\/shorts\/[\w-]{11}/,
 		/^https?:\/\/m\.youtube\.com\/watch\?v=[\w-]{11}/,
-		/^https?:\/\/(www\.)?youtube\.com\/playlist\?list=[\w-]+/,
 	];
 	return patterns.some((pattern) => pattern.test(input));
 }
@@ -33,7 +31,6 @@ let eta = $state("");
 let videoTitle = $state("");
 let preview = $state<VideoPreviewType | null>(null);
 let loadingPreview = $state(false);
-let downloadPlaylist = $state(false);
 
 function formatDuration(seconds: number): string {
 	if (!seconds) return "";
@@ -52,7 +49,6 @@ async function loadPreview() {
 	loadingPreview = true;
 
 	try {
-		// Fast path: oEmbed for instant preview
 		const response = await fetch("/api/preview", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -67,7 +63,6 @@ async function loadPreview() {
 		preview = await response.json();
 		error = "";
 
-		// Lazy load duration and playlist details in background
 		const currentUrl = url;
 		fetch("/api/preview/details", {
 			method: "POST",
@@ -76,12 +71,10 @@ async function loadPreview() {
 		})
 			.then((res) => res.json())
 			.then((details) => {
-				// Only update if URL hasn't changed
 				if (url === currentUrl && preview && details.success) {
 					preview = {
 						...preview,
 						duration: details.duration,
-						playlist: details.playlist || preview.playlist,
 					};
 				}
 			})
@@ -120,7 +113,7 @@ function handleDownload() {
 	videoTitle = "";
 
 	const eventSource = new EventSource(
-		`/api/download-stream?url=${encodeURIComponent(url)}&playlist=${downloadPlaylist}`,
+		`/api/download-stream?url=${encodeURIComponent(url)}`,
 	);
 
 	eventSource.onmessage = (event) => {
@@ -231,17 +224,7 @@ function handleDownload() {
 
 			<!-- Preview -->
 			{#if preview && !loading && !loadingPreview}
-				<div class="space-y-3">
-					<VideoPreview preview={preview} formatDuration={formatDuration} />
-
-					{#if preview.playlist}
-						<PlaylistPreview
-							playlist={preview.playlist}
-							bind:downloadPlaylist={downloadPlaylist}
-							onToggle={(checked) => downloadPlaylist = checked}
-						/>
-					{/if}
-				</div>
+				<VideoPreview preview={preview} formatDuration={formatDuration} />
 			{/if}
 
 			<!-- Loading Preview -->

@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { extractVideoId, isPlaylistUrl } from "$lib/video-utils";
+import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -20,7 +20,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const metadata = await fetchYouTubeMetadata(videoId);
-		const isPlaylist = isPlaylistUrl(url);
 
 		return json({
 			success: true,
@@ -29,7 +28,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			title: metadata.trackTitle,
 			thumbnail: metadata.thumbnailUrl,
 			duration: null,
-			playlist: isPlaylist ? { pending: true } : null,
 		});
 	} catch (error) {
 		if (error instanceof YouTubeMetadataError) {

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
-	isPlaylistUrl: vi.fn(),
 }));
 
 vi.mock("$lib/youtube-metadata", () => ({
@@ -18,7 +17,7 @@ vi.mock("$lib/youtube-metadata", () => ({
 	},
 }));
 
-import { extractVideoId, isPlaylistUrl } from "$lib/video-utils";
+import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -92,7 +91,6 @@ describe("POST /api/preview", () => {
 		it("returns video preview for valid URL", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
-			vi.mocked(isPlaylistUrl).mockReturnValue(false);
 			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
 				videoTitle: "Rick Astley - Never Gonna Give You Up",
 				artist: "Rick Astley",
@@ -119,13 +117,11 @@ describe("POST /api/preview", () => {
 				"https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			);
 			expect(data.duration).toBeNull();
-			expect(data.playlist).toBeNull();
 		});
 
 		it("uses artist from metadata (uploader fallback handled by utility)", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("abc123XYZ12");
-			vi.mocked(isPlaylistUrl).mockReturnValue(false);
 			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
 				videoTitle: "Some Video Title",
 				artist: "Channel Name",
@@ -144,30 +140,6 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(data.artist).toBe("Channel Name");
-		});
-
-		it("marks playlist URLs with pending flag", async () => {
-			// #given
-			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
-			vi.mocked(isPlaylistUrl).mockReturnValue(true);
-			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
-				videoTitle: "Artist - Title",
-				artist: "Artist",
-				trackTitle: "Title",
-				uploader: "Artist",
-				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-			});
-
-			const event = createMockEvent({
-				url: "https://youtube.com/watch?v=dQw4w9WgXcQ&list=PLtest123",
-			});
-
-			// #when
-			const response = await POST(event);
-			const data = await response.json();
-
-			// #then
-			expect(data.playlist).toEqual({ pending: true });
 		});
 	});
 
@@ -251,7 +223,6 @@ describe("POST /api/preview", () => {
 		it("passes extracted video ID to metadata function", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("safeVideoId1");
-			vi.mocked(isPlaylistUrl).mockReturnValue(false);
 			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
 				videoTitle: "Test",
 				artist: "",

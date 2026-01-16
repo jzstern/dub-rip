@@ -69,14 +69,13 @@ async function getYTDlp(): Promise<YtDlpInstance> {
 
 export const GET: RequestHandler = async ({ url }) => {
 	const videoUrl = url.searchParams.get("url");
-	const downloadPlaylist = url.searchParams.get("playlist") === "true";
 
 	if (!videoUrl) {
 		return new Response("URL parameter required", { status: 400 });
 	}
 
 	const videoId = extractVideoId(videoUrl);
-	if (!videoId && !videoUrl.includes("list=")) {
+	if (!videoId) {
 		return new Response("Invalid YouTube URL", { status: 400 });
 	}
 
@@ -162,43 +161,40 @@ export const GET: RequestHandler = async ({ url }) => {
 				let downloadMethod: DownloadMethod = "yt-dlp";
 				let cobaltFailed = false;
 
-				if (!downloadPlaylist) {
-					send({ type: "status", message: "Starting download..." });
+				send({ type: "status", message: "Trying fast download..." });
 
-					try {
-						const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
-						console.log("[Cobalt] Got download URL");
+				try {
+					const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
+					console.log("[Cobalt] Got download URL");
 
-						send({ type: "progress", percent: 10 });
+					send({ type: "progress", percent: 10 });
 
-						const audioBuffer = await fetchCobaltAudio(downloadUrl, 55000);
+					const audioBuffer = await fetchCobaltAudio(downloadUrl, 55000);
+					console.log(
+						"[Cobalt] Downloaded audio, size:",
+						audioBuffer.byteLength,
+					);
+
+					send({ type: "progress", percent: 80 });
+
+					writeFileSync(actualFilePath, Buffer.from(audioBuffer));
+					downloadMethod = "cobalt";
+					console.log("[Cobalt] Download successful");
+				} catch (err) {
+					cobaltFailed = true;
+					if (err instanceof CobaltError) {
 						console.log(
-							"[Cobalt] Downloaded audio, size:",
-							audioBuffer.byteLength,
+							"[Cobalt] Failed, falling back to yt-dlp:",
+							err.message,
 						);
-
-						send({ type: "progress", percent: 80 });
-
-						writeFileSync(actualFilePath, Buffer.from(audioBuffer));
-						downloadMethod = "cobalt";
-						console.log("[Cobalt] Download successful");
-					} catch (err) {
-						cobaltFailed = true;
-						if (err instanceof CobaltError) {
-							console.log(
-								"[Cobalt] Failed, falling back to yt-dlp:",
-								err.message,
-							);
-						} else {
-							const errMsg =
-								err instanceof Error ? err.message : "Unknown error";
-							console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
-						}
+					} else {
+						const errMsg = err instanceof Error ? err.message : "Unknown error";
+						console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
 					}
 				}
 
-				if (downloadPlaylist || cobaltFailed) {
-					send({ type: "status", message: "Downloading with yt-dlp..." });
+				if (cobaltFailed) {
+					send({ type: "status", message: "Starting download..." });
 
 					const ytDlp = await getYTDlp();
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
@@ -220,13 +216,10 @@ export const GET: RequestHandler = async ({ url }) => {
 						"%(title)s:%(meta_title)s",
 						"--parse-metadata",
 						"%(artist)s:%(meta_artist)s",
+						"--no-playlist",
+						"-o",
+						`${outputPath}.%(ext)s`,
 					];
-
-					if (!downloadPlaylist) {
-						args.push("--no-playlist");
-					}
-
-					args.push("-o", `${outputPath}.%(ext)s`);
 
 					const downloadProcess = ytDlp.exec(args);
 

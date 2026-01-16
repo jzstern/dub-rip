@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractVideoId, isPlaylistUrl } from "$lib/video-utils";
+import { extractVideoId } from "$lib/video-utils";
 
 describe("POST /api/preview/details - validation logic", () => {
 	describe("URL validation", () => {
@@ -24,39 +24,6 @@ describe("POST /api/preview/details - validation logic", () => {
 			// #then
 			expect(result).toBe("dQw4w9WgXcQ");
 		});
-
-		it("isPlaylistUrl detects playlist parameter", () => {
-			// #given
-			const playlistUrl = "https://youtube.com/watch?v=abc&list=PLtest123";
-
-			// #when
-			const result = isPlaylistUrl(playlistUrl);
-
-			// #then
-			expect(result).toBe(true);
-		});
-
-		it("isPlaylistUrl detects /playlist path", () => {
-			// #given
-			const playlistUrl = "https://youtube.com/playlist?list=PLtest123";
-
-			// #when
-			const result = isPlaylistUrl(playlistUrl);
-
-			// #then
-			expect(result).toBe(true);
-		});
-
-		it("isPlaylistUrl returns false for non-playlist URLs", () => {
-			// #given
-			const videoUrl = "https://youtube.com/watch?v=dQw4w9WgXcQ";
-
-			// #when
-			const result = isPlaylistUrl(videoUrl);
-
-			// #then
-			expect(result).toBe(false);
-		});
 	});
 
 	describe("validation requirements", () => {
@@ -66,37 +33,20 @@ describe("POST /api/preview/details - validation logic", () => {
 
 			// #when
 			const videoId = extractVideoId(url);
-			const isPlaylist = isPlaylistUrl(url);
 
 			// #then
 			expect(videoId).toBe("dQw4w9WgXcQ");
-			expect(isPlaylist).toBe(false);
 		});
 
-		it("accepts playlist URL even without video ID extraction", () => {
-			// #given
-			const url = "https://youtube.com/playlist?list=PLtest123";
-
-			// #when
-			const videoId = extractVideoId(url);
-			const containsListParam = url.includes("list=");
-
-			// #then
-			expect(videoId).toBeNull();
-			expect(containsListParam).toBe(true);
-		});
-
-		it("rejects invalid URL without list parameter", () => {
+		it("rejects invalid URL", () => {
 			// #given
 			const url = "https://vimeo.com/123456";
 
 			// #when
 			const videoId = extractVideoId(url);
-			const containsListParam = url.includes("list=");
 
 			// #then
 			expect(videoId).toBeNull();
-			expect(containsListParam).toBe(false);
 		});
 	});
 });

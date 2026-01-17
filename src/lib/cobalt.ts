@@ -8,11 +8,17 @@
  */
 
 import * as Sentry from "@sentry/sveltekit";
+import { env } from "$env/dynamic/private";
 import { extractVideoId } from "$lib/video-utils";
 
-const COBALT_API_URL =
-	process.env.COBALT_API_URL || "https://api.cobalt.tools/";
-const COBALT_API_KEY = process.env.COBALT_API_KEY;
+function getCobaltApiUrl(): string {
+	return env.COBALT_API_URL || "https://api.cobalt.tools/";
+}
+
+function getCobaltApiKey(): string | undefined {
+	return env.COBALT_API_KEY;
+}
+
 const DEFAULT_TIMEOUT = 30000;
 const MAX_REDIRECTS = 5;
 
@@ -39,7 +45,7 @@ function isPrivateHostname(hostname: string): boolean {
 
 function isPrivateCobaltInstance(): boolean {
 	try {
-		const parsed = new URL(COBALT_API_URL);
+		const parsed = new URL(getCobaltApiUrl());
 		if (parsed.protocol !== "http:") {
 			return false;
 		}
@@ -52,7 +58,7 @@ function isPrivateCobaltInstance(): boolean {
 function getAllowedDownloadHosts(): Set<string> {
 	const hosts = new Set(DEFAULT_ALLOWED_DOWNLOAD_HOSTS);
 	try {
-		hosts.add(new URL(COBALT_API_URL).hostname);
+		hosts.add(new URL(getCobaltApiUrl()).hostname);
 	} catch {
 		// ignore invalid env value
 	}
@@ -74,7 +80,7 @@ function isAllowedDownloadUrl(url: string): boolean {
 			return false;
 		}
 		const allowedHosts = getAllowedDownloadHosts();
-		const cobaltHostname = new URL(COBALT_API_URL).hostname;
+		const cobaltHostname = new URL(getCobaltApiUrl()).hostname;
 		return Array.from(allowedHosts).some((host) => {
 			if (parsed.hostname === host) {
 				return true;
@@ -168,11 +174,12 @@ export async function requestCobaltAudio(
 			Accept: "application/json",
 		};
 
-		if (COBALT_API_KEY) {
-			headers.Authorization = `Api-Key ${COBALT_API_KEY}`;
+		const apiKey = getCobaltApiKey();
+		if (apiKey) {
+			headers.Authorization = `Api-Key ${apiKey}`;
 		}
 
-		const response = await fetch(COBALT_API_URL, {
+		const response = await fetch(getCobaltApiUrl(), {
 			method: "POST",
 			headers,
 			body: JSON.stringify({

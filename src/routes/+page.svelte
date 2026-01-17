@@ -24,6 +24,7 @@ function isValidYouTubeUrl(input: string): boolean {
 
 let isValidUrl = $derived(isValidYouTubeUrl(url));
 let error = $state("");
+let errorUrl = $state("");
 let status = $state("");
 let progress = $state(0);
 let speed = $state("");
@@ -42,7 +43,6 @@ function formatDuration(seconds: number): string {
 async function loadPreview() {
 	if (!url || url.length < 10) {
 		preview = null;
-		error = "";
 		return;
 	}
 
@@ -61,7 +61,6 @@ async function loadPreview() {
 		}
 
 		preview = await response.json();
-		error = "";
 
 		const currentUrl = url;
 		fetch("/api/preview/details", {
@@ -89,12 +88,20 @@ async function loadPreview() {
 }
 
 let previewTimeout: ReturnType<typeof setTimeout>;
+let lastPreviewUrl = $state("");
 $effect(() => {
 	clearTimeout(previewTimeout);
-	if (url && !loading) {
-		previewTimeout = setTimeout(loadPreview, 500);
-	} else {
-		preview = null;
+	if (url !== lastPreviewUrl) {
+		lastPreviewUrl = url;
+		if (error && url !== errorUrl) {
+			error = "";
+			errorUrl = "";
+		}
+		if (url && !loading) {
+			previewTimeout = setTimeout(loadPreview, 500);
+		} else {
+			preview = null;
+		}
 	}
 });
 
@@ -172,6 +179,7 @@ function handleDownload() {
 
 				case "error":
 					error = data.message;
+					errorUrl = url;
 					eventSource.close();
 					loading = false;
 					status = "";
@@ -186,6 +194,7 @@ function handleDownload() {
 		if (!error) {
 			error = "Connection lost";
 		}
+		errorUrl = url;
 		eventSource.close();
 		loading = false;
 		status = "";

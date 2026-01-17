@@ -15,6 +15,7 @@ import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
+import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -53,19 +54,35 @@ async function getYTDlp(): Promise<YtDlpInstance> {
 	try {
 		const YTDlpWrapModule = require("yt-dlp-wrap");
 		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-		const binaryPath = join(tmpdir(), "yt-dlp");
 
+		const binaryPath = await ensureYtDlpBinary();
 		ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
-
-		if (!existsSync(binaryPath)) {
-			console.log("Downloading yt-dlp binary...");
-			await YTDlpWrap.downloadFromGithub(binaryPath);
-		}
-
 		return ytDlpWrap;
 	} finally {
 		isInitializing = false;
 	}
+}
+
+function parseYtDlpError(errorMessage: string): string {
+	if (
+		errorMessage.includes("Sign in to confirm you're not a bot") ||
+		errorMessage.includes("cookies")
+	) {
+		return "This video requires authentication. Please try a different video or try again later.";
+	}
+	if (errorMessage.includes("Video unavailable")) {
+		return "This video is unavailable or private.";
+	}
+	if (errorMessage.includes("age")) {
+		return "This video is age-restricted and cannot be downloaded.";
+	}
+	if (errorMessage.includes("copyright")) {
+		return "This video is blocked due to copyright restrictions.";
+	}
+	if (errorMessage.includes("private")) {
+		return "This video is private and cannot be downloaded.";
+	}
+	return "Download failed. Please try a different video.";
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -392,8 +409,9 @@ export const GET: RequestHandler = async ({ url }) => {
 					tags: { service: "download-stream", operation: "download" },
 					extra: { videoId },
 				});
-				const message =
+				const rawMessage =
 					error instanceof Error ? error.message : "Unknown error";
+				const message = parseYtDlpError(rawMessage);
 				send({ type: "error", message });
 				closeStream();
 

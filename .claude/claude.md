@@ -50,10 +50,10 @@ Required environment variables for production:
 ## yt-dlp Integration
 - yt-dlp is used as a **fallback** when Cobalt fails (primary download method is Cobalt)
 - Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)
-- Always use `--cookies-from-browser chrome` (bot detection)
+- **Do NOT use** `--cookies-from-browser` on Railway (no browser available)
+- Some videos require authentication and cannot be downloaded via yt-dlp fallback
 - Single video from playlist: `--no-playlist`
-- Playlist info: `--playlist-end 10` (avoid buffer overflow)
-- Parse stderr for user-friendly error messages
+- Parse stderr for user-friendly error messages (see `parseYtDlpError`)
 
 ## Metadata (node-id3)
 - Use node-id3 for ID3 tags (not ffmpeg)

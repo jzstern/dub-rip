@@ -84,19 +84,18 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			const downloadProcess = ytDlp.exec([
 				url,
-				"-x", // Extract audio
+				"-x",
 				"--audio-format",
 				"mp3",
 				"--audio-quality",
-				"0", // Best quality
-				"--embed-thumbnail", // Embed artwork
-				"--add-metadata", // Add metadata
-				"--cookies-from-browser",
-				"chrome", // Use Chrome cookies to bypass bot detection
+				"0",
+				"--embed-thumbnail",
+				"--add-metadata",
 				"--ffmpeg-location",
 				ffmpegInstaller.path,
-				"--newline", // Output progress on new lines
+				"--newline",
 				"--no-warnings",
+				"--no-playlist",
 				"-o",
 				`${outputPath}.%(ext)s`,
 			]);

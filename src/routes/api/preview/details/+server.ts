@@ -54,8 +54,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
 		const result = await execFilePromise(binaryPath, [
-			"--cookies-from-browser",
-			"chrome",
 			"--dump-json",
 			"--no-warnings",
 			"--no-playlist",

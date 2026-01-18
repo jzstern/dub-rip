@@ -4,13 +4,16 @@ import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 
 describe("PreviewSkeleton", () => {
 	describe("rendering", () => {
-		it("renders a skeleton loading state", () => {
+		it("renders a skeleton loading state with testid", () => {
 			// #given / #when
 			const { container } = render(PreviewSkeleton);
 
 			// #then
-			const skeleton = container.querySelector(".animate-pulse");
+			const skeleton = container.querySelector(
+				'[data-testid="preview-skeleton"]',
+			);
 			expect(skeleton).toBeInTheDocument();
+			expect(skeleton).toHaveClass("animate-pulse");
 		});
 
 		it("displays placeholder elements for thumbnail and text", () => {

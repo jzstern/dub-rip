@@ -97,6 +97,7 @@ $effect(() => {
 
 	if (!isValidUrl || loading) {
 		preview = null;
+		loadingPreview = false;
 		return;
 	}
 

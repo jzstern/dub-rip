@@ -68,7 +68,7 @@ test.describe("Video Preview Flow", () => {
 		const input = page.locator('input[data-slot="input"]');
 		await input.fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 
-		const skeleton = page.locator(".animate-pulse");
+		const skeleton = page.locator('[data-testid="preview-skeleton"]');
 		await expect(skeleton).toBeVisible({ timeout: 2000 });
 	});
 

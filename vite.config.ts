@@ -11,6 +11,6 @@ export default defineConfig({
 		sveltekit(),
 	],
 	ssr: {
-		external: ["yt-dlp-wrap", "@ffmpeg-installer/ffmpeg"],
+		external: ["yt-dlp-wrap", "@ffmpeg-installer/ffmpeg", "node-id3"],
 	},
 });

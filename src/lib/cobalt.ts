@@ -5,6 +5,8 @@
  * Environment variables:
  * - COBALT_API_URL: URL of your Cobalt instance (default: public API)
  * - COBALT_API_KEY: API key for authenticated requests to self-hosted instances
+ * - COBALT_TUNNEL_HOST: Public hostname for Cobalt tunnel URLs (needed when using
+ *   internal API URL but Cobalt returns public tunnel URLs)
  */
 
 import * as Sentry from "@sentry/sveltekit";
@@ -17,6 +19,10 @@ function getCobaltApiUrl(): string {
 
 function getCobaltApiKey(): string | undefined {
 	return env.COBALT_API_KEY;
+}
+
+function getCobaltTunnelHost(): string | undefined {
+	return env.COBALT_TUNNEL_HOST;
 }
 
 const DEFAULT_TIMEOUT = 30000;
@@ -61,6 +67,10 @@ function getAllowedDownloadHosts(): Set<string> {
 		hosts.add(new URL(getCobaltApiUrl()).hostname);
 	} catch {
 		// ignore invalid env value
+	}
+	const tunnelHost = getCobaltTunnelHost();
+	if (tunnelHost) {
+		hosts.add(tunnelHost);
 	}
 	return hosts;
 }

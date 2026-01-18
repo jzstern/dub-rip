@@ -140,7 +140,6 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 3. Service name: `cobalt`
 4. Add environment variables:
    ```bash
-   API_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}/
    API_PORT=9000
    API_KEY_URL=file://keys.json
    YOUTUBE_SESSION_SERVER=http://yt-session.railway.internal:8080/
@@ -149,7 +148,15 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 5. Add a volume mount for `keys.json`:
    - Mount path: `/keys.json`
    - Content: Your API keys JSON
-6. Enable public networking on port 9000
+6. **Keep Cobalt internal-only** (no public networking needed)
+   - dub-rip communicates with Cobalt via Railway's private network
+   - This reduces attack surface and prevents unauthorized API access
+
+> **Note:** If you need to expose Cobalt publicly (e.g., for debugging), add:
+> ```bash
+> API_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}/
+> ```
+> Then enable public networking on port 9000. Remember to disable this after debugging.
 
 ### Step 4: Deploy dub-rip
 
@@ -165,12 +172,14 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 ### Step 5: Verify Deployment
 
-1. Check yt-session-generator logs for successful startup
-2. Test Cobalt token generation:
-   ```bash
-   curl http://yt-session.railway.internal:8080/token
-   ```
-3. Test dub-rip by downloading a YouTube video
+1. Check yt-session-generator logs in Railway dashboard for successful startup
+2. Check Cobalt logs for successful connection to yt-session-generator
+3. Test dub-rip by downloading a YouTube video through the web interface
+4. (Optional) To test internal services, use Railway's shell feature:
+   - Open Railway dashboard → Select service → Click "Shell"
+   - Run: `curl http://yt-session.railway.internal:8080/token`
+
+> **Note:** Internal `.railway.internal` URLs are only accessible from within Railway's private network. You cannot `curl` these URLs from your local machine.
 
 ## Download Flow
 
@@ -215,16 +224,21 @@ Railway provides $5/month in free credits. For personal use or low traffic, you 
 - Pull latest image: Railway will auto-deploy on image update
 - Check [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) for issues
 
-**Troubleshooting Commands:**
+**Troubleshooting Commands (via Railway Shell):**
+
+To run these commands, open Railway dashboard → Select service → Click "Shell":
+
 ```bash
+# From any Railway service shell:
+
 # Check yt-session-generator health
 curl http://yt-session.railway.internal:8080/token
 
 # Force token refresh
 curl http://yt-session.railway.internal:8080/update
-
-# Check Cobalt logs in Railway dashboard
 ```
+
+You can also check service logs directly in the Railway dashboard.
 
 ## Security Considerations
 

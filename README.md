@@ -18,8 +18,8 @@ A simple web app to download YouTube audio with rich metadata including song tit
 
 - **Frontend**: Svelte 5 + SvelteKit
 - **Backend**: SvelteKit API routes
-- **Deployment**: Vercel
-- **Audio Processing**: yt-dlp + ffmpeg
+- **Deployment**: Railway (with Cobalt + yt-session-generator)
+- **Audio Processing**: Cobalt API (primary) + yt-dlp (fallback)
 
 ## Development
 
@@ -43,23 +43,55 @@ bun run build
 
 ## Deployment
 
-This project is configured to deploy on Vercel. Simply connect your repository to Vercel and it will automatically deploy.
+This project is configured to deploy on Railway with a self-hosted Cobalt instance for YouTube downloads.
 
-The project uses:
-- `@sveltejs/adapter-vercel` for serverless deployment
-- Extended function timeout (300s) for long downloads
-- Automatic yt-dlp binary installation
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Railway Project                           │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
+│  │   dub-rip app   │──│     Cobalt      │──│yt-session-  │  │
+│  │   (SvelteKit)   │  │   (port 9000)   │  │ generator   │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Services Required
+
+1. **dub-rip** - This app (SvelteKit + Node.js)
+2. **Cobalt** - YouTube download API (`ghcr.io/imputnet/cobalt:latest`)
+3. **yt-session-generator** - BotGuard token generator (`ghcr.io/imputnet/yt-session-generator:webserver`)
+
+### Environment Variables
+
+```bash
+# dub-rip service
+COBALT_API_URL=http://cobalt.railway.internal:9000
+COBALT_API_KEY=your-api-key-uuid
+RAILPACK_DEPLOY_APT_PACKAGES=python3
+
+# Cobalt service
+API_URL=https://your-cobalt-url.up.railway.app/
+API_KEY_URL=file://keys.json
+YOUTUBE_SESSION_SERVER=http://yt-session.railway.internal:8080/
+YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
+```
+
+See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions.
 
 ## How It Works
 
 1. User enters a YouTube URL
-2. The frontend sends a POST request to `/api/download`
-3. The backend uses yt-dlp to:
-   - Download the audio from the video
-   - Extract metadata from YouTube
-   - Embed metadata into the MP3 file
-   - Add artwork/thumbnail
-4. The file is streamed back to the user's browser for download
+2. The frontend sends a request to `/api/download-stream`
+3. The backend attempts to download via Cobalt API:
+   - Cobalt requests a `poToken` from yt-session-generator (BotGuard bypass)
+   - Cobalt fetches the audio stream from YouTube
+   - On success: streams audio back to dub-rip
+   - On failure: falls back to yt-dlp with ffmpeg
+4. Metadata is extracted (title, artist, album, artwork)
+5. ID3 tags are embedded into the MP3
+6. The file is streamed back to the user's browser
 
 ## AI-Assisted Development
 

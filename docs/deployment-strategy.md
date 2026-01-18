@@ -6,7 +6,7 @@ This document outlines the deployment architecture for dub-rip on Railway, using
 
 ### Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        Users                                 │
 └─────────────────────────────────────────────────────────────┘
@@ -139,7 +139,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 2. Image: `ghcr.io/imputnet/cobalt:latest`
 3. Service name: `cobalt`
 4. Add environment variables:
-   ```
+   ```bash
    API_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}/
    API_PORT=9000
    API_KEY_URL=file://keys.json
@@ -156,7 +156,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 1. Add a new service → GitHub Repo
 2. Select your dub-rip repository
 3. Add environment variables:
-   ```
+   ```bash
    COBALT_API_URL=http://cobalt.railway.internal:9000
    COBALT_API_KEY=your-api-key-uuid
    RAILPACK_DEPLOY_APT_PACKAGES=python3
@@ -174,7 +174,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 ## Download Flow
 
-```
+```text
 1. User enters YouTube URL
 2. dub-rip validates URL and extracts video ID
 3. dub-rip calls Cobalt API with authenticated request

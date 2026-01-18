@@ -47,7 +47,7 @@ This project is configured to deploy on Railway with a self-hosted Cobalt instan
 
 ### Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    Railway Project                           │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │

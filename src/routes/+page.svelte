@@ -40,19 +40,14 @@ function formatDuration(seconds: number): string {
 	return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-async function loadPreview() {
-	if (!url || url.length < 10) {
-		preview = null;
-		return;
-	}
-
+async function loadPreview(targetUrl: string) {
 	loadingPreview = true;
 
 	try {
 		const response = await fetch("/api/preview", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ url }),
+			body: JSON.stringify({ url: targetUrl }),
 		});
 
 		if (!response.ok) {
@@ -60,17 +55,18 @@ async function loadPreview() {
 			throw new Error(data.error || "Failed to load preview");
 		}
 
+		if (url !== targetUrl) return;
+
 		preview = await response.json();
 
-		const currentUrl = url;
 		fetch("/api/preview/details", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ url: currentUrl }),
+			body: JSON.stringify({ url: targetUrl }),
 		})
 			.then((res) => res.json())
 			.then((details) => {
-				if (url === currentUrl && preview && details.success) {
+				if (url === targetUrl && preview && details.success) {
 					preview = {
 						...preview,
 						duration: details.duration,
@@ -79,30 +75,38 @@ async function loadPreview() {
 			})
 			.catch((err) => console.error("Details error:", err));
 	} catch (err) {
+		if (url !== targetUrl) return;
 		console.error("Preview error:", err);
 		error = err instanceof Error ? err.message : "Failed to load preview";
+		errorUrl = targetUrl;
 		preview = null;
 	} finally {
 		loadingPreview = false;
 	}
 }
 
-let previewTimeout: ReturnType<typeof setTimeout>;
 let lastPreviewUrl = $state("");
 $effect(() => {
-	clearTimeout(previewTimeout);
 	if (url !== lastPreviewUrl) {
 		lastPreviewUrl = url;
 		if (error && url !== errorUrl) {
 			error = "";
 			errorUrl = "";
 		}
-		if (url && !loading) {
-			previewTimeout = setTimeout(loadPreview, 500);
-		} else {
-			preview = null;
-		}
 	}
+
+	if (!isValidUrl || loading) {
+		preview = null;
+		loadingPreview = false;
+		return;
+	}
+
+	const currentUrl = url;
+	const timeoutId = setTimeout(() => {
+		loadPreview(currentUrl);
+	}, 500);
+
+	return () => clearTimeout(timeoutId);
 });
 
 function handleDownload() {

@@ -9,16 +9,8 @@ on:
 jobs:
   lint-and-check:
     runs-on: ubuntu-latest
-    env:
-      # Workaround for Vercel adapter issue on GitHub Actions
-      # Prevents .NET from creating diagnostic socket files that @vercel/nft tries to read
-      DOTNET_EnableDiagnostics: 0
-      DOTNET_SYSTEM_GLOBALIZATION_INVARIANT: 1
     steps:
       - uses: actions/checkout@v4
-
-      - name: Clean up .NET diagnostic sockets
-        run: rm -f /tmp/dotnet-diagnostic-* 2>/dev/null || true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -34,12 +26,8 @@ jobs:
       - name: Lint
         run: bun run lint
 
-      - name: Clean up .NET diagnostic sockets before build
-        run: rm -f /tmp/dotnet-diagnostic-* 2>/dev/null || true
-
       - name: Build
         run: bun run build
-        continue-on-error: true  # Vercel handles production builds; this is for early feedback
 
   test:
     runs-on: ubuntu-latest
@@ -56,7 +44,7 @@ jobs:
         run: bun install
 
       - name: Run unit tests
-        run: bun run test:run || echo "No tests configured yet"
+        run: bun run test:run
 
   e2e:
     runs-on: ubuntu-latest
@@ -84,7 +72,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Run E2E tests
-        run: bunx playwright test || echo "No E2E tests configured yet"
+        run: bunx playwright test
 
       - name: Upload test artifacts
         if: failure()

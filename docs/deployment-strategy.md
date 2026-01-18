@@ -1,37 +1,34 @@
-# Deployment Strategy: Oracle Cloud + Railway
+# Deployment Strategy: Railway
 
 ## Overview
 
-This document outlines the deployment architecture for dub-rip, addressing the Cobalt authentication requirement and Vercel's lack of Python support.
+This document outlines the deployment architecture for dub-rip on Railway, using a self-hosted Cobalt instance with yt-session-generator for YouTube BotGuard bypass.
 
 ### Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        Users                                 │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Railway (Free Tier)                       │
+│                    Railway Project                           │
+│                                                              │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │              dub-rip SvelteKit App                    │  │
 │  │  • Git-push deployment                                │  │
 │  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)   │  │
-│  │  • COBALT_API_URL points to Oracle instance           │  │
+│  │  • COBALT_API_URL points to internal Cobalt service   │  │
 │  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ (Private API)
-┌─────────────────────────────────────────────────────────────┐
-│              Oracle Cloud (Always-Free Tier)                 │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │                 Cobalt Instance                       │  │
-│  │  • ARM VM (4 OCPU, 24GB RAM - free forever)           │  │
-│  │  • Docker deployment                                  │  │
-│  │  • API key authentication (private to dub-rip)        │  │
-│  │  • Handles YouTube bot detection                      │  │
-│  └───────────────────────────────────────────────────────┘  │
+│                              │                               │
+│                              ▼ (Internal API)                │
+│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
+│  │  yt-session-generator│◄──│       Cobalt Instance       │ │
+│  │  (port 8080)         │    │       (port 9000)           │ │
+│  │  Generates poToken   │    │  YOUTUBE_SESSION_SERVER=    │ │
+│  │  for BotGuard bypass │    │  http://yt-session:8080/    │ │
+│  └─────────────────────┘    └─────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,183 +36,231 @@ This document outlines the deployment architecture for dub-rip, addressing the C
 
 | Requirement | Solution |
 |-------------|----------|
-| Free tier budget | Oracle (always-free VM) + Railway ($5 credit/month) |
-| Cobalt authentication | Self-hosted instance - no Turnstile captcha needed |
-| YouTube bot detection | Cobalt handles this internally |
-| No user cookies needed | Cobalt doesn't require user authentication |
-| Resilience | yt-dlp fallback on Railway (Python via env var) |
-| Simple deployment | Git-push for app, Docker for Cobalt |
-| Private access | API key restricts Cobalt to dub-rip only |
+| YouTube bot detection | yt-session-generator provides poToken & visitor_data |
+| Self-hosted Cobalt | No rate limits or auth requirements from public APIs |
+| No user cookies needed | Cobalt + session generator handles authentication |
+| Resilience | yt-dlp fallback when Cobalt fails |
+| Simple deployment | Git-push for app, Docker templates for services |
+| Internal networking | Services communicate via Railway's private network |
 
 ## Component Details
 
-### 1. Oracle Cloud - Cobalt Instance
+### 1. dub-rip App (SvelteKit)
 
-**Resources (Always-Free Tier):**
-- 4 Ampere A1 OCPUs
-- 24 GB RAM
-- 200 GB storage
-- Unlimited egress within Oracle network
+The main web application that provides the user interface and orchestrates downloads.
 
-**Setup Steps:**
-1. Create Oracle Cloud account (requires credit card but won't charge)
-2. Create ARM-based Compute Instance (Ampere A1)
-3. Install Docker
-4. Deploy Cobalt with API key authentication
-5. Configure firewall to allow HTTPS traffic
-6. Set up SSL certificate (Let's Encrypt)
+**Deployment:**
+- Connect GitHub repository to Railway
+- Automatic deployment on push to main
 
-**Cobalt Configuration:**
-```yaml
-# docker-compose.yml
-services:
-  cobalt:
-    image: ghcr.io/imputnet/cobalt:latest
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-    environment:
-      - API_URL=http://localhost:9000/
-      - API_PORT=9000
-    volumes:
-      - ./keys.json:/keys.json:ro  # API keys for authentication
+**Environment Variables:**
+```bash
+# Required: Cobalt API configuration
+COBALT_API_URL=http://cobalt.railway.internal:9000
+COBALT_API_KEY=your-api-key-uuid
+
+# Optional: If Cobalt returns public tunnel URLs
+COBALT_TUNNEL_HOST=your-cobalt-hostname.up.railway.app
+
+# Required: Python for yt-dlp fallback
+RAILPACK_DEPLOY_APT_PACKAGES=python3
+
+# Optional: Error monitoring
+PUBLIC_SENTRY_DSN=https://your-key@sentry.io/project
+SENTRY_DSN=https://your-key@sentry.io/project
+```
+
+### 2. Cobalt Instance
+
+Self-hosted Cobalt API for YouTube downloads with BotGuard bypass.
+
+**Docker Image:** `ghcr.io/imputnet/cobalt:latest`
+
+**Environment Variables:**
+```bash
+# Required
+API_URL=https://your-cobalt-hostname.up.railway.app/
+API_PORT=9000
+API_KEY_URL=file://keys.json
+
+# YouTube BotGuard bypass
+YOUTUBE_SESSION_SERVER=http://yt-session.railway.internal:8080/
+YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
 ```
 
 **API Keys File (`keys.json`):**
 ```json
 {
-  "your-api-key-uuid-here": {
+  "your-api-key-uuid": {
     "name": "dub-rip",
     "limit": 100
   }
 }
 ```
 
-**Note:** Generate a UUID for your API key (e.g., `uuidgen` on macOS/Linux). The client sends this key via `Authorization: Api-Key <uuid>` header.
-
-### 2. Railway - dub-rip App
-
-**Resources (Free Tier):**
-- $5 credit/month (renews)
-- Sufficient for small audience (tens to hundreds of downloads/day)
-- Python available via `RAILPACK_DEPLOY_APT_PACKAGES=python3`
-
-**Environment Variables:**
+Generate a UUID for your API key:
 ```bash
-COBALT_API_URL=https://your-oracle-instance.com
-COBALT_API_KEY=your-api-key-here  # For authenticated requests
-
-# Required for yt-dlp fallback - installs Python3 in the runtime container
-RAILPACK_DEPLOY_APT_PACKAGES=python3
+uuidgen
 ```
 
-**Setup Steps:**
-1. Create Railway account
-2. Connect GitHub repository
-3. Set environment variables
-4. Deploy via git push
+### 3. yt-session-generator
 
-### 3. Download Flow
+Generates poToken and visitor_data for YouTube BotGuard bypass.
 
-```
+**Docker Image:** `ghcr.io/imputnet/yt-session-generator:webserver`
+
+**Configuration:**
+- No environment variables required
+- Exposes HTTP API on port 8080
+- Only accessible internally (no public exposure needed)
+
+**API Endpoints:**
+- `GET /token` - Returns current poToken and visitor_data
+- `GET /update` - Forces token refresh
+
+## Railway Setup Steps
+
+### Step 1: Create Railway Project
+
+1. Go to [Railway](https://railway.app) and create a new project
+2. Name it something like `dub-rip-production`
+
+### Step 2: Deploy yt-session-generator
+
+1. Add a new service → Docker Image
+2. Image: `ghcr.io/imputnet/yt-session-generator:webserver`
+3. Service name: `yt-session`
+4. No environment variables needed
+5. No public networking (internal only)
+
+### Step 3: Deploy Cobalt
+
+1. Add a new service → Docker Image
+2. Image: `ghcr.io/imputnet/cobalt:latest`
+3. Service name: `cobalt`
+4. Add environment variables:
+   ```bash
+   API_PORT=9000
+   API_KEY_URL=file://keys.json
+   YOUTUBE_SESSION_SERVER=http://yt-session.railway.internal:8080/
+   YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
+   ```
+5. Add a volume mount for `keys.json`:
+   - Mount path: `/keys.json`
+   - Content: Your API keys JSON
+6. **Keep Cobalt internal-only** (no public networking needed)
+   - dub-rip communicates with Cobalt via Railway's private network
+   - This reduces attack surface and prevents unauthorized API access
+
+> **Note:** If you need to expose Cobalt publicly (e.g., for debugging), add:
+> ```bash
+> API_URL=https://${{RAILWAY_PUBLIC_DOMAIN}}/
+> ```
+> Then enable public networking on port 9000. Remember to disable this after debugging.
+
+### Step 4: Deploy dub-rip
+
+1. Add a new service → GitHub Repo
+2. Select your dub-rip repository
+3. Add environment variables:
+   ```bash
+   COBALT_API_URL=http://cobalt.railway.internal:9000
+   COBALT_API_KEY=your-api-key-uuid
+   RAILPACK_DEPLOY_APT_PACKAGES=python3
+   ```
+4. Enable public networking
+
+### Step 5: Verify Deployment
+
+1. Check yt-session-generator logs in Railway dashboard for successful startup
+2. Check Cobalt logs for successful connection to yt-session-generator
+3. Test dub-rip by downloading a YouTube video through the web interface
+4. (Optional) To test internal services, use Railway's shell feature:
+   - Open Railway dashboard → Select service → Click "Shell"
+   - Run: `curl http://yt-session.railway.internal:8080/token`
+
+> **Note:** Internal `.railway.internal` URLs are only accessible from within Railway's private network. You cannot `curl` these URLs from your local machine.
+
+## Download Flow
+
+```text
 1. User enters YouTube URL
-2. App calls Cobalt API (Oracle instance)
-   ├── Success: Stream audio from Cobalt CDN
-   └── Failure: Fall back to yt-dlp (Railway has Python)
-3. Apply ID3 metadata
-4. Return MP3 to user
-```
+2. dub-rip validates URL and extracts video ID
+3. dub-rip calls Cobalt API with authenticated request
+4. Cobalt checks if it needs a fresh poToken
+5. If needed, Cobalt requests token from yt-session-generator
+6. yt-session-generator solves BotGuard challenge, returns tokens
+7. Cobalt uses tokens to fetch YouTube stream
+8. Cobalt returns stream URL to dub-rip
+9. dub-rip fetches audio, applies ID3 metadata
+10. MP3 streamed back to user's browser
 
-## Code Changes Required
-
-### 1. Add Cobalt API Key Support
-
-```typescript
-// src/lib/cobalt.ts
-const COBALT_API_KEY = process.env.COBALT_API_KEY;
-
-export async function requestCobaltAudio(youtubeUrl: string): Promise<string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-
-  if (COBALT_API_KEY) {
-    headers["Authorization"] = `Api-Key ${COBALT_API_KEY}`;
-  }
-
-  // ... rest of function
-}
-```
-
-### 2. Update Allowlist for Oracle Instance
-
-The current code already handles this - `COBALT_API_URL` hostname is automatically added to the allowlist.
-
-### 3. Railway Configuration
-
-```toml
-# railway.toml (optional - Railway auto-detects SvelteKit)
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "bun run start"
+Fallback path (if Cobalt fails):
+3b. dub-rip falls back to yt-dlp with ffmpeg
+4b. yt-dlp downloads audio directly
+5b. Continue from step 9
 ```
 
 ## Cost Analysis
 
-| Service | Cost | Notes |
-|---------|------|-------|
-| Oracle Cloud | $0 | Always-free ARM tier |
-| Railway | $0-5/month | Free credit covers small usage |
-| Domain (optional) | $10-15/year | Can use Railway's subdomain for free |
-| **Total** | **$0-5/month** | |
+| Service | Railway Credits | Notes |
+|---------|-----------------|-------|
+| dub-rip | ~$2-3/month | Depends on traffic |
+| Cobalt | ~$2-3/month | Depends on downloads |
+| yt-session-generator | ~$1/month | Lightweight service |
+| **Total** | **~$5-7/month** | Within free tier for low usage |
+
+Railway provides $5/month in free credits. For personal use or low traffic, you may stay within the free tier.
 
 ## Maintenance
 
-**Monthly:**
-- Check Oracle VM health
-- Review Railway usage (stay within free tier)
+**Regular:**
+- Monitor Railway dashboard for resource usage
+- Check error logs for download failures
+- Update Docker images when new versions release
 
-**As Needed:**
-- Update Cobalt Docker image when new versions release
-- Update dub-rip dependencies
+**When YouTube Changes:**
+- yt-session-generator is actively maintained
+- Pull latest image: Railway will auto-deploy on image update
+- Check [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) for issues
 
-**Monitoring:**
-- Railway provides basic metrics
-- Oracle Cloud has monitoring dashboards
-- Add error tracking (Sentry) for proactive alerting
+**Troubleshooting Commands (via Railway Shell):**
+
+To run these commands, open Railway dashboard → Select service → Click "Shell":
+
+```bash
+# From any Railway service shell:
+
+# Check yt-session-generator health
+curl http://yt-session.railway.internal:8080/token
+
+# Force token refresh
+curl http://yt-session.railway.internal:8080/update
+```
+
+You can also check service logs directly in the Railway dashboard.
 
 ## Security Considerations
 
-1. **API Key Protection**: Store in environment variables, never commit
-2. **HTTPS Only**: Both Railway and Oracle should use HTTPS
-3. **Rate Limiting**: Cobalt has built-in rate limiting
-4. **SSRF Protection**: Already implemented in cobalt.ts (redirect validation)
-5. **Private Instance**: API key prevents unauthorized access to Cobalt
-
-## Migration Path from Vercel
-
-1. **Phase 1**: Set up Oracle Cloud Cobalt instance
-2. **Phase 2**: Test Cobalt integration locally with new instance
-3. **Phase 3**: Deploy app to Railway
-4. **Phase 4**: Update DNS/redirect from Vercel (if using custom domain)
-5. **Phase 5**: Decommission Vercel deployment
+1. **API Key Protection**: Store in Railway environment variables
+2. **Internal Networking**: yt-session-generator not exposed publicly
+3. **HTTPS Only**: Railway provides automatic SSL
+4. **Rate Limiting**: Cobalt has built-in rate limiting
+5. **SSRF Protection**: Implemented in dub-rip's cobalt.ts
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 |------|------------|
-| Oracle account termination | Keep backups, document setup for quick recreation |
-| Cobalt API changes | Pin Docker image version, test before updating |
-| Railway free tier limits | Monitor usage, optimize if needed |
-| YouTube blocks Cobalt | yt-dlp fallback, community Cobalt updates |
+| Railway pricing changes | Monitor usage, set spending alerts |
+| Cobalt API changes | Pin Docker image tag, test before updating |
+| YouTube blocks BotGuard bypass | yt-dlp fallback, community updates |
+| Service downtime | yt-dlp fallback provides resilience |
 
-## Alternative Approaches Considered
+## References
 
-1. **Vercel + External Cobalt**: Rejected - no free external Cobalt services
-2. **All Railway**: Viable but uses more of free credit
-3. **Fly.io**: Similar to Railway, less generous free tier
-4. **User OAuth**: Adds friction, complexity
-5. **Manual cookies**: Security risk, maintenance burden
+- [Cobalt Documentation](https://github.com/imputnet/cobalt)
+- [Cobalt API Environment Variables](https://github.com/imputnet/cobalt/blob/main/docs/api-env-variables.md)
+- [yt-session-generator](https://github.com/imputnet/yt-session-generator)
+- [Railway Documentation](https://docs.railway.app)
+- [yt-dlp PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide)

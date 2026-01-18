@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,56 +9,10 @@ import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
+import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
-
-const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
-let isDownloading = false;
-
-async function ensureYtDlpBinary(): Promise<string> {
-	if (existsSync(YTDLP_BINARY_PATH)) {
-		return YTDLP_BINARY_PATH;
-	}
-
-	if (isDownloading) {
-		while (isDownloading) {
-			await new Promise((resolve) => setTimeout(resolve, 100));
-		}
-		if (existsSync(YTDLP_BINARY_PATH)) {
-			return YTDLP_BINARY_PATH;
-		}
-	}
-
-	isDownloading = true;
-
-	try {
-		if (existsSync(YTDLP_BINARY_PATH)) {
-			return YTDLP_BINARY_PATH;
-		}
-
-		const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
-
-		console.log("[Cobalt] Downloading yt-dlp binary...");
-		const YTDlpWrapModule = require("yt-dlp-wrap");
-		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-		await YTDlpWrap.downloadFromGithub(tempPath);
-
-		try {
-			renameSync(tempPath, YTDLP_BINARY_PATH);
-		} catch {
-			if (existsSync(tempPath)) unlinkSync(tempPath);
-			if (existsSync(YTDLP_BINARY_PATH)) {
-				return YTDLP_BINARY_PATH;
-			}
-			throw new Error("Failed to install yt-dlp binary");
-		}
-
-		return YTDLP_BINARY_PATH;
-	} finally {
-		isDownloading = false;
-	}
-}
 
 export const GET: RequestHandler = async ({ url }) => {
 	const videoUrl = url.searchParams.get("url");

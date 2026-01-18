@@ -39,20 +39,15 @@ function formatDuration(seconds: number): string {
 	return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-async function loadPreview() {
-	if (!url || url.length < 10) {
-		preview = null;
-		error = "";
-		return;
-	}
-
+async function loadPreview(targetUrl: string) {
 	loadingPreview = true;
+	error = "";
 
 	try {
 		const response = await fetch("/api/preview", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ url }),
+			body: JSON.stringify({ url: targetUrl }),
 		});
 
 		if (!response.ok) {
@@ -60,18 +55,18 @@ async function loadPreview() {
 			throw new Error(data.error || "Failed to load preview");
 		}
 
-		preview = await response.json();
-		error = "";
+		if (url !== targetUrl) return;
 
-		const currentUrl = url;
+		preview = await response.json();
+
 		fetch("/api/preview/details", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ url: currentUrl }),
+			body: JSON.stringify({ url: targetUrl }),
 		})
 			.then((res) => res.json())
 			.then((details) => {
-				if (url === currentUrl && preview && details.success) {
+				if (url === targetUrl && preview && details.success) {
 					preview = {
 						...preview,
 						duration: details.duration,
@@ -80,6 +75,7 @@ async function loadPreview() {
 			})
 			.catch((err) => console.error("Details error:", err));
 	} catch (err) {
+		if (url !== targetUrl) return;
 		console.error("Preview error:", err);
 		error = err instanceof Error ? err.message : "Failed to load preview";
 		preview = null;
@@ -88,14 +84,18 @@ async function loadPreview() {
 	}
 }
 
-let previewTimeout: ReturnType<typeof setTimeout>;
 $effect(() => {
-	clearTimeout(previewTimeout);
-	if (url && !loading) {
-		previewTimeout = setTimeout(loadPreview, 500);
-	} else {
+	if (!isValidUrl || loading) {
 		preview = null;
+		return;
 	}
+
+	const currentUrl = url;
+	const timeoutId = setTimeout(() => {
+		loadPreview(currentUrl);
+	}, 500);
+
+	return () => clearTimeout(timeoutId);
 });
 
 function handleDownload() {

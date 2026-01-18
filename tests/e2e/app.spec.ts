@@ -11,18 +11,16 @@ test.describe("dub-rip App", () => {
 		await expect(page.locator('input[data-slot="input"]')).toBeVisible();
 	});
 
-	test("should show error for invalid URL", async ({ page }) => {
+	test("should NOT show error for invalid URL (no API call)", async ({
+		page,
+	}) => {
 		await page.goto("/");
 
-		// Enter invalid URL
 		const input = page.locator('input[data-slot="input"]');
 		await input.fill("not-a-valid-url");
 
-		// Error message appears automatically after preview API call fails
-		// (debounced 500ms + API call)
-		await expect(page.locator(".text-destructive")).toBeVisible({
-			timeout: 15000,
-		});
+		await page.waitForTimeout(1000);
+		await expect(page.locator(".text-destructive")).not.toBeVisible();
 	});
 
 	test("should accept valid YouTube URL format", async ({ page }) => {
@@ -46,17 +44,91 @@ test.describe("dub-rip App", () => {
 });
 
 test.describe("Video Preview Flow", () => {
-	// Skip this test in CI as it requires actual yt-dlp
-	test.skip(!!process.env.CI, "Skipped in CI - requires yt-dlp");
+	test("should show loading skeleton while fetching preview", async ({
+		page,
+	}) => {
+		await page.route("**/api/preview", async (route) => {
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					success: true,
+					videoTitle: "Test Video",
+					artist: "Test Artist",
+					title: "Test Title",
+					thumbnail: "https://i.ytimg.com/vi/test/hqdefault.jpg",
+					duration: null,
+				}),
+			});
+		});
 
-	test("should show preview for valid video", async ({ page }) => {
 		await page.goto("/");
 
-		// Enter a known public video URL
 		const input = page.locator('input[data-slot="input"]');
-		await input.fill("https://www.youtube.com/watch?v=jNQXAC9IVRw"); // "Me at the zoo" - first YouTube video
+		await input.fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
 
-		// Wait for preview to load (debounced 500ms + API call)
+		const skeleton = page.locator(".animate-pulse");
+		await expect(skeleton).toBeVisible({ timeout: 2000 });
+	});
+
+	test("should NOT trigger preview for invalid URLs", async ({ page }) => {
+		let previewCalled = false;
+		await page.route("**/api/preview", async (route) => {
+			previewCalled = true;
+			await route.fulfill({
+				status: 400,
+				contentType: "application/json",
+				body: JSON.stringify({ error: "Invalid URL" }),
+			});
+		});
+
+		await page.goto("/");
+
+		const input = page.locator('input[data-slot="input"]');
+		await input.fill("not-a-valid-url");
+
+		await page.waitForTimeout(1000);
+		expect(previewCalled).toBe(false);
+	});
+
+	test("should clear preview when URL becomes invalid", async ({ page }) => {
+		await page.route("**/api/preview", async (route) => {
+			await route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					success: true,
+					videoTitle: "Test Video",
+					artist: "Test Artist",
+					title: "Test Title",
+					thumbnail: "https://i.ytimg.com/vi/test/hqdefault.jpg",
+					duration: null,
+				}),
+			});
+		});
+
+		await page.goto("/");
+
+		const input = page.locator('input[data-slot="input"]');
+		await input.fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+
+		const previewImage = page.locator('img[alt="Test Title"]');
+		await expect(previewImage).toBeVisible({ timeout: 5000 });
+
+		await input.fill("invalid");
+
+		await expect(previewImage).not.toBeVisible({ timeout: 2000 });
+	});
+
+	test("should show preview for valid video", async ({ page }) => {
+		test.skip(!!process.env.CI, "Skipped in CI - requires network access");
+
+		await page.goto("/");
+
+		const input = page.locator('input[data-slot="input"]');
+		await input.fill("https://www.youtube.com/watch?v=jNQXAC9IVRw");
+
 		await expect(page.locator("img")).toBeVisible({ timeout: 30000 });
 	});
 });

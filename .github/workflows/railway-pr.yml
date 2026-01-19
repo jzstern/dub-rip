@@ -1,0 +1,174 @@
+name: Railway PR Environments
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: railway-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_url: ${{ steps.deploy.outputs.url }}
+      env_name: ${{ steps.environment.outputs.env_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.com/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Link to Railway project
+        run: railway link -p "$RAILWAY_PROJECT_ID"
+
+      - name: Create or use PR environment
+        id: environment
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+        run: |
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
+
+          if railway link -p "$RAILWAY_PROJECT_ID" -e "$ENV_NAME" 2>/dev/null; then
+            echo "Environment $ENV_NAME already exists, linking to it"
+          else
+            echo "Creating environment $ENV_NAME from production"
+            railway environment new "$ENV_NAME" --duplicate production
+            railway link -p "$RAILWAY_PROJECT_ID" -e "$ENV_NAME"
+          fi
+
+      - name: Deploy to PR environment
+        id: deploy
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+        run: |
+          railway up --service dub-rip --ci 2>&1 | tee deploy.log
+
+          DOMAIN=$(railway domain --service dub-rip 2>/dev/null || railway domain --service dub-rip)
+
+          echo "url=https://$DOMAIN" >> $GITHUB_OUTPUT
+
+      - name: Post deployment URL
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          ENV_NAME: ${{ steps.environment.outputs.env_name }}
+        with:
+          script: |
+            const url = process.env.DEPLOYMENT_URL;
+            const envName = process.env.ENV_NAME;
+            const prNumber = context.issue.number;
+
+            const body = [
+              '## 🚂 Railway Preview Deployment',
+              '',
+              '| Environment | URL |',
+              '|-------------|-----|',
+              `| \`${envName}\` | ${url} |`,
+              '',
+              'This preview deployment will be automatically cleaned up when the PR is closed.',
+              '',
+              '---',
+              '<sub>Deployed by [Railway](https://railway.app) • [View logs](https://railway.app)</sub>'
+            ].join('\n');
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Railway Preview Deployment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.com/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Link to Railway project
+        run: railway link -p "$RAILWAY_PROJECT_ID"
+
+      - name: Delete PR environment
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+        run: |
+          railway environment delete "$ENV_NAME" -y 2>/dev/null || echo "Environment not found or already deleted"
+
+      - name: Post cleanup notice
+        uses: actions/github-script@v7
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const envName = process.env.ENV_NAME;
+
+            // Find and update existing deployment comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Railway Preview Deployment')
+            );
+
+            if (botComment) {
+              const body = [
+                '## 🚂 Railway Preview Deployment',
+                '',
+                '| Environment | Status |',
+                '|-------------|--------|',
+                `| \`${envName}\` | ✅ Cleaned up |`,
+                '',
+                'The preview environment has been deleted.',
+                '',
+                '---',
+                '<sub>Managed by [Railway](https://railway.app)</sub>'
+              ].join('\n');
+
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            }

@@ -47,6 +47,15 @@ Required environment variables for production:
 - `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp fallback (Railway doesn't include Python by default)
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
 
+### PR Preview Environments
+PRs automatically get isolated Railway environments for testing. Setup requires:
+
+**GitHub Repository Settings → Secrets and variables → Actions:**
+- **Secret** `RAILWAY_TOKEN` - Railway API token (get from Railway dashboard → Account Settings → Tokens)
+- **Variable** `RAILWAY_PROJECT_ID` - Railway project ID (found in project URL or `railway status`)
+
+PR environments inherit production variables and get unique domains. They're automatically cleaned up when PRs close.
+
 ## yt-dlp Integration
 - yt-dlp is used as a **fallback** when Cobalt fails (primary download method is Cobalt)
 - Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)

@@ -80,6 +80,17 @@ YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
 
 See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions.
 
+### PR Preview Environments
+
+Pull requests automatically get isolated Railway environments for testing. Each PR environment:
+- Inherits production environment variables
+- Gets a unique preview URL
+- Is automatically cleaned up when the PR closes
+
+**Setup Requirements:**
+1. Add `RAILWAY_TOKEN` secret (Railway API token) to GitHub repository settings
+2. Add `RAILWAY_PROJECT_ID` variable (Railway project ID) to GitHub repository settings
+
 ## How It Works
 
 1. User enters a YouTube URL

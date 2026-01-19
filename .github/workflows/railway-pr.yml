@@ -50,8 +50,9 @@ jobs:
         run: |
           railway up --service dub-rip --ci 2>&1 | tee deploy.log
 
-          # Generate domain if not exists
+          # Generate domain if not exists, strip emojis and extra text
           DOMAIN=$(railway domain --service dub-rip 2>/dev/null || railway domain --service dub-rip)
+          DOMAIN=$(echo "$DOMAIN" | grep -oE '[a-zA-Z0-9.-]+\.railway\.app' | head -1)
 
           echo "url=https://$DOMAIN" >> $GITHUB_OUTPUT
 

@@ -397,6 +397,123 @@ describe("Cobalt API Integration", () => {
 			expect(error.isUnavailable).toBe(false);
 			expect(error.isAuthRequired).toBe(true);
 		});
+
+		it("preserves errorCode", () => {
+			// #when
+			const error = new CobaltError(
+				"Video unavailable",
+				false,
+				true,
+				false,
+				"error.api.content.video.unavailable",
+			);
+
+			// #then
+			expect(error.errorCode).toBe("error.api.content.video.unavailable");
+		});
+	});
+
+	describe("error code parsing", () => {
+		it("captures error code from 400 response with JSON body", async () => {
+			// #given
+			const mockResponse = {
+				status: "error",
+				error: { code: "error.api.content.video.unavailable" },
+			};
+			vi.mocked(fetch).mockResolvedValue({
+				ok: false,
+				status: 400,
+				json: () => Promise.resolve(mockResponse),
+			} as Response);
+
+			// #when
+			let caughtError: CobaltError | undefined;
+			try {
+				await requestCobaltAudio(mockYouTubeUrl);
+			} catch (e) {
+				caughtError = e as CobaltError;
+			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.errorCode).toBe("error.api.content.video.unavailable");
+			expect(caughtError?.isUnavailable).toBe(true);
+		});
+
+		it("handles youtube.login error code", async () => {
+			// #given
+			const mockResponse = {
+				status: "error",
+				error: { code: "error.api.youtube.login" },
+			};
+			vi.mocked(fetch).mockResolvedValue({
+				ok: false,
+				status: 400,
+				json: () => Promise.resolve(mockResponse),
+			} as Response);
+
+			// #when
+			let caughtError: CobaltError | undefined;
+			try {
+				await requestCobaltAudio(mockYouTubeUrl);
+			} catch (e) {
+				caughtError = e as CobaltError;
+			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.errorCode).toBe("error.api.youtube.login");
+			expect(caughtError?.isAuthRequired).toBe(true);
+			expect(caughtError?.message).toContain("session tokens");
+		});
+
+		it("handles invalid_body error code", async () => {
+			// #given
+			const mockResponse = {
+				status: "error",
+				error: { code: "error.api.invalid_body" },
+			};
+			vi.mocked(fetch).mockResolvedValue({
+				ok: false,
+				status: 400,
+				json: () => Promise.resolve(mockResponse),
+			} as Response);
+
+			// #when
+			let caughtError: CobaltError | undefined;
+			try {
+				await requestCobaltAudio(mockYouTubeUrl);
+			} catch (e) {
+				caughtError = e as CobaltError;
+			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.errorCode).toBe("error.api.invalid_body");
+			expect(caughtError?.message).toContain("Invalid request");
+		});
+
+		it("handles non-JSON error response gracefully", async () => {
+			// #given
+			vi.mocked(fetch).mockResolvedValue({
+				ok: false,
+				status: 502,
+				json: () => Promise.reject(new Error("Invalid JSON")),
+			} as Response);
+
+			// #when
+			let caughtError: CobaltError | undefined;
+			try {
+				await requestCobaltAudio(mockYouTubeUrl);
+			} catch (e) {
+				caughtError = e as CobaltError;
+			}
+
+			// #then
+			expect(caughtError).toBeInstanceOf(CobaltError);
+			expect(caughtError?.errorCode).toBe("http_502_parse_error");
+			expect(caughtError?.isUnavailable).toBe(true);
+		});
 	});
 });
 

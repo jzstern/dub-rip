@@ -138,23 +138,28 @@ export class CobaltError extends Error {
 		public readonly isRateLimit: boolean = false,
 		public readonly isUnavailable: boolean = false,
 		public readonly isAuthRequired: boolean = false,
+		public readonly errorCode?: string,
 	) {
 		super(message);
 		this.name = "CobaltError";
 	}
 }
 
-function parseErrorCode(code: string): {
+interface ParsedErrorCode {
 	message: string;
 	isAuth: boolean;
 	isRateLimit: boolean;
-} {
+	isUnavailable: boolean;
+}
+
+function parseErrorCode(code: string): ParsedErrorCode {
 	if (code.includes("auth")) {
 		return {
 			message:
 				"Cobalt requires authentication. Set COBALT_API_URL to a self-hosted instance.",
 			isAuth: true,
 			isRateLimit: false,
+			isUnavailable: false,
 		};
 	}
 	if (code.includes("rate")) {
@@ -162,12 +167,46 @@ function parseErrorCode(code: string): {
 			message: "Cobalt rate limit exceeded",
 			isAuth: false,
 			isRateLimit: true,
+			isUnavailable: false,
+		};
+	}
+	if (code.includes("video.unavailable") || code.includes("content.unavailable")) {
+		return {
+			message: "This video is unavailable or cannot be downloaded",
+			isAuth: false,
+			isRateLimit: false,
+			isUnavailable: true,
+		};
+	}
+	if (code.includes("youtube.login") || code.includes("youtube.token")) {
+		return {
+			message: "YouTube requires authentication. The server may need session tokens configured.",
+			isAuth: true,
+			isRateLimit: false,
+			isUnavailable: false,
+		};
+	}
+	if (code.includes("youtube.bot") || code.includes("youtube.captcha")) {
+		return {
+			message: "YouTube detected bot activity. Try again later.",
+			isAuth: false,
+			isRateLimit: false,
+			isUnavailable: true,
+		};
+	}
+	if (code.includes("invalid_body")) {
+		return {
+			message: "Invalid request sent to Cobalt",
+			isAuth: false,
+			isRateLimit: false,
+			isUnavailable: false,
 		};
 	}
 	return {
 		message: `Cobalt error: ${code}`,
 		isAuth: false,
 		isRateLimit: false,
+		isUnavailable: false,
 	};
 }
 
@@ -234,25 +273,34 @@ export async function requestCobaltAudio(
 			);
 		}
 
-		if (!response.ok) {
+		let data: CobaltResponse;
+		try {
+			data = (await response.json()) as CobaltResponse;
+		} catch {
+			const errorCode = `http_${response.status}_parse_error`;
+			console.error(
+				`[Cobalt] Failed to parse response for ${videoId}: status ${response.status}`,
+			);
 			throw new CobaltError(
-				`Cobalt API returned status ${response.status}`,
+				`Cobalt returned invalid response (status ${response.status})`,
 				false,
 				response.status >= 500,
 				false,
+				errorCode,
 			);
 		}
 
-		const data = (await response.json()) as CobaltResponse;
-
-		if (data.status === "error") {
-			console.error(`[Cobalt] API error for ${videoId}: ${data.error.code}`);
-			const parsed = parseErrorCode(data.error.code);
+		if (!response.ok || data.status === "error") {
+			const errorCode =
+				data.status === "error" ? data.error.code : `http_${response.status}`;
+			console.error(`[Cobalt] API error for ${videoId}: ${errorCode}`);
+			const parsed = parseErrorCode(errorCode);
 			throw new CobaltError(
 				parsed.message,
 				parsed.isRateLimit,
-				false,
+				parsed.isUnavailable || response.status >= 500,
 				parsed.isAuth,
+				errorCode,
 			);
 		}
 
@@ -263,15 +311,27 @@ export async function requestCobaltAudio(
 
 		throw new CobaltError(
 			`Unexpected Cobalt response status: ${(data as { status: string }).status}`,
+			false,
+			false,
+			false,
+			`unexpected_status_${(data as { status: string }).status}`,
 		);
 	} catch (error) {
 		const videoId = safeVideoId(youtubeUrl);
 		if (error instanceof CobaltError) {
-			console.error(`[Cobalt] CobaltError for ${videoId}:`, error.message);
+			console.error(
+				`[Cobalt] CobaltError for ${videoId}:`,
+				error.message,
+				error.errorCode ? `(${error.errorCode})` : "",
+			);
 			if (!error.isRateLimit && !error.isAuthRequired) {
 				Sentry.captureException(error, {
-					tags: { service: "cobalt", operation: "request" },
-					extra: { videoId },
+					tags: {
+						service: "cobalt",
+						operation: "request",
+						cobaltErrorCode: error.errorCode,
+					},
+					extra: { videoId, errorCode: error.errorCode },
 				});
 			}
 			throw error;

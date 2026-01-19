@@ -13,7 +13,7 @@ permissions:
   pull-requests: write
 
 env:
-  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
   RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
 
 jobs:

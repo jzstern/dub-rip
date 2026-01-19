@@ -51,7 +51,7 @@ Required environment variables for production:
 Same-repo PRs automatically get isolated Railway environments for testing (forked PRs are skipped since secrets aren't available). Setup requires:
 
 **GitHub Repository Settings → Secrets and variables → Actions:**
-- **Secret** `RAILWAY_TOKEN` - Railway API token (get from Railway dashboard → Account Settings → Tokens)
+- **Secret** `RAILWAY_API_TOKEN` - Railway Account Token (get from Railway dashboard → Account Settings → Tokens, NOT a project token)
 - **Variable** `RAILWAY_PROJECT_ID` - Railway project ID (found in project URL or `railway status`)
 
 PR environments inherit production variables and get unique domains. They're automatically cleaned up when PRs close.

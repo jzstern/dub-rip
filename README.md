@@ -88,7 +88,7 @@ Pull requests from the same repository automatically get isolated Railway enviro
 - Is automatically cleaned up when the PR closes
 
 **Setup Requirements:**
-1. Add `RAILWAY_TOKEN` secret (Railway API token) to GitHub repository settings
+1. Add `RAILWAY_API_TOKEN` secret (Railway Account Token from Account Settings → Tokens, NOT a project token) to GitHub repository settings
 2. Add `RAILWAY_PROJECT_ID` variable (Railway project ID) to GitHub repository settings
 
 ## How It Works

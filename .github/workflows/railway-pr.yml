@@ -14,7 +14,7 @@ permissions:
 
 env:
   RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-  RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+  PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
 
 jobs:
   deploy:
@@ -22,19 +22,12 @@ jobs:
       github.event.action != 'closed' &&
       !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     outputs:
       deployment_url: ${{ steps.deploy.outputs.url }}
       env_name: ${{ steps.environment.outputs.env_name }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.com/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Link to Railway project
-        run: railway link -p "$RAILWAY_PROJECT_ID"
 
       - name: Create or use PR environment
         id: environment
@@ -43,21 +36,21 @@ jobs:
         run: |
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
 
-          if railway link -p "$RAILWAY_PROJECT_ID" -e "$ENV_NAME" 2>/dev/null; then
-            echo "Environment $ENV_NAME already exists, linking to it"
-          else
-            echo "Creating environment $ENV_NAME from production"
-            railway environment new "$ENV_NAME" --duplicate production
-            railway link -p "$RAILWAY_PROJECT_ID" -e "$ENV_NAME"
-          fi
+          # Link to project with production environment first
+          railway link --project "$PROJECT_ID" --environment production
+
+          # Try to create environment, ignore if exists
+          railway environment new "$ENV_NAME" --copy production 2>/dev/null || echo "Environment may already exist"
+
+          # Link to the PR environment
+          railway link --project "$PROJECT_ID" --environment "$ENV_NAME"
 
       - name: Deploy to PR environment
         id: deploy
-        env:
-          ENV_NAME: pr-${{ github.event.pull_request.number }}
         run: |
           railway up --service dub-rip --ci 2>&1 | tee deploy.log
 
+          # Generate domain if not exists
           DOMAIN=$(railway domain --service dub-rip 2>/dev/null || railway domain --service dub-rip)
 
           echo "url=https://$DOMAIN" >> $GITHUB_OUTPUT
@@ -119,19 +112,13 @@ jobs:
       github.event.action == 'closed' &&
       !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     steps:
-      - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.com/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Link to Railway project
-        run: railway link -p "$RAILWAY_PROJECT_ID"
-
       - name: Delete PR environment
         env:
           ENV_NAME: pr-${{ github.event.pull_request.number }}
         run: |
+          railway link --project "$PROJECT_ID" --environment production
           railway environment delete "$ENV_NAME" -y 2>/dev/null || echo "Environment not found or already deleted"
 
       - name: Post cleanup notice

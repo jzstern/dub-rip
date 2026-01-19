@@ -1,0 +1,194 @@
+name: Railway PR Environments
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+concurrency:
+  group: railway-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+  PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+
+jobs:
+  deploy:
+    if: >
+      github.event.action != 'closed' &&
+      !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    outputs:
+      deployment_url: ${{ steps.deploy.outputs.url }}
+      env_name: ${{ steps.environment.outputs.env_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create or use PR environment
+        id: environment
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+        run: |
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
+
+          railway link --project "$PROJECT_ID" --environment production
+
+          railway environment new "$ENV_NAME" --copy production 2>/dev/null || echo "Environment may already exist"
+
+          railway link --project "$PROJECT_ID" --environment "$ENV_NAME"
+
+      - name: Deploy to PR environment
+        id: deploy
+        run: |
+          set -o pipefail
+          railway up --service dub-rip --ci 2>&1 | tee deploy.log
+
+          DOMAIN=$(railway domain --service dub-rip 2>/dev/null || railway domain --service dub-rip)
+          DOMAIN=$(echo "$DOMAIN" | grep -oE '[a-zA-Z0-9.-]+\.railway\.app' | head -1)
+
+          if [ -z "$DOMAIN" ]; then
+            echo "::error::Failed to retrieve deployment domain"
+            exit 1
+          fi
+
+          echo "url=https://$DOMAIN" >> $GITHUB_OUTPUT
+
+      - name: Post deployment URL
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          ENV_NAME: ${{ steps.environment.outputs.env_name }}
+        with:
+          script: |
+            const url = process.env.DEPLOYMENT_URL;
+            const envName = process.env.ENV_NAME;
+            const prNumber = context.issue.number;
+
+            const body = [
+              '## 🚂 Railway Preview Deployment',
+              '',
+              '| Environment | URL |',
+              '|-------------|-----|',
+              `| \`${envName}\` | ${url} |`,
+              '',
+              'This preview deployment will be automatically cleaned up when the PR is closed.',
+              '',
+              '---',
+              '<sub>Deployed by [Railway](https://railway.app) • [View logs](https://railway.app)</sub>'
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Railway Preview Deployment')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+  cleanup:
+    if: >
+      github.event.action == 'closed' &&
+      !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    steps:
+      - name: Delete PR environment
+        id: delete
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+        run: |
+          railway link --project "$PROJECT_ID" --environment production
+
+          if railway environment delete "$ENV_NAME" -y 2>&1; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            EXIT_CODE=$?
+            if railway environment 2>&1 | grep -q "$ENV_NAME"; then
+              echo "::error::Failed to delete environment $ENV_NAME (exit code: $EXIT_CODE)"
+              echo "status=failed" >> $GITHUB_OUTPUT
+            else
+              echo "Environment $ENV_NAME not found or already deleted"
+              echo "status=not_found" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Post cleanup notice
+        uses: actions/github-script@v7
+        env:
+          ENV_NAME: pr-${{ github.event.pull_request.number }}
+          DELETE_STATUS: ${{ steps.delete.outputs.status }}
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const envName = process.env.ENV_NAME;
+            const deleteStatus = process.env.DELETE_STATUS;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.includes('Railway Preview Deployment')
+            );
+
+            if (botComment) {
+              let statusText, statusEmoji;
+              if (deleteStatus === 'success' || deleteStatus === 'not_found') {
+                statusText = 'Cleaned up';
+                statusEmoji = '✅';
+              } else {
+                statusText = 'Cleanup failed - manual deletion may be required';
+                statusEmoji = '⚠️';
+              }
+
+              const body = [
+                '## 🚂 Railway Preview Deployment',
+                '',
+                '| Environment | Status |',
+                '|-------------|--------|',
+                `| \`${envName}\` | ${statusEmoji} ${statusText} |`,
+                '',
+                deleteStatus === 'failed'
+                  ? 'The preview environment could not be automatically deleted. Please check Railway dashboard.'
+                  : 'The preview environment has been deleted.',
+                '',
+                '---',
+                '<sub>Managed by [Railway](https://railway.app)</sub>'
+              ].join('\n');
+
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            }

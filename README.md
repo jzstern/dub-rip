@@ -82,7 +82,7 @@ See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup ins
 
 ### PR Preview Environments
 
-Pull requests automatically get isolated Railway environments for testing. Each PR environment:
+Pull requests from the same repository automatically get isolated Railway environments for testing (secrets aren't exposed to forks). Each PR environment:
 - Inherits production environment variables
 - Gets a unique preview URL
 - Is automatically cleaned up when the PR closes

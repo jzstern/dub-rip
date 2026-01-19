@@ -18,7 +18,9 @@ env:
 
 jobs:
   deploy:
-    if: github.event.action != 'closed'
+    if: >
+      github.event.action != 'closed' &&
+      !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
     outputs:
       deployment_url: ${{ steps.deploy.outputs.url }}
@@ -113,7 +115,9 @@ jobs:
             }
 
   cleanup:
-    if: github.event.action == 'closed'
+    if: >
+      github.event.action == 'closed' &&
+      !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
     steps:
       - name: Install Railway CLI

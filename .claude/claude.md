@@ -48,7 +48,7 @@ Required environment variables for production:
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
 
 ### PR Preview Environments
-PRs automatically get isolated Railway environments for testing. Setup requires:
+Same-repo PRs automatically get isolated Railway environments for testing (forked PRs are skipped since secrets aren't available). Setup requires:
 
 **GitHub Repository Settings → Secrets and variables → Actions:**
 - **Secret** `RAILWAY_TOKEN` - Railway API token (get from Railway dashboard → Account Settings → Tokens)

@@ -170,7 +170,10 @@ function parseErrorCode(code: string): ParsedErrorCode {
 			isUnavailable: false,
 		};
 	}
-	if (code.includes("video.unavailable") || code.includes("content.unavailable")) {
+	if (
+		code.includes("video.unavailable") ||
+		code.includes("content.unavailable")
+	) {
 		return {
 			message: "This video is unavailable or cannot be downloaded",
 			isAuth: false,
@@ -180,7 +183,8 @@ function parseErrorCode(code: string): ParsedErrorCode {
 	}
 	if (code.includes("youtube.login") || code.includes("youtube.token")) {
 		return {
-			message: "YouTube requires authentication. The server may need session tokens configured.",
+			message:
+				"YouTube requires authentication. The server may need session tokens configured.",
 			isAuth: true,
 			isRateLimit: false,
 			isUnavailable: false,

@@ -436,7 +436,9 @@ describe("Cobalt API Integration", () => {
 
 			// #then
 			expect(caughtError).toBeInstanceOf(CobaltError);
-			expect(caughtError?.errorCode).toBe("error.api.content.video.unavailable");
+			expect(caughtError?.errorCode).toBe(
+				"error.api.content.video.unavailable",
+			);
 			expect(caughtError?.isUnavailable).toBe(true);
 		});
 

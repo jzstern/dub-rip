@@ -175,6 +175,10 @@ export async function requestCobaltAudio(
 	youtubeUrl: string,
 	timeout: number = DEFAULT_TIMEOUT,
 ): Promise<string> {
+	const cobaltUrl = getCobaltApiUrl();
+	const videoId = safeVideoId(youtubeUrl);
+	console.log(`[Cobalt] Requesting audio for ${videoId} from ${cobaltUrl}`);
+
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -189,7 +193,7 @@ export async function requestCobaltAudio(
 			headers.Authorization = `Api-Key ${apiKey}`;
 		}
 
-		const response = await fetch(getCobaltApiUrl(), {
+		const response = await fetch(cobaltUrl, {
 			method: "POST",
 			headers,
 			body: JSON.stringify({
@@ -226,6 +230,7 @@ export async function requestCobaltAudio(
 		const data = (await response.json()) as CobaltResponse;
 
 		if (data.status === "error") {
+			console.error(`[Cobalt] API error for ${videoId}: ${data.error.code}`);
 			const parsed = parseErrorCode(data.error.code);
 			throw new CobaltError(
 				parsed.message,
@@ -236,6 +241,7 @@ export async function requestCobaltAudio(
 		}
 
 		if (data.status === "tunnel" || data.status === "redirect") {
+			console.log(`[Cobalt] Got ${data.status} URL for ${videoId}`);
 			return data.url;
 		}
 
@@ -245,6 +251,7 @@ export async function requestCobaltAudio(
 	} catch (error) {
 		const videoId = safeVideoId(youtubeUrl);
 		if (error instanceof CobaltError) {
+			console.error(`[Cobalt] CobaltError for ${videoId}:`, error.message);
 			if (!error.isRateLimit && !error.isAuthRequired) {
 				Sentry.captureException(error, {
 					tags: { service: "cobalt", operation: "request" },
@@ -254,13 +261,28 @@ export async function requestCobaltAudio(
 			throw error;
 		}
 		if (error instanceof Error) {
-			Sentry.captureException(error, {
-				tags: { service: "cobalt", operation: "request" },
-				extra: { videoId },
-			});
 			if (error.name === "AbortError") {
+				console.error(
+					`[Cobalt] Request timed out for ${videoId} after ${timeout}ms`,
+				);
 				throw new CobaltError("Cobalt request timed out", false, true, false);
 			}
+			const isNetworkError =
+				error.message.includes("fetch failed") ||
+				error.message.includes("ECONNREFUSED") ||
+				error.message.includes("ENOTFOUND") ||
+				error.message.includes("getaddrinfo");
+			if (isNetworkError) {
+				console.error(
+					`[Cobalt] Network error for ${videoId}: ${error.message} (Is COBALT_API_URL correct? Current: ${cobaltUrl})`,
+				);
+			} else {
+				console.error(`[Cobalt] Error for ${videoId}:`, error.message);
+			}
+			Sentry.captureException(error, {
+				tags: { service: "cobalt", operation: "request" },
+				extra: { videoId, cobaltUrl },
+			});
 			throw new CobaltError(
 				`Cobalt request failed: ${error.message}`,
 				false,
@@ -268,6 +290,7 @@ export async function requestCobaltAudio(
 				false,
 			);
 		}
+		console.error(`[Cobalt] Unknown error for ${videoId}:`, error);
 		const normalizedError = new Error(`Unknown Cobalt error: ${String(error)}`);
 		Sentry.captureException(normalizedError, {
 			tags: { service: "cobalt", operation: "request" },

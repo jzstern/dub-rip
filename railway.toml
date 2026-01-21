@@ -1,11 +1,11 @@
 # Railway configuration for yt-session service
 # This configures the token service to build from its Dockerfile
 
-[services.yt-session]
-[services.yt-session.build]
+[services.yt-token-service]
+[services.yt-token-service.build]
 dockerfilePath = "Dockerfile.yt-session"
 
-[services.yt-session.deploy]
+[services.yt-token-service.deploy]
 healthcheckPath = "/health"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10

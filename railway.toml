@@ -3,7 +3,7 @@
 
 [services.yt-session]
 [services.yt-session.build]
-dockerfilePath = "services/yt-token/Dockerfile"
+dockerfilePath = "Dockerfile.yt-session"
 
 [services.yt-session.deploy]
 healthcheckPath = "/health"

@@ -1,72 +1,46 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockEnv = vi.hoisted(() => ({
-	YT_TOKEN_SERVICE_URL: "http://localhost:8080",
-}));
+const mockGenerate = vi.hoisted(() => vi.fn());
 
-vi.mock("$env/dynamic/private", () => ({
-	env: mockEnv,
+vi.mock("youtube-po-token-generator", () => ({
+	generate: mockGenerate,
 }));
 
 import { clearCache, fetchPoToken } from "$lib/yt-token";
 
 describe("fetchPoToken()", () => {
 	// #given
-	const mockTokenResponse = {
+	const mockTokenResult = {
 		poToken: "test-po-token-abc123",
 		visitorData: "test-visitor-data-xyz789",
 	};
 
 	beforeEach(() => {
 		vi.useFakeTimers();
-		vi.stubGlobal("fetch", vi.fn());
-		mockEnv.YT_TOKEN_SERVICE_URL = "http://localhost:8080";
+		vi.setSystemTime(new Date("2026-01-20T00:00:00Z"));
+		mockGenerate.mockReset();
 		clearCache();
 	});
 
 	afterEach(() => {
 		vi.useRealTimers();
-		vi.unstubAllGlobals();
 	});
 
-	it("returns token when service responds successfully", async () => {
+	it("returns token when generation succeeds", async () => {
 		// #given
-		vi.mocked(fetch).mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve(mockTokenResponse),
-		} as Response);
+		mockGenerate.mockResolvedValue(mockTokenResult);
 
 		// #when
 		const result = await fetchPoToken();
 
 		// #then
-		expect(result).toEqual(mockTokenResponse);
-		expect(fetch).toHaveBeenCalledWith(
-			"http://localhost:8080/token",
-			expect.objectContaining({
-				signal: expect.any(AbortSignal),
-			}),
-		);
+		expect(result).toEqual(mockTokenResult);
+		expect(mockGenerate).toHaveBeenCalledOnce();
 	});
 
-	it("returns null when YT_TOKEN_SERVICE_URL is not configured", async () => {
+	it("returns null when generator returns empty poToken", async () => {
 		// #given
-		mockEnv.YT_TOKEN_SERVICE_URL = "";
-
-		// #when
-		const result = await fetchPoToken();
-
-		// #then
-		expect(result).toBeNull();
-		expect(fetch).not.toHaveBeenCalled();
-	});
-
-	it("returns null when service returns non-ok status", async () => {
-		// #given
-		vi.mocked(fetch).mockResolvedValue({
-			ok: false,
-			status: 503,
-		} as Response);
+		mockGenerate.mockResolvedValue({ poToken: "", visitorData: "data" });
 
 		// #when
 		const result = await fetchPoToken();
@@ -75,12 +49,9 @@ describe("fetchPoToken()", () => {
 		expect(result).toBeNull();
 	});
 
-	it("returns null when response is missing poToken", async () => {
+	it("returns null when generator returns empty visitorData", async () => {
 		// #given
-		vi.mocked(fetch).mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ visitorData: "data" }),
-		} as Response);
+		mockGenerate.mockResolvedValue({ poToken: "token", visitorData: "" });
 
 		// #when
 		const result = await fetchPoToken();
@@ -89,12 +60,9 @@ describe("fetchPoToken()", () => {
 		expect(result).toBeNull();
 	});
 
-	it("returns null when response is missing visitorData", async () => {
+	it("returns null when generation throws", async () => {
 		// #given
-		vi.mocked(fetch).mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve({ poToken: "token" }),
-		} as Response);
+		mockGenerate.mockRejectedValue(new Error("jsdom failed"));
 
 		// #when
 		const result = await fetchPoToken();
@@ -103,25 +71,16 @@ describe("fetchPoToken()", () => {
 		expect(result).toBeNull();
 	});
 
-	it("returns null when fetch throws a network error", async () => {
+	it("returns null when generation times out", async () => {
 		// #given
-		vi.mocked(fetch).mockRejectedValue(new Error("Connection refused"));
-
-		// #when
-		const result = await fetchPoToken();
-
-		// #then
-		expect(result).toBeNull();
-	});
-
-	it("returns null when fetch times out", async () => {
-		// #given
-		vi.mocked(fetch).mockRejectedValue(
-			new DOMException("Aborted", "AbortError"),
+		mockGenerate.mockImplementation(
+			() => new Promise(() => {}), // never resolves
 		);
 
 		// #when
-		const result = await fetchPoToken();
+		const resultPromise = fetchPoToken();
+		vi.advanceTimersByTime(30_000);
+		const result = await resultPromise;
 
 		// #then
 		expect(result).toBeNull();
@@ -129,77 +88,89 @@ describe("fetchPoToken()", () => {
 
 	it("returns cached result on subsequent calls", async () => {
 		// #given
-		vi.mocked(fetch).mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve(mockTokenResponse),
-		} as Response);
+		mockGenerate.mockResolvedValue(mockTokenResult);
 
 		// #when
 		await fetchPoToken();
 		const secondResult = await fetchPoToken();
 
 		// #then
-		expect(secondResult).toEqual(mockTokenResponse);
-		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(secondResult).toEqual(mockTokenResult);
+		expect(mockGenerate).toHaveBeenCalledOnce();
 	});
 
-	it("refetches after cache expires", async () => {
+	it("regenerates after cache expires (50 minutes)", async () => {
 		// #given
-		vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
-
-		vi.mocked(fetch).mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve(mockTokenResponse),
-		} as Response);
-
+		mockGenerate.mockResolvedValue(mockTokenResult);
 		await fetchPoToken();
 
-		vi.setSystemTime(new Date("2026-01-01T00:51:00Z"));
+		vi.advanceTimersByTime(51 * 60 * 1000);
 
-		const updatedResponse = {
+		const updatedResult = {
 			poToken: "new-token",
 			visitorData: "new-visitor",
 		};
-		vi.mocked(fetch).mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve(updatedResponse),
-		} as Response);
+		mockGenerate.mockResolvedValue(updatedResult);
 
 		// #when
 		const result = await fetchPoToken();
 
 		// #then
-		expect(result).toEqual(updatedResponse);
-		expect(fetch).toHaveBeenCalledTimes(2);
+		expect(result).toEqual(updatedResult);
+		expect(mockGenerate).toHaveBeenCalledTimes(2);
 	});
 
-	it("does not cache failed responses", async () => {
+	it("returns stale cache during backoff after failure", async () => {
 		// #given
-		vi.mocked(fetch).mockResolvedValueOnce({
-			ok: false,
-			status: 500,
-		} as Response);
-
-		vi.mocked(fetch).mockResolvedValueOnce({
-			ok: true,
-			json: () => Promise.resolve(mockTokenResponse),
-		} as Response);
-
-		// #when
+		mockGenerate.mockResolvedValue(mockTokenResult);
 		await fetchPoToken();
+
+		vi.advanceTimersByTime(51 * 60 * 1000);
+		mockGenerate.mockRejectedValue(new Error("failed"));
+		await fetchPoToken();
+
+		// #when - still in backoff period
 		const result = await fetchPoToken();
 
 		// #then
-		expect(result).toEqual(mockTokenResponse);
-		expect(fetch).toHaveBeenCalledTimes(2);
+		expect(result).toEqual(mockTokenResult);
+	});
+
+	it("returns null during backoff with no stale cache", async () => {
+		// #given
+		mockGenerate.mockRejectedValue(new Error("failed"));
+		await fetchPoToken();
+
+		// #when - still in backoff period
+		const result = await fetchPoToken();
+
+		// #then
+		expect(result).toBeNull();
+		expect(mockGenerate).toHaveBeenCalledOnce();
+	});
+
+	it("retries after backoff period expires", async () => {
+		// #given
+		mockGenerate.mockRejectedValue(new Error("failed"));
+		await fetchPoToken();
+
+		vi.advanceTimersByTime(31_000);
+		mockGenerate.mockResolvedValue(mockTokenResult);
+
+		// #when
+		const result = await fetchPoToken();
+
+		// #then
+		expect(result).toEqual(mockTokenResult);
+		expect(mockGenerate).toHaveBeenCalledTimes(2);
 	});
 
 	it("deduplicates concurrent in-flight requests", async () => {
 		// #given
-		let resolveResponse: (value: Response) => void = () => {};
-		vi.mocked(fetch).mockReturnValue(
+		let resolveGenerate: (value: unknown) => void = () => {};
+		mockGenerate.mockReturnValue(
 			new Promise((resolve) => {
-				resolveResponse = resolve;
+				resolveGenerate = resolve;
 			}),
 		);
 
@@ -208,19 +179,31 @@ describe("fetchPoToken()", () => {
 		const second = fetchPoToken();
 		const third = fetchPoToken();
 
-		resolveResponse({
-			ok: true,
-			json: () => Promise.resolve(mockTokenResponse),
-		} as Response);
+		resolveGenerate(mockTokenResult);
 
 		const results = await Promise.all([first, second, third]);
 
 		// #then
 		expect(results).toEqual([
-			mockTokenResponse,
-			mockTokenResponse,
-			mockTokenResponse,
+			mockTokenResult,
+			mockTokenResult,
+			mockTokenResult,
 		]);
-		expect(fetch).toHaveBeenCalledTimes(1);
+		expect(mockGenerate).toHaveBeenCalledOnce();
+	});
+
+	it("clears backoff state on clearCache", async () => {
+		// #given
+		mockGenerate.mockRejectedValue(new Error("failed"));
+		await fetchPoToken();
+
+		clearCache();
+		mockGenerate.mockResolvedValue(mockTokenResult);
+
+		// #when
+		const result = await fetchPoToken();
+
+		// #then
+		expect(result).toEqual(mockTokenResult);
 	});
 });

@@ -1,4 +1,4 @@
-import { env } from "$env/dynamic/private";
+import { generate } from "youtube-po-token-generator";
 
 export interface PoTokenResult {
 	poToken: string;
@@ -6,14 +6,12 @@ export interface PoTokenResult {
 }
 
 const CACHE_TTL_MS = 50 * 60 * 1000;
-const FETCH_TIMEOUT_MS = 3000;
+const GENERATION_TIMEOUT_MS = 30_000;
+const FAILURE_BACKOFF_MS = 30_000;
 
 let cached: { result: PoTokenResult; fetchedAt: number } | null = null;
+let lastFailedAt = 0;
 let inFlight: Promise<PoTokenResult | null> | null = null;
-
-function getServiceUrl(): string | undefined {
-	return env.YT_TOKEN_SERVICE_URL;
-}
 
 function isCacheValid(): boolean {
 	return cached !== null && Date.now() - cached.fetchedAt < CACHE_TTL_MS;
@@ -21,6 +19,25 @@ function isCacheValid(): boolean {
 
 export function clearCache(): void {
 	cached = null;
+	lastFailedAt = 0;
+}
+
+async function generateWithTimeout(): Promise<PoTokenResult> {
+	const controller = {
+		id: undefined as ReturnType<typeof setTimeout> | undefined,
+	};
+	const timeoutPromise = new Promise<never>((_, reject) => {
+		controller.id = setTimeout(
+			() => reject(new Error("Token generation timed out")),
+			GENERATION_TIMEOUT_MS,
+		);
+	});
+
+	try {
+		return await Promise.race([generate(), timeoutPromise]);
+	} finally {
+		if (controller.id !== undefined) clearTimeout(controller.id);
+	}
 }
 
 export async function fetchPoToken(): Promise<PoTokenResult | null> {
@@ -30,38 +47,36 @@ export async function fetchPoToken(): Promise<PoTokenResult | null> {
 
 	if (inFlight) return inFlight;
 
-	const serviceUrl = getServiceUrl();
-	if (!serviceUrl) return null;
+	if (lastFailedAt && Date.now() - lastFailedAt < FAILURE_BACKOFF_MS) {
+		if (cached) {
+			console.log("[yt-token] In backoff period, returning stale token");
+			return cached.result;
+		}
+		return null;
+	}
 
 	inFlight = (async () => {
 		try {
-			const response = await fetch(`${serviceUrl}/token`, {
-				signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-			});
+			const result = await generateWithTimeout();
 
-			if (!response.ok) {
-				console.warn(`[yt-token] Token service returned ${response.status}`);
+			if (!result.poToken || !result.visitorData) {
+				console.warn("[yt-token] Generator returned incomplete data");
+				lastFailedAt = Date.now();
 				return null;
 			}
-
-			const data = await response.json();
-
-			if (!data.poToken || !data.visitorData) {
-				console.warn("[yt-token] Token service returned incomplete data");
-				return null;
-			}
-
-			const result: PoTokenResult = {
-				poToken: data.poToken,
-				visitorData: data.visitorData,
-			};
 
 			cached = { result, fetchedAt: Date.now() };
-			console.log("[yt-token] Fetched and cached PO token");
+			lastFailedAt = 0;
+			console.log("[yt-token] Generated and cached PO token");
 			return result;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			console.warn(`[yt-token] Failed to fetch token: ${message}`);
+			console.warn(`[yt-token] Token generation failed: ${message}`);
+			lastFailedAt = Date.now();
+			if (cached) {
+				console.log("[yt-token] Returning stale cached token");
+				return cached.result;
+			}
 			return null;
 		} finally {
 			inFlight = null;

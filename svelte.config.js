@@ -7,7 +7,12 @@ function getAdapter() {
 		return adapterVercel({
 			runtime: "nodejs20.x",
 			maxDuration: 300,
-			external: ["node-id3", "yt-dlp-wrap", "@ffmpeg-installer/ffmpeg"],
+			external: [
+				"node-id3",
+				"yt-dlp-wrap",
+				"@ffmpeg-installer/ffmpeg",
+				"youtube-po-token-generator",
+			],
 		});
 	}
 	return adapterNode();

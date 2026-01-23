@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-COPY services/yt-token/package*.json ./
-RUN npm install --production
+COPY services/yt-token/package.json services/yt-token/package-lock.json ./
+RUN npm ci --omit=dev
 
 COPY services/yt-token/index.js ./
 

@@ -9,6 +9,7 @@ const SHUTDOWN_GRACE_MS = 10_000;
 
 let cachedToken = null;
 let lastGenerated = 0;
+let lastFailedAt = 0;
 let isGenerating = false;
 let generationPromise = null;
 
@@ -59,6 +60,14 @@ async function getToken() {
 		return generationPromise;
 	}
 
+	if (lastFailedAt && now - lastFailedAt < FAILURE_BACKOFF_MS) {
+		if (cachedToken) {
+			log("In backoff period, returning stale cached token");
+			return cachedToken;
+		}
+		throw new Error("Token generation in backoff period after failure");
+	}
+
 	isGenerating = true;
 	generationPromise = generateToken()
 		.then((result) => {
@@ -67,6 +76,7 @@ async function getToken() {
 			}
 			cachedToken = result;
 			lastGenerated = Date.now();
+			lastFailedAt = 0;
 			return result;
 		})
 		.catch((err) => {
@@ -74,7 +84,7 @@ async function getToken() {
 				`[${new Date().toISOString()}] Token generation failed:`,
 				err.message,
 			);
-			lastGenerated = Date.now() - CACHE_TTL_MS + FAILURE_BACKOFF_MS;
+			lastFailedAt = Date.now();
 			if (cachedToken) {
 				log("Returning stale cached token");
 				return cachedToken;

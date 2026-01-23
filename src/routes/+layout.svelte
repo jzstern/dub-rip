@@ -30,7 +30,7 @@ onMount(() => {
 	<meta property="og:image:height" content="630" />
 	<meta property="og:image:alt" content="dub-rip - Download YouTube audio with rich metadata" />
 	<meta property="og:site_name" content="dub-rip" />
-	<meta property="og:url" content="{page.url.origin}" />
+	<meta property="og:url" content="{page.url.href}" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content="dub-rip" />
 	<meta name="twitter:description" content="Download YouTube audio with rich metadata" />

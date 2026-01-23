@@ -1,0 +1,17 @@
+{
+	"name": "yt-token-service",
+	"version": "1.0.0",
+	"description": "YouTube PO Token generator service for Cobalt integration",
+	"type": "module",
+	"main": "index.js",
+	"scripts": {
+		"start": "node index.js",
+		"dev": "node --watch index.js"
+	},
+	"dependencies": {
+		"youtube-po-token-generator": "^0.5.0"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
+}

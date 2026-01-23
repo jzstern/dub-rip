@@ -253,10 +253,20 @@ export const GET: RequestHandler = async ({ url }) => {
 
 					const tokenResult = await fetchPoToken();
 					if (tokenResult) {
-						args.push(
-							"--extractor-args",
-							`youtube:po_token=web+${tokenResult.poToken};visitor_data=${tokenResult.visitorData}`,
-						);
+						const safeTokenChars = /^[A-Za-z0-9._\-+/=%]+$/;
+						if (
+							safeTokenChars.test(tokenResult.poToken) &&
+							safeTokenChars.test(tokenResult.visitorData)
+						) {
+							args.push(
+								"--extractor-args",
+								`youtube:po_token=web+${tokenResult.poToken};visitor_data=${tokenResult.visitorData}`,
+							);
+						} else {
+							console.warn(
+								"[yt-token] Token contained unexpected characters, skipping",
+							);
+						}
 					}
 
 					const downloadProcess = ytDlp.exec(args);

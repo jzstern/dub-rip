@@ -23,13 +23,13 @@ This document outlines the deployment architecture for dub-rip on Railway, using
 │  └───────────────────────────────────────────────────────┘  │
 │                              │                               │
 │                              ▼ (Internal API)                │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │  yt-token-service    │◄──│       Cobalt Instance       │ │
-│  │  (port 8080)         │    │       (port 9000)           │ │
-│  │  Generates poToken   │    │  YOUTUBE_SESSION_SERVER=    │ │
-│  │  for BotGuard bypass │    │  http://yt-token-service    │ │
-│  │                       │    │    .railway.internal:8080/  │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────────┐ │
+│  │  yt-token-service            │◄─│         Cobalt Instance          │ │
+│  │  (port 8080)                 │  │         (port 9000)              │ │
+│  │  Generates poToken &         │  │                                  │ │
+│  │  visitor_data for BotGuard   │  │  Connects via Railway internal   │ │
+│  │                               │  │  networking (*.railway.internal) │ │
+│  └─────────────────────────────┘  └─────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -110,6 +110,10 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 **Docker Image:** `ghcr.io/imputnet/yt-session-generator:webserver`
 **Railway Service Name:** `yt-token-service`
+
+> **Note:** The Railway service name is arbitrary — it doesn't need to match the Docker image name.
+> Whatever you name the service becomes its internal hostname (`{service-name}.railway.internal`),
+> which must match the `YOUTUBE_SESSION_SERVER` URL configured on Cobalt.
 
 **Configuration:**
 - No environment variables required

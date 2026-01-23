@@ -141,12 +141,6 @@ const server = http.createServer(async (req, res) => {
 	if (pathname === "/token" || pathname === "/") {
 		log(`${req.method} ${req.url} from ${req.socket.remoteAddress}`);
 
-		if (req.method === "HEAD") {
-			res.writeHead(cachedToken ? 200 : 503, NO_CACHE_HEADERS);
-			res.end();
-			return;
-		}
-
 		try {
 			const token = await getToken();
 			res.writeHead(200, NO_CACHE_HEADERS);

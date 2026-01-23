@@ -32,12 +32,13 @@ export function clearCache(): void {
 async function generateWithTimeout(): Promise<PoTokenResult> {
 	if (!activeGeneration) {
 		activeGeneration = generate();
-		activeGeneration.then(
+		const thisGeneration = activeGeneration;
+		thisGeneration.then(
 			() => {
-				activeGeneration = null;
+				if (activeGeneration === thisGeneration) activeGeneration = null;
 			},
 			() => {
-				activeGeneration = null;
+				if (activeGeneration === thisGeneration) activeGeneration = null;
 			},
 		);
 	}

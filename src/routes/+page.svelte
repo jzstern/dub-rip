@@ -211,7 +211,7 @@ function handleDownload() {
 		<!-- Header -->
 		<div class="flex flex-col items-center space-y-2 text-center">
 			<AsciiVinyl />
-			<h1 class="text-4xl font-bold tracking-tight">dub-rip</h1>
+			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
 			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
 

@@ -16,6 +16,7 @@ import {
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
 import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+import { fetchPoToken } from "$lib/yt-token";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -249,6 +250,14 @@ export const GET: RequestHandler = async ({ url }) => {
 						"-o",
 						`${outputPath}.%(ext)s`,
 					];
+
+					const tokenResult = await fetchPoToken();
+					if (tokenResult) {
+						args.push(
+							"--extractor-args",
+							`youtube:po_token=web+${tokenResult.poToken};visitor_data=${tokenResult.visitorData}`,
+						);
+					}
 
 					const downloadProcess = ytDlp.exec(args);
 

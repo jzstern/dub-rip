@@ -29,8 +29,11 @@ async function generateToken() {
 		);
 	});
 
+	const generatePromise = generate();
+	generatePromise.catch(() => {});
+
 	try {
-		const result = await Promise.race([generate(), timeoutPromise]);
+		const result = await Promise.race([generatePromise, timeoutPromise]);
 		log(`Token generated in ${Date.now() - startTime}ms`);
 		return result;
 	} finally {

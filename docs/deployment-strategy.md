@@ -23,12 +23,13 @@ This document outlines the deployment architecture for dub-rip on Railway, using
 │  └───────────────────────────────────────────────────────┘  │
 │                              │                               │
 │                              ▼ (Internal API)                │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │  yt-session-generator│◄──│       Cobalt Instance       │ │
-│  │  (port 8080)         │    │       (port 9000)           │ │
-│  │  Generates poToken   │    │  YOUTUBE_SESSION_SERVER=    │ │
-│  │  for BotGuard bypass │    │  http://yt-session:8080/    │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────────┐ │
+│  │  yt-token-service            │◄─│         Cobalt Instance          │ │
+│  │  (port 8080)                 │  │         (port 9000)              │ │
+│  │  Generates poToken &         │  │                                  │ │
+│  │  visitor_data for BotGuard   │  │  Connects via Railway internal   │ │
+│  │                               │  │  networking (*.railway.internal) │ │
+│  └─────────────────────────────┘  └─────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,7 +85,7 @@ API_PORT=9000
 API_KEY_URL=file://keys.json
 
 # YouTube BotGuard bypass
-YOUTUBE_SESSION_SERVER=http://yt-session.railway.internal:8080/
+YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/
 YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
 ```
 
@@ -103,11 +104,16 @@ Generate a UUID for your API key:
 uuidgen
 ```
 
-### 3. yt-session-generator
+### 3. yt-token-service (yt-session-generator)
 
 Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 **Docker Image:** `ghcr.io/imputnet/yt-session-generator:webserver`
+**Railway Service Name:** `yt-token-service`
+
+> **Note:** The Railway service name is arbitrary — it doesn't need to match the Docker image name.
+> Whatever you name the service becomes its internal hostname (`{service-name}.railway.internal`),
+> which must match the `YOUTUBE_SESSION_SERVER` URL configured on Cobalt.
 
 **Configuration:**
 - No environment variables required
@@ -125,11 +131,11 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 1. Go to [Railway](https://railway.app) and create a new project
 2. Name it something like `dub-rip-production`
 
-### Step 2: Deploy yt-session-generator
+### Step 2: Deploy yt-token-service
 
 1. Add a new service → Docker Image
 2. Image: `ghcr.io/imputnet/yt-session-generator:webserver`
-3. Service name: `yt-session`
+3. Service name: `yt-token-service`
 4. No environment variables needed
 5. No public networking (internal only)
 
@@ -142,7 +148,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
    ```bash
    API_PORT=9000
    API_KEY_URL=file://keys.json
-   YOUTUBE_SESSION_SERVER=http://yt-session.railway.internal:8080/
+   YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/
    YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
    ```
 5. Add a volume mount for `keys.json`:
@@ -172,12 +178,12 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 ### Step 5: Verify Deployment
 
-1. Check yt-session-generator logs in Railway dashboard for successful startup
-2. Check Cobalt logs for successful connection to yt-session-generator
+1. Check yt-token-service logs in Railway dashboard for successful startup
+2. Check Cobalt logs for successful connection to yt-token-service
 3. Test dub-rip by downloading a YouTube video through the web interface
 4. (Optional) To test internal services, use Railway's shell feature:
    - Open Railway dashboard → Select service → Click "Shell"
-   - Run: `curl http://yt-session.railway.internal:8080/token`
+   - Run: `curl http://yt-token-service.railway.internal:8080/token`
 
 > **Note:** Internal `.railway.internal` URLs are only accessible from within Railway's private network. You cannot `curl` these URLs from your local machine.
 
@@ -188,8 +194,8 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 2. dub-rip validates URL and extracts video ID
 3. dub-rip calls Cobalt API with authenticated request
 4. Cobalt checks if it needs a fresh poToken
-5. If needed, Cobalt requests token from yt-session-generator
-6. yt-session-generator solves BotGuard challenge, returns tokens
+5. If needed, Cobalt requests token from yt-token-service
+6. yt-token-service solves BotGuard challenge, returns tokens
 7. Cobalt uses tokens to fetch YouTube stream
 8. Cobalt returns stream URL to dub-rip
 9. dub-rip fetches audio, applies ID3 metadata
@@ -207,7 +213,7 @@ Fallback path (if Cobalt fails):
 |---------|-----------------|-------|
 | dub-rip | ~$2-3/month | Depends on traffic |
 | Cobalt | ~$2-3/month | Depends on downloads |
-| yt-session-generator | ~$1/month | Lightweight service |
+| yt-token-service | ~$1/month | Lightweight service |
 | **Total** | **~$5-7/month** | Within free tier for low usage |
 
 Railway provides $5/month in free credits. For personal use or low traffic, you may stay within the free tier.
@@ -231,11 +237,11 @@ To run these commands, open Railway dashboard → Select service → Click "Shel
 ```bash
 # From any Railway service shell:
 
-# Check yt-session-generator health
-curl http://yt-session.railway.internal:8080/token
+# Check yt-token-service health
+curl http://yt-token-service.railway.internal:8080/token
 
 # Force token refresh
-curl http://yt-session.railway.internal:8080/update
+curl http://yt-token-service.railway.internal:8080/update
 ```
 
 You can also check service logs directly in the Railway dashboard.
@@ -243,7 +249,7 @@ You can also check service logs directly in the Railway dashboard.
 ## Security Considerations
 
 1. **API Key Protection**: Store in Railway environment variables
-2. **Internal Networking**: yt-session-generator not exposed publicly
+2. **Internal Networking**: yt-token-service not exposed publicly
 3. **HTTPS Only**: Railway provides automatic SSL
 4. **Rate Limiting**: Cobalt has built-in rate limiting
 5. **SSRF Protection**: Implemented in dub-rip's cobalt.ts

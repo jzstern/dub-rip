@@ -6,7 +6,13 @@ vi.mock("youtube-po-token-generator", () => ({
 	generate: mockGenerate,
 }));
 
-import { clearCache, fetchPoToken } from "$lib/yt-token";
+import {
+	CACHE_TTL_MS,
+	clearCache,
+	FAILURE_BACKOFF_MS,
+	fetchPoToken,
+	GENERATION_TIMEOUT_MS,
+} from "$lib/yt-token";
 
 describe("fetchPoToken()", () => {
 	// #given
@@ -60,6 +66,21 @@ describe("fetchPoToken()", () => {
 		expect(result).toBeNull();
 	});
 
+	it("returns stale cache when generator returns incomplete data", async () => {
+		// #given
+		mockGenerate.mockResolvedValue(mockTokenResult);
+		await fetchPoToken();
+
+		await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);
+		mockGenerate.mockResolvedValue({ poToken: "", visitorData: "" });
+
+		// #when
+		const result = await fetchPoToken();
+
+		// #then
+		expect(result).toEqual(mockTokenResult);
+	});
+
 	it("returns null when generation throws", async () => {
 		// #given
 		mockGenerate.mockRejectedValue(new Error("jsdom failed"));
@@ -79,7 +100,7 @@ describe("fetchPoToken()", () => {
 
 		// #when
 		const resultPromise = fetchPoToken();
-		vi.advanceTimersByTime(30_000);
+		await vi.advanceTimersByTimeAsync(GENERATION_TIMEOUT_MS);
 		const result = await resultPromise;
 
 		// #then
@@ -99,12 +120,12 @@ describe("fetchPoToken()", () => {
 		expect(mockGenerate).toHaveBeenCalledOnce();
 	});
 
-	it("regenerates after cache expires (50 minutes)", async () => {
+	it("regenerates after cache expires", async () => {
 		// #given
 		mockGenerate.mockResolvedValue(mockTokenResult);
 		await fetchPoToken();
 
-		vi.advanceTimersByTime(51 * 60 * 1000);
+		await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);
 
 		const updatedResult = {
 			poToken: "new-token",
@@ -125,7 +146,7 @@ describe("fetchPoToken()", () => {
 		mockGenerate.mockResolvedValue(mockTokenResult);
 		await fetchPoToken();
 
-		vi.advanceTimersByTime(51 * 60 * 1000);
+		await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1000);
 		mockGenerate.mockRejectedValue(new Error("failed"));
 		await fetchPoToken();
 
@@ -134,6 +155,22 @@ describe("fetchPoToken()", () => {
 
 		// #then
 		expect(result).toEqual(mockTokenResult);
+	});
+
+	it("returns null when stale cache exceeds max staleness", async () => {
+		// #given
+		mockGenerate.mockResolvedValue(mockTokenResult);
+		await fetchPoToken();
+
+		await vi.advanceTimersByTimeAsync(CACHE_TTL_MS * 2 + 1000);
+		mockGenerate.mockRejectedValue(new Error("failed"));
+		await fetchPoToken();
+
+		// #when - stale cache is too old
+		const result = await fetchPoToken();
+
+		// #then
+		expect(result).toBeNull();
 	});
 
 	it("returns null during backoff with no stale cache", async () => {
@@ -154,7 +191,7 @@ describe("fetchPoToken()", () => {
 		mockGenerate.mockRejectedValue(new Error("failed"));
 		await fetchPoToken();
 
-		vi.advanceTimersByTime(31_000);
+		await vi.advanceTimersByTimeAsync(FAILURE_BACKOFF_MS + 1000);
 		mockGenerate.mockResolvedValue(mockTokenResult);
 
 		// #when
@@ -189,6 +226,32 @@ describe("fetchPoToken()", () => {
 			mockTokenResult,
 			mockTokenResult,
 		]);
+		expect(mockGenerate).toHaveBeenCalledOnce();
+	});
+
+	it("does not start overlapping generations after timeout", async () => {
+		// #given
+		let resolveFirst: (value: unknown) => void = () => {};
+		mockGenerate.mockReturnValueOnce(
+			new Promise((resolve) => {
+				resolveFirst = resolve;
+			}),
+		);
+
+		const firstPromise = fetchPoToken();
+		await vi.advanceTimersByTimeAsync(GENERATION_TIMEOUT_MS);
+		await firstPromise;
+
+		// #when - after backoff, try again (first generate() still pending)
+		await vi.advanceTimersByTimeAsync(FAILURE_BACKOFF_MS + 1000);
+		const secondPromise = fetchPoToken();
+
+		// resolve the first generation
+		resolveFirst(mockTokenResult);
+		const result = await secondPromise;
+
+		// #then - reused the same generate() call, did not start a new one
+		expect(result).toEqual(mockTokenResult);
 		expect(mockGenerate).toHaveBeenCalledOnce();
 	});
 

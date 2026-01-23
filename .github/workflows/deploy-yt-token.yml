@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'services/yt-token/**'
-      - 'Dockerfile.yt-session'
+      - 'Dockerfile.yt-token'
       - '.github/workflows/deploy-yt-token.yml'
   workflow_dispatch:
 
@@ -37,13 +37,13 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha
-            type=raw,value=latest
+            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.yt-session
-          push: true
+          file: Dockerfile.yt-token
+          push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

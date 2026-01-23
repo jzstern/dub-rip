@@ -4,6 +4,7 @@ import { generate } from "youtube-po-token-generator";
 const PORT = process.env.PORT || 8080;
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const GENERATION_TIMEOUT_MS = 30_000;
+const FAILURE_BACKOFF_MS = 30_000;
 const SHUTDOWN_GRACE_MS = 10_000;
 
 let cachedToken = null;
@@ -19,16 +20,29 @@ async function generateToken() {
 	log("Generating new token...");
 	const startTime = Date.now();
 
-	const timeoutPromise = new Promise((_, reject) =>
-		setTimeout(
+	let timeoutId;
+	const timeoutPromise = new Promise((_, reject) => {
+		timeoutId = setTimeout(
 			() => reject(new Error("Token generation timed out")),
 			GENERATION_TIMEOUT_MS,
-		),
-	);
+		);
+	});
 
-	const result = await Promise.race([generate(), timeoutPromise]);
-	log(`Token generated in ${Date.now() - startTime}ms`);
-	return result;
+	try {
+		const result = await Promise.race([generate(), timeoutPromise]);
+		log(`Token generated in ${Date.now() - startTime}ms`);
+		return result;
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+
+function isValidToken(token) {
+	return (
+		token &&
+		typeof token.poToken === "string" &&
+		typeof token.visitorData === "string"
+	);
 }
 
 async function getToken() {
@@ -48,6 +62,9 @@ async function getToken() {
 	isGenerating = true;
 	generationPromise = generateToken()
 		.then((result) => {
+			if (!isValidToken(result)) {
+				throw new Error("Generator returned invalid token structure");
+			}
 			cachedToken = result;
 			lastGenerated = Date.now();
 			return result;
@@ -57,6 +74,7 @@ async function getToken() {
 				`[${new Date().toISOString()}] Token generation failed:`,
 				err.message,
 			);
+			lastGenerated = Date.now() - CACHE_TTL_MS + FAILURE_BACKOFF_MS;
 			if (cachedToken) {
 				log("Returning stale cached token");
 				return cachedToken;
@@ -77,10 +95,17 @@ const NO_CACHE_HEADERS = {
 };
 
 const server = http.createServer(async (req, res) => {
-	const { pathname } = new URL(
-		req.url ?? "/",
-		`http://${req.headers.host ?? "localhost"}`,
-	);
+	let pathname;
+	try {
+		pathname = new URL(
+			req.url ?? "/",
+			`http://${req.headers.host ?? "localhost"}`,
+		).pathname;
+	} catch {
+		res.writeHead(400, { "Content-Type": "text/plain" });
+		res.end("Bad Request");
+		return;
+	}
 
 	if (req.method !== "GET" && req.method !== "HEAD") {
 		res.writeHead(405, {
@@ -105,6 +130,12 @@ const server = http.createServer(async (req, res) => {
 
 	if (pathname === "/token" || pathname === "/") {
 		log(`${req.method} ${req.url} from ${req.socket.remoteAddress}`);
+
+		if (req.method === "HEAD") {
+			res.writeHead(cachedToken ? 200 : 503, NO_CACHE_HEADERS);
+			res.end();
+			return;
+		}
 
 		try {
 			const token = await getToken();
@@ -151,6 +182,11 @@ function shutdown() {
 		process.exit(1);
 	}, SHUTDOWN_GRACE_MS).unref();
 }
+
+server.on("error", (err) => {
+	console.error(`[${new Date().toISOString()}] Server error: ${err.message}`);
+	process.exit(1);
+});
 
 server.listen(PORT, () => {
 	log(`yt-token-service listening on port ${PORT}`);

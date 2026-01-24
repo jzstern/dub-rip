@@ -29,7 +29,14 @@ export interface EnrichedMetadata {
 }
 
 export interface StreamEvent {
-	type: "status" | "info" | "progress" | "complete" | "error" | "event" | "metadata";
+	type:
+		| "status"
+		| "info"
+		| "progress"
+		| "complete"
+		| "error"
+		| "event"
+		| "metadata";
 	message?: string;
 	title?: string;
 	artist?: string;

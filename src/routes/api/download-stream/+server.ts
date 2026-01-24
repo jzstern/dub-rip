@@ -5,6 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
+import {
+	type CoverArtResult,
+	fetchCoverArt,
+	fetchThumbnailArt,
+	lookupTrack,
+	type TrackMetadata,
+} from "$lib/musicbrainz";
 import type { DownloadMethod } from "$lib/types";
 import {
 	extractVideoId,
@@ -90,6 +97,34 @@ function parseYtDlpError(errorMessage: string): string {
 		return "This video is private and cannot be downloaded.";
 	}
 	return "Download failed. Please try a different video.";
+}
+
+interface EnrichmentResult {
+	metadata: TrackMetadata | null;
+	artwork: CoverArtResult | null;
+}
+
+async function enrichMetadata(
+	artist: string,
+	title: string,
+	videoId: string,
+): Promise<EnrichmentResult> {
+	try {
+		const metadata = await lookupTrack(artist, title);
+
+		let artwork: CoverArtResult | null = null;
+		if (metadata?.releaseId) {
+			artwork = await fetchCoverArt(metadata.releaseId);
+		}
+		if (!artwork) {
+			artwork = await fetchThumbnailArt(videoId);
+		}
+
+		return { metadata, artwork };
+	} catch (err) {
+		console.error("MusicBrainz enrichment failed:", err);
+		return { metadata: null, artwork: null };
+	}
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -180,6 +215,15 @@ export const GET: RequestHandler = async ({ url }) => {
 							console.error("Metadata fetch error:", err);
 						}
 					}
+				}
+
+				let enrichmentPromise: Promise<EnrichmentResult> =
+					Promise.resolve({ metadata: null, artwork: null });
+
+				if (artist && trackTitle) {
+					enrichmentPromise = enrichMetadata(artist, trackTitle, videoId);
+				} else if (videoId) {
+					enrichmentPromise = enrichMetadata("", "", videoId);
 				}
 
 				let actualFilePath = `${outputPath}.mp3`;
@@ -402,17 +446,56 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
+				const enrichment = await enrichmentPromise;
+
+				if (enrichment.metadata) {
+					send({
+						type: "metadata",
+						metadata: {
+							album: enrichment.metadata.album,
+							year: enrichment.metadata.year,
+							genre: enrichment.metadata.genre,
+							trackNumber: enrichment.metadata.trackNumber,
+							label: enrichment.metadata.label,
+							hasArtwork: enrichment.artwork !== null,
+						},
+					});
+				}
+
 				const NodeID3 = require("node-id3");
 
 				try {
-					const tags = {
+					const tags: Record<string, unknown> = {
 						title: trackTitle || videoTitle,
 						artist: artist || "Unknown Artist",
 						albumArtist: artist || "Unknown Artist",
 					};
 
-					console.log("Writing ID3 tags:", tags);
+					if (enrichment.metadata) {
+						if (enrichment.metadata.album)
+							tags.album = enrichment.metadata.album;
+						if (enrichment.metadata.year) tags.year = enrichment.metadata.year;
+						if (enrichment.metadata.genre)
+							tags.genre = enrichment.metadata.genre;
+						if (enrichment.metadata.trackNumber)
+							tags.trackNumber = enrichment.metadata.trackNumber;
+						if (enrichment.metadata.label)
+							tags.publisher = enrichment.metadata.label;
+					}
 
+					if (enrichment.artwork) {
+						tags.image = {
+							mime: enrichment.artwork.mime,
+							type: { id: 3, name: "front cover" },
+							description: "Cover",
+							imageBuffer: enrichment.artwork.imageBuffer,
+						};
+					}
+
+					console.log("Writing ID3 tags:", {
+						...tags,
+						image: tags.image ? "(artwork included)" : undefined,
+					});
 					const success = NodeID3.write(tags, actualFilePath);
 					if (success !== true) {
 						const error =

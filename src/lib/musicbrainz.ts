@@ -134,3 +134,32 @@ export async function fetchCoverArt(
 		clearTimeout(timeoutId);
 	}
 }
+
+export async function fetchThumbnailArt(
+	videoId: string,
+	timeout: number = COVER_ART_TIMEOUT,
+): Promise<CoverArtResult | null> {
+	if (!videoId) return null;
+
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+	try {
+		const url = `https://i.ytimg.com/vi/${encodeURIComponent(videoId)}/hqdefault.jpg`;
+
+		const response = await fetch(url, {
+			signal: controller.signal,
+		});
+
+		if (!response.ok) return null;
+
+		const arrayBuffer = await response.arrayBuffer();
+		const mime = response.headers.get("Content-Type") ?? "image/jpeg";
+
+		return { imageBuffer: Buffer.from(arrayBuffer), mime };
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}

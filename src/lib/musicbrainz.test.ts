@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	type CoverArtResult,
 	fetchCoverArt,
+	fetchThumbnailArt,
 	lookupTrack,
 	type TrackMetadata,
 } from "./musicbrainz";
@@ -248,6 +249,49 @@ describe("fetchCoverArt()", () => {
 
 		// #when
 		const result = await fetchCoverArt("release-123", 10);
+
+		// #then
+		expect(result).toBeNull();
+	});
+});
+
+describe("fetchThumbnailArt()", () => {
+	let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		fetchSpy = vi.spyOn(globalThis, "fetch");
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("returns thumbnail buffer for a valid video ID", async () => {
+		// #given
+		const fakeImageBytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+		fetchSpy.mockResolvedValue(
+			new Response(fakeImageBytes, {
+				status: 200,
+				headers: { "Content-Type": "image/jpeg" },
+			}),
+		);
+
+		// #when
+		const result = await fetchThumbnailArt("dQw4w9WgXcQ");
+
+		// #then
+		expect(result).toEqual({
+			imageBuffer: Buffer.from(fakeImageBytes),
+			mime: "image/jpeg",
+		} satisfies CoverArtResult);
+	});
+
+	it("returns null on network error", async () => {
+		// #given
+		fetchSpy.mockRejectedValue(new Error("Network unreachable"));
+
+		// #when
+		const result = await fetchThumbnailArt("dQw4w9WgXcQ");
 
 		// #then
 		expect(result).toBeNull();

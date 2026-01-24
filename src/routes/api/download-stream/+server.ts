@@ -8,6 +8,7 @@ import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
 	extractVideoId,
+	formatBytes,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
@@ -191,9 +192,33 @@ export const GET: RequestHandler = async ({ url }) => {
 					const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
 					console.log("[Cobalt] Got download URL");
 
-					send({ type: "progress", percent: 10 });
+					send({ type: "progress", percent: 5 });
 
-					const audioBuffer = await fetchCobaltAudio(downloadUrl, 55000);
+					const audioBuffer = await fetchCobaltAudio(
+						downloadUrl,
+						55000,
+						(p) => {
+							if (p.totalBytes) {
+								send({
+									type: "progress",
+									percent: Math.round(5 + (p.percent / 100) * 70),
+								});
+							} else {
+								const pseudo = Math.min(
+									70,
+									Math.log10(1 + p.bytesReceived) * 10,
+								);
+								send({
+									type: "progress",
+									percent: Math.round(5 + pseudo),
+								});
+								send({
+									type: "status",
+									message: `Downloading... (${formatBytes(p.bytesReceived)})`,
+								});
+							}
+						},
+					);
 					console.log(
 						"[Cobalt] Downloaded audio, size:",
 						audioBuffer.byteLength,
@@ -205,7 +230,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						);
 					}
 
-					send({ type: "progress", percent: 80 });
+					send({ type: "progress", percent: 75 });
 
 					writeFileSync(actualFilePath, Buffer.from(audioBuffer));
 					downloadMethod = "cobalt";
@@ -274,9 +299,13 @@ export const GET: RequestHandler = async ({ url }) => {
 					downloadProcess.on(
 						"progress",
 						(progress: Record<string, unknown>) => {
+							const rawPercent = Math.min(
+								100,
+								Math.max(0, (progress.percent as number) || 0),
+							);
 							send({
 								type: "progress",
-								percent: (progress.percent as number) || 0,
+								percent: Math.round(5 + (rawPercent / 100) * 70),
 								speed: (progress.currentSpeed as string) || "",
 								eta: (progress.eta as string) || "",
 							});
@@ -370,6 +399,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				console.log("Parsed artist:", artist);
 				console.log("Parsed track title:", trackTitle);
 
+				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
 				const NodeID3 = require("node-id3");
@@ -389,11 +419,18 @@ export const GET: RequestHandler = async ({ url }) => {
 					console.error("Metadata processing error:", err);
 				}
 
+				send({ type: "progress", percent: 85 });
 				send({ type: "status", message: "Preparing download..." });
 
 				const fs = await import("node:fs/promises");
 				const stats = await fs.stat(actualFilePath);
+
+				send({ type: "progress", percent: 88 });
+
 				const fileContent = await fs.readFile(actualFilePath);
+				const base64Data = Buffer.from(fileContent).toString("base64");
+
+				send({ type: "progress", percent: 95 });
 
 				let finalFilename: string;
 				if (artist && trackTitle) {
@@ -420,7 +457,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					type: "complete",
 					filename: finalFilename,
 					size: stats.size,
-					data: Buffer.from(fileContent).toString("base64"),
+					data: base64Data,
 					downloadMethod,
 				});
 

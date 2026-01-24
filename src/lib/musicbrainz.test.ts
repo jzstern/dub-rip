@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { lookupTrack, type TrackMetadata } from "./musicbrainz";
+import {
+	type CoverArtResult,
+	fetchCoverArt,
+	lookupTrack,
+	type TrackMetadata,
+} from "./musicbrainz";
 
 const FULL_RESPONSE = {
 	recordings: [
@@ -176,6 +181,73 @@ describe("lookupTrack()", () => {
 
 		// #when
 		const result = await lookupTrack("Queen", "Bohemian Rhapsody");
+
+		// #then
+		expect(result).toBeNull();
+	});
+});
+
+describe("fetchCoverArt()", () => {
+	let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		fetchSpy = vi.spyOn(globalThis, "fetch");
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("returns image buffer for a valid release", async () => {
+		// #given
+		const fakeImageBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+		fetchSpy.mockResolvedValue(
+			new Response(fakeImageBytes, {
+				status: 200,
+				headers: { "Content-Type": "image/png" },
+			}),
+		);
+
+		// #when
+		const result = await fetchCoverArt("release-123");
+
+		// #then
+		expect(result).toEqual({
+			imageBuffer: Buffer.from(fakeImageBytes),
+			mime: "image/png",
+		} satisfies CoverArtResult);
+	});
+
+	it("returns null on 404", async () => {
+		// #given
+		fetchSpy.mockResolvedValue(new Response("", { status: 404 }));
+
+		// #when
+		const result = await fetchCoverArt("nonexistent-release");
+
+		// #then
+		expect(result).toBeNull();
+	});
+
+	it("returns null on timeout", async () => {
+		// #given
+		fetchSpy.mockImplementation(
+			(_url: string | URL | Request, init?: RequestInit) => {
+				return new Promise((_resolve, reject) => {
+					const signal = init?.signal as AbortSignal | undefined;
+					if (signal) {
+						signal.addEventListener("abort", () => {
+							reject(
+								new DOMException("The operation was aborted.", "AbortError"),
+							);
+						});
+					}
+				});
+			},
+		);
+
+		// #when
+		const result = await fetchCoverArt("release-123", 10);
 
 		// #then
 		expect(result).toBeNull();

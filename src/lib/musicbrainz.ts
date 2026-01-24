@@ -1,6 +1,8 @@
 const DEFAULT_TIMEOUT = 5000;
+const COVER_ART_TIMEOUT = 4000;
 const USER_AGENT = "dub-rip/1.0 (https://github.com/jzs/dub-rip)";
 const API_BASE = "https://musicbrainz.org/ws/2/recording";
+const COVER_ART_BASE = "https://coverartarchive.org/release";
 
 export interface TrackMetadata {
 	album: string;
@@ -9,6 +11,11 @@ export interface TrackMetadata {
 	trackNumber: string;
 	label: string;
 	releaseId: string;
+}
+
+export interface CoverArtResult {
+	imageBuffer: Buffer;
+	mime: string;
 }
 
 interface MusicBrainzTag {
@@ -91,6 +98,36 @@ export async function lookupTrack(
 			label: release["label-info"]?.[0]?.label?.name ?? "",
 			releaseId: release.id,
 		};
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+
+export async function fetchCoverArt(
+	releaseId: string,
+	timeout: number = COVER_ART_TIMEOUT,
+): Promise<CoverArtResult | null> {
+	if (!releaseId) return null;
+
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+	try {
+		const url = `${COVER_ART_BASE}/${encodeURIComponent(releaseId)}/front-250`;
+
+		const response = await fetch(url, {
+			signal: controller.signal,
+			headers: { "User-Agent": USER_AGENT },
+		});
+
+		if (!response.ok) return null;
+
+		const arrayBuffer = await response.arrayBuffer();
+		const mime = response.headers.get("Content-Type") ?? "image/jpeg";
+
+		return { imageBuffer: Buffer.from(arrayBuffer), mime };
 	} catch {
 		return null;
 	} finally {

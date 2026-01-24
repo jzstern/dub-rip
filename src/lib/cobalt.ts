@@ -472,23 +472,22 @@ export async function fetchCobaltAudio(
 			const chunks: Uint8Array[] = [];
 			let bytesReceived = 0;
 
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
+			try {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
 
-				chunks.push(value);
-				bytesReceived += value.byteLength;
-				const percent = totalBytes ? (bytesReceived / totalBytes) * 100 : 0;
-				onProgress({ bytesReceived, totalBytes, percent });
+					chunks.push(value);
+					bytesReceived += value.byteLength;
+					const percent = totalBytes ? (bytesReceived / totalBytes) * 100 : 0;
+					onProgress({ bytesReceived, totalBytes, percent });
+				}
+			} finally {
+				reader.releaseLock();
 			}
 
-			const result = new Uint8Array(bytesReceived);
-			let offset = 0;
-			for (const chunk of chunks) {
-				result.set(chunk, offset);
-				offset += chunk.byteLength;
-			}
-			return result.buffer;
+			const buf = Buffer.concat(chunks);
+			return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 		}
 
 		throw new CobaltError("Too many redirects");

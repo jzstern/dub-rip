@@ -372,6 +372,7 @@ describe("Cobalt API Integration", () => {
 						return Promise.resolve({ done: false, value: chunk2 });
 					return Promise.resolve({ done: true, value: undefined });
 				}),
+				releaseLock: vi.fn(),
 			};
 			vi.mocked(fetch).mockResolvedValue({
 				ok: true,
@@ -416,6 +417,7 @@ describe("Cobalt API Integration", () => {
 						return Promise.resolve({ done: false, value: chunk });
 					return Promise.resolve({ done: true, value: undefined });
 				}),
+				releaseLock: vi.fn(),
 			};
 			vi.mocked(fetch).mockResolvedValue({
 				ok: true,

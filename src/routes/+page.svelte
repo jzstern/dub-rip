@@ -34,6 +34,7 @@ let preview = $state<VideoPreviewType | null>(null);
 let loadingPreview = $state(false);
 let downloadComplete = $state(false);
 let completedFilename = $state("");
+let currentDownloadId = 0;
 
 function formatDuration(seconds: number): string {
 	if (!seconds) return "";
@@ -133,6 +134,7 @@ function handleDownload() {
 	videoTitle = "";
 	downloadComplete = false;
 	completedFilename = "";
+	const thisDownloadId = ++currentDownloadId;
 
 	const eventSource = new EventSource(
 		`/api/download-stream?url=${encodeURIComponent(url)}`,
@@ -166,28 +168,36 @@ function handleDownload() {
 					eta = "";
 
 					setTimeout(() => {
-						const binaryString = atob(data.data);
-						const bytes = new Uint8Array(binaryString.length);
-						for (let i = 0; i < binaryString.length; i++) {
-							bytes[i] = binaryString.charCodeAt(i);
-						}
-						const blob = new Blob([bytes], { type: "audio/mpeg" });
-						const downloadUrl = window.URL.createObjectURL(blob);
-						const a = document.createElement("a");
-						a.href = downloadUrl;
-						a.download = data.filename;
-						document.body.appendChild(a);
-						a.click();
-						window.URL.revokeObjectURL(downloadUrl);
-						document.body.removeChild(a);
+						if (currentDownloadId !== thisDownloadId) return;
+						try {
+							const binaryString = atob(data.data);
+							const bytes = new Uint8Array(binaryString.length);
+							for (let i = 0; i < binaryString.length; i++) {
+								bytes[i] = binaryString.charCodeAt(i);
+							}
+							const blob = new Blob([bytes], { type: "audio/mpeg" });
+							const downloadUrl = window.URL.createObjectURL(blob);
+							const a = document.createElement("a");
+							a.href = downloadUrl;
+							a.download = data.filename;
+							document.body.appendChild(a);
+							a.click();
+							window.URL.revokeObjectURL(downloadUrl);
+							document.body.removeChild(a);
 
-						progress = 100;
-						status = "Downloaded!";
-						loading = false;
-						downloadComplete = true;
-						completedFilename = data.filename;
-						url = "";
-						preview = null;
+							progress = 100;
+							status = "Downloaded!";
+							loading = false;
+							downloadComplete = true;
+							completedFilename = data.filename;
+							url = "";
+							preview = null;
+						} catch (err) {
+							console.error("Failed to save file:", err);
+							error = "Failed to save file";
+							loading = false;
+							status = "";
+						}
 					}, 0);
 					break;
 				}

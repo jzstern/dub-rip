@@ -204,6 +204,14 @@ export const GET: RequestHandler = async ({ url }) => {
 									percent: Math.round(5 + (p.percent / 100) * 70),
 								});
 							} else {
+								const pseudo = Math.min(
+									70,
+									Math.log10(1 + p.bytesReceived) * 10,
+								);
+								send({
+									type: "progress",
+									percent: Math.round(5 + pseudo),
+								});
 								send({
 									type: "status",
 									message: `Downloading... (${formatBytes(p.bytesReceived)})`,
@@ -291,7 +299,10 @@ export const GET: RequestHandler = async ({ url }) => {
 					downloadProcess.on(
 						"progress",
 						(progress: Record<string, unknown>) => {
-							const rawPercent = (progress.percent as number) || 0;
+							const rawPercent = Math.min(
+								100,
+								Math.max(0, (progress.percent as number) || 0),
+							);
 							send({
 								type: "progress",
 								percent: Math.round(5 + (rawPercent / 100) * 70),

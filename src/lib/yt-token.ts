@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { generate } from "youtube-po-token-generator";
 
 export interface PoTokenResult {
@@ -100,6 +101,14 @@ export async function fetchPoToken(): Promise<PoTokenResult | null> {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			console.warn(`[yt-token] Token generation failed: ${message}`);
+			const normalizedError =
+				err instanceof Error
+					? err
+					: new Error(`Token generation failed: ${message}`);
+			Sentry.captureException(normalizedError, {
+				tags: { service: "yt-token", operation: "generate" },
+				extra: { hasStaleCacheAvailable: isCacheUsable() },
+			});
 			lastFailedAt = Date.now();
 			if (isCacheUsable()) {
 				console.log("[yt-token] Returning stale cached token");

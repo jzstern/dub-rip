@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@sentry/sveltekit", () => ({
+	captureException: vi.fn(),
+	captureMessage: vi.fn(),
+}));
+
 const mockGenerate = vi.hoisted(() => vi.fn());
 
 vi.mock("youtube-po-token-generator", () => ({

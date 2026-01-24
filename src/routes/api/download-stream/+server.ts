@@ -417,6 +417,14 @@ export const GET: RequestHandler = async ({ url }) => {
 					console.log("ID3 write success:", success);
 				} catch (err) {
 					console.error("Metadata processing error:", err);
+					const normalizedError =
+						err instanceof Error
+							? err
+							: new Error(`ID3 processing failed: ${String(err)}`);
+					Sentry.captureException(normalizedError, {
+						tags: { service: "download-stream", operation: "id3-write" },
+						extra: { videoId },
+					});
 				}
 
 				send({ type: "progress", percent: 85 });

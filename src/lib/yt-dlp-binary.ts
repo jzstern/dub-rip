@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { platform, tmpdir } from "node:os";
 import { join } from "node:path";
+import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 
 /**
@@ -56,9 +57,14 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 
 	if (!releaseRes.ok) {
 		const body = await releaseRes.text().catch(() => "");
-		throw new Error(
+		const error = new Error(
 			`Failed to fetch yt-dlp release info: ${releaseRes.status} ${releaseRes.statusText}${body ? ` - ${body}` : ""}`,
 		);
+		Sentry.captureException(error, {
+			tags: { service: "yt-dlp-binary", operation: "fetch-release" },
+			extra: { status: releaseRes.status },
+		});
+		throw error;
 	}
 
 	const release = (await releaseRes.json()) as {
@@ -67,7 +73,14 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 
 	const asset = release.assets.find((a) => a.name === binaryName);
 	if (!asset) {
-		throw new Error(`Could not find ${binaryName} in yt-dlp release assets`);
+		const error = new Error(
+			`Could not find ${binaryName} in yt-dlp release assets`,
+		);
+		Sentry.captureException(error, {
+			tags: { service: "yt-dlp-binary", operation: "find-asset" },
+			extra: { binaryName, availableAssets: release.assets.map((a) => a.name) },
+		});
+		throw error;
 	}
 
 	console.log(`Downloading ${binaryName} from ${asset.browser_download_url}`);
@@ -78,9 +91,14 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 
 	if (!binaryRes.ok) {
 		const body = await binaryRes.text().catch(() => "");
-		throw new Error(
+		const error = new Error(
 			`Failed to download yt-dlp binary: ${binaryRes.status} ${binaryRes.statusText}${body ? ` - ${body}` : ""}`,
 		);
+		Sentry.captureException(error, {
+			tags: { service: "yt-dlp-binary", operation: "download" },
+			extra: { status: binaryRes.status, binaryName },
+		});
+		throw error;
 	}
 
 	const buffer = Buffer.from(await binaryRes.arrayBuffer());
@@ -110,12 +128,19 @@ export async function ensureYtDlpBinary(): Promise<string> {
 
 			try {
 				renameSync(tempPath, YTDLP_BINARY_PATH);
-			} catch {
+			} catch (err) {
 				if (existsSync(tempPath)) unlinkSync(tempPath);
 				if (existsSync(YTDLP_BINARY_PATH)) {
 					return YTDLP_BINARY_PATH;
 				}
-				throw new Error("Failed to install yt-dlp binary");
+				const error = new Error("Failed to install yt-dlp binary");
+				Sentry.captureException(error, {
+					tags: { service: "yt-dlp-binary", operation: "install" },
+					extra: {
+						originalError: err instanceof Error ? err.message : String(err),
+					},
+				});
+				throw error;
 			}
 
 			return YTDLP_BINARY_PATH;

@@ -402,9 +402,16 @@ export async function requestCobaltAudio(
 	}
 }
 
+export interface CobaltDownloadProgress {
+	bytesReceived: number;
+	totalBytes: number | null;
+	percent: number;
+}
+
 export async function fetchCobaltAudio(
 	downloadUrl: string,
 	timeout: number = 60000,
+	onProgress?: (progress: CobaltDownloadProgress) => void,
 ): Promise<ArrayBuffer> {
 	if (!isAllowedDownloadUrl(downloadUrl)) {
 		const error = new CobaltError("Invalid download URL from Cobalt");
@@ -453,7 +460,35 @@ export async function fetchCobaltAudio(
 				);
 			}
 
-			return await response.arrayBuffer();
+			if (!onProgress || !response.body) {
+				return await response.arrayBuffer();
+			}
+
+			const contentLength = response.headers.get("content-length");
+			const totalBytes = contentLength
+				? Number.parseInt(contentLength, 10)
+				: null;
+			const reader = response.body.getReader();
+			const chunks: Uint8Array[] = [];
+			let bytesReceived = 0;
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				chunks.push(value);
+				bytesReceived += value.byteLength;
+				const percent = totalBytes ? (bytesReceived / totalBytes) * 100 : 0;
+				onProgress({ bytesReceived, totalBytes, percent });
+			}
+
+			const result = new Uint8Array(bytesReceived);
+			let offset = 0;
+			for (const chunk of chunks) {
+				result.set(chunk, offset);
+				offset += chunk.byteLength;
+			}
+			return result.buffer;
 		}
 
 		throw new CobaltError("Too many redirects");

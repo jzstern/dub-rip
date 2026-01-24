@@ -357,6 +357,104 @@ describe("Cobalt API Integration", () => {
 				"timed out",
 			);
 		});
+
+		it("calls onProgress with streaming progress when Content-Length is present", async () => {
+			// #given
+			const chunk1 = new Uint8Array([1, 2, 3]);
+			const chunk2 = new Uint8Array([4, 5]);
+			let readCount = 0;
+			const mockReader = {
+				read: vi.fn().mockImplementation(() => {
+					readCount++;
+					if (readCount === 1)
+						return Promise.resolve({ done: false, value: chunk1 });
+					if (readCount === 2)
+						return Promise.resolve({ done: false, value: chunk2 });
+					return Promise.resolve({ done: true, value: undefined });
+				}),
+			};
+			vi.mocked(fetch).mockResolvedValue({
+				ok: true,
+				status: 200,
+				headers: new Headers({ "content-length": "5" }),
+				body: { getReader: () => mockReader },
+			} as unknown as Response);
+			const progressCalls: Array<{
+				bytesReceived: number;
+				totalBytes: number | null;
+				percent: number;
+			}> = [];
+
+			// #when
+			const result = await fetchCobaltAudio(mockDownloadUrl, 60000, (p) => {
+				progressCalls.push({ ...p });
+			});
+
+			// #then
+			expect(progressCalls).toHaveLength(2);
+			expect(progressCalls[0]).toEqual({
+				bytesReceived: 3,
+				totalBytes: 5,
+				percent: 60,
+			});
+			expect(progressCalls[1]).toEqual({
+				bytesReceived: 5,
+				totalBytes: 5,
+				percent: 100,
+			});
+			expect(result.byteLength).toBe(5);
+		});
+
+		it("reports zero percent when Content-Length is missing", async () => {
+			// #given
+			const chunk = new Uint8Array([10, 20, 30]);
+			let readCount = 0;
+			const mockReader = {
+				read: vi.fn().mockImplementation(() => {
+					readCount++;
+					if (readCount === 1)
+						return Promise.resolve({ done: false, value: chunk });
+					return Promise.resolve({ done: true, value: undefined });
+				}),
+			};
+			vi.mocked(fetch).mockResolvedValue({
+				ok: true,
+				status: 200,
+				headers: new Headers(),
+				body: { getReader: () => mockReader },
+			} as unknown as Response);
+			const progressCalls: Array<{
+				bytesReceived: number;
+				totalBytes: number | null;
+				percent: number;
+			}> = [];
+
+			// #when
+			await fetchCobaltAudio(mockDownloadUrl, 60000, (p) => {
+				progressCalls.push({ ...p });
+			});
+
+			// #then
+			expect(progressCalls[0].totalBytes).toBeNull();
+			expect(progressCalls[0].percent).toBe(0);
+			expect(progressCalls[0].bytesReceived).toBe(3);
+		});
+
+		it("falls back to arrayBuffer when no onProgress callback", async () => {
+			// #given
+			const mockAudioData = new ArrayBuffer(256);
+			vi.mocked(fetch).mockResolvedValue({
+				ok: true,
+				status: 200,
+				arrayBuffer: () => Promise.resolve(mockAudioData),
+			} as Response);
+
+			// #when
+			const result = await fetchCobaltAudio(mockDownloadUrl);
+
+			// #then
+			expect(result.byteLength).toBe(256);
+		});
 	});
 
 	describe("CobaltError", () => {

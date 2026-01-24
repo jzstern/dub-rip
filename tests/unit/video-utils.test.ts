@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	extractVideoId,
+	formatBytes,
 	isValidYouTubeUrl,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
@@ -326,5 +327,42 @@ describe("sanitizeUploaderAsArtist", () => {
 
 		// #then
 		expect(result).toBe("NANA");
+	});
+});
+
+describe("formatBytes", () => {
+	it("returns '0 B' for zero bytes", () => {
+		expect(formatBytes(0)).toBe("0 B");
+	});
+
+	it("formats bytes under 1 KB without decimals", () => {
+		expect(formatBytes(512)).toBe("512 B");
+	});
+
+	it("formats kilobytes with one decimal", () => {
+		expect(formatBytes(1024)).toBe("1.0 KB");
+	});
+
+	it("formats megabytes with one decimal", () => {
+		expect(formatBytes(2.3 * 1024 * 1024)).toBe("2.3 MB");
+	});
+
+	it("formats gigabytes with one decimal", () => {
+		expect(formatBytes(1.5 * 1024 * 1024 * 1024)).toBe("1.5 GB");
+	});
+
+	it("caps at GB for very large values", () => {
+		// #given
+		const terabyte = 1024 * 1024 * 1024 * 1024;
+
+		// #when
+		const result = formatBytes(terabyte);
+
+		// #then
+		expect(result).toBe("1024.0 GB");
+	});
+
+	it("formats 1 byte correctly", () => {
+		expect(formatBytes(1)).toBe("1 B");
 	});
 });

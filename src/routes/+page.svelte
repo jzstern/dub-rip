@@ -32,6 +32,8 @@ let eta = $state("");
 let videoTitle = $state("");
 let preview = $state<VideoPreviewType | null>(null);
 let loadingPreview = $state(false);
+let downloadComplete = $state(false);
+let completedFilename = $state("");
 
 function formatDuration(seconds: number): string {
 	if (!seconds) return "";
@@ -93,6 +95,13 @@ $effect(() => {
 			error = "";
 			errorUrl = "";
 		}
+		if (downloadComplete) {
+			downloadComplete = false;
+			completedFilename = "";
+			status = "";
+			progress = 0;
+			videoTitle = "";
+		}
 	}
 
 	if (!isValidUrl || loading) {
@@ -122,6 +131,8 @@ function handleDownload() {
 	speed = "";
 	eta = "";
 	videoTitle = "";
+	downloadComplete = false;
+	completedFilename = "";
 
 	const eventSource = new EventSource(
 		`/api/download-stream?url=${encodeURIComponent(url)}`,
@@ -148,36 +159,36 @@ function handleDownload() {
 					break;
 
 				case "complete": {
-					status = "Download complete!";
-					progress = 100;
-
-					const binaryString = atob(data.data);
-					const bytes = new Uint8Array(binaryString.length);
-					for (let i = 0; i < binaryString.length; i++) {
-						bytes[i] = binaryString.charCodeAt(i);
-					}
-					const blob = new Blob([bytes], { type: "audio/mpeg" });
-					const downloadUrl = window.URL.createObjectURL(blob);
-					const a = document.createElement("a");
-					a.href = downloadUrl;
-					a.download = data.filename;
-					document.body.appendChild(a);
-					a.click();
-					window.URL.revokeObjectURL(downloadUrl);
-					document.body.removeChild(a);
-
 					eventSource.close();
-					loading = false;
-					url = "";
-					preview = null;
-
-					setTimeout(() => {
-						status = "";
-						progress = 0;
-						videoTitle = "";
-					}, 2000);
+					status = "Saving...";
+					progress = 95;
 					speed = "";
 					eta = "";
+
+					setTimeout(() => {
+						const binaryString = atob(data.data);
+						const bytes = new Uint8Array(binaryString.length);
+						for (let i = 0; i < binaryString.length; i++) {
+							bytes[i] = binaryString.charCodeAt(i);
+						}
+						const blob = new Blob([bytes], { type: "audio/mpeg" });
+						const downloadUrl = window.URL.createObjectURL(blob);
+						const a = document.createElement("a");
+						a.href = downloadUrl;
+						a.download = data.filename;
+						document.body.appendChild(a);
+						a.click();
+						window.URL.revokeObjectURL(downloadUrl);
+						document.body.removeChild(a);
+
+						progress = 100;
+						status = "Downloaded!";
+						loading = false;
+						downloadComplete = true;
+						completedFilename = data.filename;
+						url = "";
+						preview = null;
+					}, 0);
 					break;
 				}
 
@@ -271,6 +282,10 @@ function handleDownload() {
 								</div>
 							</div>
 						</div>
+
+						{#if downloadComplete && completedFilename}
+							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+						{/if}
 					</div>
 				{/if}
 

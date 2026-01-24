@@ -394,6 +394,14 @@ export const GET: RequestHandler = async ({ url }) => {
 										artist: artist,
 										track: trackTitle,
 									});
+
+									if (artist && trackTitle) {
+										enrichmentPromise = enrichMetadata(
+											artist,
+											trackTitle,
+											videoId,
+										);
+									}
 								}
 							}
 

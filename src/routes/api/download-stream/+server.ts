@@ -217,8 +217,10 @@ export const GET: RequestHandler = async ({ url }) => {
 					}
 				}
 
-				let enrichmentPromise: Promise<EnrichmentResult> =
-					Promise.resolve({ metadata: null, artwork: null });
+				let enrichmentPromise: Promise<EnrichmentResult> = Promise.resolve({
+					metadata: null,
+					artwork: null,
+				});
 
 				if (artist && trackTitle) {
 					enrichmentPromise = enrichMetadata(artist, trackTitle, videoId);

@@ -1,6 +1,6 @@
 const DEFAULT_TIMEOUT = 5000;
 const COVER_ART_TIMEOUT = 4000;
-const USER_AGENT = "dub-rip/1.0 (https://github.com/jzs/dub-rip)";
+const USER_AGENT = "dub-rip/1.0 (https://github.com/jzstern/dub-rip)";
 const API_BASE = "https://musicbrainz.org/ws/2/recording";
 const COVER_ART_BASE = "https://coverartarchive.org/release";
 
@@ -54,7 +54,7 @@ function extractGenre(tags?: MusicBrainzTag[]): string {
 }
 
 function escapeLucene(value: string): string {
-	return value.replace(/"/g, '\\"');
+	return value.replace(/[+\-&|!(){}[\]^"~*?:\\/]/g, "\\$&");
 }
 
 export async function lookupTrack(
@@ -149,6 +149,7 @@ export async function fetchThumbnailArt(
 
 		const response = await fetch(url, {
 			signal: controller.signal,
+			headers: { "User-Agent": USER_AGENT },
 		});
 
 		if (!response.ok) return null;

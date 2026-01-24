@@ -6,7 +6,10 @@ import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
 import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
-import type { VideoPreview as VideoPreviewType } from "$lib/types";
+import type {
+	EnrichedMetadata,
+	VideoPreview as VideoPreviewType,
+} from "$lib/types";
 
 let url = $state("");
 let loading = $state(false);
@@ -35,12 +38,7 @@ let loadingPreview = $state(false);
 let downloadComplete = $state(false);
 let completedFilename = $state("");
 let currentDownloadId = 0;
-let enrichedMetadata = $state<{
-	album?: string;
-	year?: string;
-	genre?: string;
-	label?: string;
-} | null>(null);
+let enrichedMetadata = $state<EnrichedMetadata | null>(null);
 
 function formatDuration(seconds: number): string {
 	if (!seconds) return "";
@@ -235,6 +233,7 @@ function handleDownload() {
 		eventSource.close();
 		loading = false;
 		status = "";
+		enrichedMetadata = null;
 	};
 }
 </script>

@@ -8,9 +8,10 @@ import {
 	type TrackMetadata,
 } from "./musicbrainz";
 
-const MUSICBRAINZ_RECORDING_RESPONSE = {
+const SEARCH_RESPONSE = {
 	recordings: [
 		{
+			id: "recording-muse-001",
 			title: "Starlight",
 			"artist-credit": [{ name: "Muse" }],
 			releases: [
@@ -20,15 +21,21 @@ const MUSICBRAINZ_RECORDING_RESPONSE = {
 					date: "2006-07-03",
 					"release-group": { "primary-type": "Album" },
 					media: [{ track: [{ number: "2" }] }],
-					"label-info": [{ label: { name: "Helium 3" } }],
 				},
-			],
-			tags: [
-				{ name: "alternative rock", count: 12 },
-				{ name: "space rock", count: 4 },
 			],
 		},
 	],
+};
+
+const TAGS_RESPONSE = {
+	tags: [
+		{ name: "alternative rock", count: 12 },
+		{ name: "space rock", count: 4 },
+	],
+};
+
+const LABELS_RESPONSE = {
+	"label-info": [{ label: { name: "Helium 3" } }],
 };
 
 const FAKE_COVER_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
@@ -49,9 +56,13 @@ describe("metadata enrichment integration", () => {
 		it("returns track metadata with album, year, and genre", async () => {
 			// #given
 			fetchSpy.mockResolvedValueOnce(
-				new Response(JSON.stringify(MUSICBRAINZ_RECORDING_RESPONSE), {
-					status: 200,
-				}),
+				new Response(JSON.stringify(SEARCH_RESPONSE), { status: 200 }),
+			);
+			fetchSpy.mockResolvedValueOnce(
+				new Response(JSON.stringify(TAGS_RESPONSE), { status: 200 }),
+			);
+			fetchSpy.mockResolvedValueOnce(
+				new Response(JSON.stringify(LABELS_RESPONSE), { status: 200 }),
 			);
 
 			// #when
@@ -71,9 +82,13 @@ describe("metadata enrichment integration", () => {
 		it("fetches cover art using the returned releaseId", async () => {
 			// #given
 			fetchSpy.mockResolvedValueOnce(
-				new Response(JSON.stringify(MUSICBRAINZ_RECORDING_RESPONSE), {
-					status: 200,
-				}),
+				new Response(JSON.stringify(SEARCH_RESPONSE), { status: 200 }),
+			);
+			fetchSpy.mockResolvedValueOnce(
+				new Response(JSON.stringify(TAGS_RESPONSE), { status: 200 }),
+			);
+			fetchSpy.mockResolvedValueOnce(
+				new Response(JSON.stringify(LABELS_RESPONSE), { status: 200 }),
 			);
 			fetchSpy.mockResolvedValueOnce(
 				new Response(FAKE_COVER_BYTES, {

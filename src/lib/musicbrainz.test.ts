@@ -8,9 +8,10 @@ import {
 	type TrackMetadata,
 } from "./musicbrainz";
 
-const FULL_RESPONSE = {
+const SEARCH_RESPONSE = {
 	recordings: [
 		{
+			id: "recording-001",
 			title: "Bohemian Rhapsody",
 			"artist-credit": [{ name: "Queen" }],
 			releases: [
@@ -20,20 +21,27 @@ const FULL_RESPONSE = {
 					date: "1975-10-31",
 					"release-group": { "primary-type": "Album" },
 					media: [{ track: [{ number: "11" }] }],
-					"label-info": [{ label: { name: "EMI" } }],
 				},
-			],
-			tags: [
-				{ name: "rock", count: 10 },
-				{ name: "classic rock", count: 5 },
 			],
 		},
 	],
 };
 
-const ALBUM_VS_SINGLE_RESPONSE = {
+const TAGS_RESPONSE = {
+	tags: [
+		{ name: "rock", count: 10 },
+		{ name: "classic rock", count: 5 },
+	],
+};
+
+const LABELS_RESPONSE = {
+	"label-info": [{ label: { name: "EMI" } }],
+};
+
+const ALBUM_VS_SINGLE_SEARCH_RESPONSE = {
 	recordings: [
 		{
+			id: "recording-002",
 			title: "Bohemian Rhapsody",
 			"artist-credit": [{ name: "Queen" }],
 			releases: [
@@ -43,7 +51,6 @@ const ALBUM_VS_SINGLE_RESPONSE = {
 					date: "1975-10-31",
 					"release-group": { "primary-type": "Single" },
 					media: [{ track: [{ number: "1" }] }],
-					"label-info": [{ label: { name: "EMI" } }],
 				},
 				{
 					id: "album-789",
@@ -51,13 +58,36 @@ const ALBUM_VS_SINGLE_RESPONSE = {
 					date: "1975-11-21",
 					"release-group": { "primary-type": "Album" },
 					media: [{ track: [{ number: "11" }] }],
-					"label-info": [{ label: { name: "EMI Records" } }],
 				},
 			],
-			tags: [{ name: "rock", count: 8 }],
 		},
 	],
 };
+
+const ALBUM_TAGS_RESPONSE = {
+	tags: [{ name: "rock", count: 8 }],
+};
+
+const ALBUM_LABELS_RESPONSE = {
+	"label-info": [{ label: { name: "EMI Records" } }],
+};
+
+function mockSearchWithLookups(
+	fetchSpy: ReturnType<typeof vi.spyOn>,
+	searchResponse: object,
+	tagsResponse: object,
+	labelsResponse: object,
+): void {
+	fetchSpy.mockResolvedValueOnce(
+		new Response(JSON.stringify(searchResponse), { status: 200 }),
+	);
+	fetchSpy.mockResolvedValueOnce(
+		new Response(JSON.stringify(tagsResponse), { status: 200 }),
+	);
+	fetchSpy.mockResolvedValueOnce(
+		new Response(JSON.stringify(labelsResponse), { status: 200 }),
+	);
+}
 
 describe("lookupTrack()", () => {
 	let fetchSpy: ReturnType<typeof vi.spyOn>;
@@ -72,8 +102,11 @@ describe("lookupTrack()", () => {
 
 	it("returns enriched metadata for a known track", async () => {
 		// #given
-		fetchSpy.mockResolvedValue(
-			new Response(JSON.stringify(FULL_RESPONSE), { status: 200 }),
+		mockSearchWithLookups(
+			fetchSpy,
+			SEARCH_RESPONSE,
+			TAGS_RESPONSE,
+			LABELS_RESPONSE,
 		);
 
 		// #when
@@ -90,9 +123,29 @@ describe("lookupTrack()", () => {
 		} satisfies TrackMetadata);
 	});
 
+	it("calls recording tags and release labels endpoints", async () => {
+		// #given
+		mockSearchWithLookups(
+			fetchSpy,
+			SEARCH_RESPONSE,
+			TAGS_RESPONSE,
+			LABELS_RESPONSE,
+		);
+
+		// #when
+		await lookupTrack("Queen", "Bohemian Rhapsody");
+
+		// #then
+		expect(fetchSpy).toHaveBeenCalledTimes(3);
+		expect(fetchSpy.mock.calls[1][0]).toContain("/recording/recording-001");
+		expect(fetchSpy.mock.calls[1][0]).toContain("inc=tags");
+		expect(fetchSpy.mock.calls[2][0]).toContain("/release/release-123");
+		expect(fetchSpy.mock.calls[2][0]).toContain("inc=labels");
+	});
+
 	it("returns null when no recordings match", async () => {
 		// #given
-		fetchSpy.mockResolvedValue(
+		fetchSpy.mockResolvedValueOnce(
 			new Response(JSON.stringify({ recordings: [] }), { status: 200 }),
 		);
 
@@ -129,8 +182,11 @@ describe("lookupTrack()", () => {
 
 	it("prefers Album release type over Single", async () => {
 		// #given
-		fetchSpy.mockResolvedValue(
-			new Response(JSON.stringify(ALBUM_VS_SINGLE_RESPONSE), { status: 200 }),
+		mockSearchWithLookups(
+			fetchSpy,
+			ALBUM_VS_SINGLE_SEARCH_RESPONSE,
+			ALBUM_TAGS_RESPONSE,
+			ALBUM_LABELS_RESPONSE,
 		);
 
 		// #when
@@ -145,6 +201,42 @@ describe("lookupTrack()", () => {
 			label: "EMI Records",
 			releaseId: "album-789",
 		} satisfies TrackMetadata);
+	});
+
+	it("returns empty genre when tags lookup fails", async () => {
+		// #given
+		fetchSpy.mockResolvedValueOnce(
+			new Response(JSON.stringify(SEARCH_RESPONSE), { status: 200 }),
+		);
+		fetchSpy.mockResolvedValueOnce(new Response("", { status: 500 }));
+		fetchSpy.mockResolvedValueOnce(
+			new Response(JSON.stringify(LABELS_RESPONSE), { status: 200 }),
+		);
+
+		// #when
+		const result = await lookupTrack("Queen", "Bohemian Rhapsody");
+
+		// #then
+		expect(result?.genre).toBe("");
+		expect(result?.label).toBe("EMI");
+	});
+
+	it("returns empty label when labels lookup fails", async () => {
+		// #given
+		fetchSpy.mockResolvedValueOnce(
+			new Response(JSON.stringify(SEARCH_RESPONSE), { status: 200 }),
+		);
+		fetchSpy.mockResolvedValueOnce(
+			new Response(JSON.stringify(TAGS_RESPONSE), { status: 200 }),
+		);
+		fetchSpy.mockResolvedValueOnce(new Response("", { status: 500 }));
+
+		// #when
+		const result = await lookupTrack("Queen", "Bohemian Rhapsody");
+
+		// #then
+		expect(result?.genre).toBe("rock");
+		expect(result?.label).toBe("");
 	});
 
 	it("returns null when artist is empty", async () => {
@@ -167,7 +259,7 @@ describe("lookupTrack()", () => {
 
 	it("returns null when API responds with non-OK status", async () => {
 		// #given
-		fetchSpy.mockResolvedValue(new Response("", { status: 503 }));
+		fetchSpy.mockResolvedValueOnce(new Response("", { status: 503 }));
 
 		// #when
 		const result = await lookupTrack("Queen", "Bohemian Rhapsody");
@@ -178,7 +270,7 @@ describe("lookupTrack()", () => {
 
 	it("returns null when fetch throws a network error", async () => {
 		// #given
-		fetchSpy.mockRejectedValue(new Error("Network unreachable"));
+		fetchSpy.mockRejectedValueOnce(new Error("Network unreachable"));
 
 		// #when
 		const result = await lookupTrack("Queen", "Bohemian Rhapsody");

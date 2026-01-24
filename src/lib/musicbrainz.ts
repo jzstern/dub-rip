@@ -1,7 +1,7 @@
 const DEFAULT_TIMEOUT = 5000;
 const COVER_ART_TIMEOUT = 4000;
 const USER_AGENT = "dub-rip/1.0 (https://github.com/jzstern/dub-rip)";
-const API_BASE = "https://musicbrainz.org/ws/2/recording";
+const API_BASE = "https://musicbrainz.org/ws/2";
 const COVER_ART_BASE = "https://coverartarchive.org/release";
 
 export interface TrackMetadata {
@@ -33,12 +33,21 @@ interface MusicBrainzRelease {
 }
 
 interface MusicBrainzRecording {
+	id?: string;
 	releases?: MusicBrainzRelease[];
 	tags?: MusicBrainzTag[];
 }
 
-interface MusicBrainzResponse {
+interface MusicBrainzSearchResponse {
 	recordings?: MusicBrainzRecording[];
+}
+
+interface MusicBrainzRecordingLookup {
+	tags?: MusicBrainzTag[];
+}
+
+interface MusicBrainzReleaseLookup {
+	"label-info"?: Array<{ label?: { name?: string } }>;
 }
 
 function pickBestRelease(releases: MusicBrainzRelease[]): MusicBrainzRelease {
@@ -57,6 +66,42 @@ function escapeLucene(value: string): string {
 	return value.replace(/[+\-&|!(){}[\]^"~*?:\\/]/g, "\\$&");
 }
 
+async function fetchRecordingTags(
+	recordingId: string,
+	signal: AbortSignal,
+): Promise<MusicBrainzTag[]> {
+	try {
+		const url = `${API_BASE}/recording/${encodeURIComponent(recordingId)}?inc=tags&fmt=json`;
+		const response = await fetch(url, {
+			signal,
+			headers: { "User-Agent": USER_AGENT },
+		});
+		if (!response.ok) return [];
+		const data = (await response.json()) as MusicBrainzRecordingLookup;
+		return data.tags ?? [];
+	} catch {
+		return [];
+	}
+}
+
+async function fetchReleaseLabels(
+	releaseId: string,
+	signal: AbortSignal,
+): Promise<string> {
+	try {
+		const url = `${API_BASE}/release/${encodeURIComponent(releaseId)}?inc=labels&fmt=json`;
+		const response = await fetch(url, {
+			signal,
+			headers: { "User-Agent": USER_AGENT },
+		});
+		if (!response.ok) return "";
+		const data = (await response.json()) as MusicBrainzReleaseLookup;
+		return data["label-info"]?.[0]?.label?.name ?? "";
+	} catch {
+		return "";
+	}
+}
+
 export async function lookupTrack(
 	artist: string,
 	title: string,
@@ -69,16 +114,16 @@ export async function lookupTrack(
 
 	try {
 		const query = `recording:"${escapeLucene(title)}" AND artist:"${escapeLucene(artist)}"`;
-		const url = `${API_BASE}?query=${encodeURIComponent(query)}&fmt=json&limit=5`;
+		const searchUrl = `${API_BASE}/recording?query=${encodeURIComponent(query)}&fmt=json&limit=5`;
 
-		const response = await fetch(url, {
+		const response = await fetch(searchUrl, {
 			signal: controller.signal,
 			headers: { "User-Agent": USER_AGENT },
 		});
 
 		if (!response.ok) return null;
 
-		const data = (await response.json()) as MusicBrainzResponse;
+		const data = (await response.json()) as MusicBrainzSearchResponse;
 		const recordings = data.recordings;
 
 		if (!recordings || recordings.length === 0) return null;
@@ -89,13 +134,21 @@ export async function lookupTrack(
 		if (!releases || releases.length === 0) return null;
 
 		const release = pickBestRelease(releases);
+		const recordingId = recording.id;
+
+		const [tags, label] = await Promise.all([
+			recordingId
+				? fetchRecordingTags(recordingId, controller.signal)
+				: Promise.resolve([]),
+			fetchReleaseLabels(release.id, controller.signal),
+		]);
 
 		return {
 			album: release.title ?? "",
 			year: release.date?.slice(0, 4) ?? "",
-			genre: extractGenre(recording.tags),
+			genre: extractGenre(tags),
 			trackNumber: release.media?.[0]?.track?.[0]?.number ?? "",
-			label: release["label-info"]?.[0]?.label?.name ?? "",
+			label,
 			releaseId: release.id,
 		};
 	} catch {

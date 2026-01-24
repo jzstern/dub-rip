@@ -56,6 +56,7 @@ export default {
 			},
 			fontFamily: {
 				sans: [...fontFamily.sans],
+				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},
 	},

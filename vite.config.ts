@@ -11,6 +11,11 @@ export default defineConfig({
 		sveltekit(),
 	],
 	ssr: {
-		external: ["yt-dlp-wrap", "@ffmpeg-installer/ffmpeg", "node-id3"],
+		external: [
+			"yt-dlp-wrap",
+			"@ffmpeg-installer/ffmpeg",
+			"node-id3",
+			"youtube-po-token-generator",
+		],
 	},
 });

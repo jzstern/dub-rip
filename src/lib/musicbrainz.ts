@@ -66,6 +66,25 @@ function escapeLucene(value: string): string {
 	return value.replace(/[+\-&|!(){}[\]^"~*?:\\/]/g, "\\$&");
 }
 
+function extractPrimaryArtist(artist: string): string {
+	const separators = [
+		/\s+(?:feat\.?|ft\.?|featuring)\s+/i,
+		/\s+&\s+/,
+		/\s+x\s+/i,
+		/\s+(?:and|with)\s+/i,
+		/\s*,\s+/,
+	];
+
+	for (const sep of separators) {
+		const parts = artist.split(sep);
+		if (parts.length > 1) {
+			return parts[0].trim();
+		}
+	}
+
+	return artist;
+}
+
 async function fetchRecordingTags(
 	recordingId: string,
 	signal: AbortSignal,
@@ -113,7 +132,8 @@ export async function lookupTrack(
 	const timeoutId = setTimeout(() => controller.abort(), timeout);
 
 	try {
-		const query = `recording:"${escapeLucene(title)}" AND artist:"${escapeLucene(artist)}"`;
+		const primaryArtist = extractPrimaryArtist(artist);
+		const query = `recording:"${escapeLucene(title)}" AND artist:"${escapeLucene(primaryArtist)}"`;
 		const searchUrl = `${API_BASE}/recording?query=${encodeURIComponent(query)}&fmt=json&limit=5`;
 
 		const response = await fetch(searchUrl, {

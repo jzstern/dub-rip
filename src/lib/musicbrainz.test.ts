@@ -278,6 +278,40 @@ describe("lookupTrack()", () => {
 		// #then
 		expect(result).toBeNull();
 	});
+
+	it("extracts primary artist from collaborative names", async () => {
+		// #given
+		mockSearchWithLookups(
+			fetchSpy,
+			SEARCH_RESPONSE,
+			TAGS_RESPONSE,
+			LABELS_RESPONSE,
+		);
+
+		// #when
+		await lookupTrack("Aries & brakence", "SLEEPWALKER");
+
+		// #then - verify the search query uses just "Aries"
+		expect(fetchSpy.mock.calls[0][0]).toContain("artist%3A%22Aries%22");
+		expect(fetchSpy.mock.calls[0][0]).not.toContain("brakence");
+	});
+
+	it("extracts primary artist from feat. notation", async () => {
+		// #given
+		mockSearchWithLookups(
+			fetchSpy,
+			SEARCH_RESPONSE,
+			TAGS_RESPONSE,
+			LABELS_RESPONSE,
+		);
+
+		// #when
+		await lookupTrack("Artist feat. Other", "Track Name");
+
+		// #then
+		expect(fetchSpy.mock.calls[0][0]).toContain("artist%3A%22Artist%22");
+		expect(fetchSpy.mock.calls[0][0]).not.toContain("Other");
+	});
 });
 
 describe("fetchCoverArt()", () => {

@@ -445,7 +445,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						type: "error",
 						message: "Download completed but file not found",
 					});
-					controller.close();
+					closeStream();
 					return;
 				}
 

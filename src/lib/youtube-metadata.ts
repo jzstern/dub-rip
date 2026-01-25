@@ -82,7 +82,7 @@ export async function fetchYouTubeMetadata(
 		const unknownError = new Error(`Unknown metadata error: ${String(error)}`);
 		Sentry.captureException(unknownError, {
 			tags: { service: "youtube-metadata", operation: "fetch" },
-			extra: { videoId },
+			extra: { videoId, originalValue: error },
 		});
 		throw new YouTubeMetadataError("Unknown metadata error");
 	} finally {

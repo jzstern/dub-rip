@@ -101,16 +101,18 @@ export async function fetchPoToken(): Promise<PoTokenResult | null> {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			console.warn(`[yt-token] Token generation failed: ${message}`);
-			const normalizedError =
-				err instanceof Error
-					? err
-					: new Error(`Token generation failed: ${message}`);
-			Sentry.captureException(normalizedError, {
-				tags: { service: "yt-token", operation: "generate" },
-				extra: { hasStaleCacheAvailable: isCacheUsable() },
-			});
+			const hasStaleCacheAvailable = isCacheUsable();
+			if (!hasStaleCacheAvailable) {
+				const normalizedError =
+					err instanceof Error
+						? err
+						: new Error(`Token generation failed: ${message}`);
+				Sentry.captureException(normalizedError, {
+					tags: { service: "yt-token", operation: "generate" },
+				});
+			}
 			lastFailedAt = Date.now();
-			if (isCacheUsable()) {
+			if (hasStaleCacheAvailable) {
 				console.log("[yt-token] Returning stale cached token");
 				return cached?.result ?? null;
 			}

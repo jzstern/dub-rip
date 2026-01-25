@@ -133,12 +133,13 @@ export async function ensureYtDlpBinary(): Promise<string> {
 				if (existsSync(YTDLP_BINARY_PATH)) {
 					return YTDLP_BINARY_PATH;
 				}
-				const error = new Error("Failed to install yt-dlp binary");
+				const originalError =
+					err instanceof Error ? err : new Error(String(err));
+				const error = new Error("Failed to install yt-dlp binary", {
+					cause: originalError,
+				});
 				Sentry.captureException(error, {
 					tags: { service: "yt-dlp-binary", operation: "install" },
-					extra: {
-						originalError: err instanceof Error ? err.message : String(err),
-					},
 				});
 				throw error;
 			}

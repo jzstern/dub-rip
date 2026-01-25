@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@sentry/sveltekit", () => ({
-	captureException: vi.fn(),
-	captureMessage: vi.fn(),
-}));
-
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 

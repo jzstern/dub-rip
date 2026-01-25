@@ -3,6 +3,7 @@ import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import {
 	extractVideoId,
@@ -139,9 +140,30 @@ export const GET: RequestHandler = async ({ url }) => {
 					};
 
 					console.log("[Cobalt] Writing ID3 tags:", tags);
-					NodeID3.write(tags, outputPath);
+					const success = NodeID3.write(tags, outputPath);
+					if (success !== true) {
+						const error =
+							success instanceof Error
+								? success
+								: new Error("NodeID3.write returned non-true value");
+						console.error("[Cobalt] ID3 write failed:", error);
+						Sentry.captureException(error, {
+							tags: { service: "download-cobalt", operation: "id3-write" },
+							extra: { videoId, tags },
+						});
+					} else {
+						console.log("[Cobalt] ID3 write success");
+					}
 				} catch (err) {
 					console.error("[Cobalt] Metadata processing error:", err);
+					const normalizedError =
+						err instanceof Error
+							? err
+							: new Error(`ID3 processing failed: ${String(err)}`);
+					Sentry.captureException(normalizedError, {
+						tags: { service: "download-cobalt", operation: "id3-write" },
+						extra: { videoId },
+					});
 				}
 
 				send({

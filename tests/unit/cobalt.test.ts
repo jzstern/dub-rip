@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@sentry/sveltekit", () => ({
-	captureException: vi.fn(),
-	captureMessage: vi.fn(),
-}));
-
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 
 describe("Cobalt API Integration", () => {

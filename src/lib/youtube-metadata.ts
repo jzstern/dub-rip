@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { parseArtistAndTitle, sanitizeUploaderAsArtist } from "./video-utils";
 
 const DEFAULT_TIMEOUT = 10000;
@@ -70,10 +71,19 @@ export async function fetchYouTubeMetadata(
 			if (error.name === "AbortError") {
 				throw new YouTubeMetadataError("Metadata request timed out");
 			}
+			Sentry.captureException(error, {
+				tags: { service: "youtube-metadata", operation: "fetch" },
+				extra: { videoId },
+			});
 			throw new YouTubeMetadataError(
 				`Failed to fetch metadata: ${error.message}`,
 			);
 		}
+		const unknownError = new Error(`Unknown metadata error: ${String(error)}`);
+		Sentry.captureException(unknownError, {
+			tags: { service: "youtube-metadata", operation: "fetch" },
+			extra: { videoId, originalValue: error },
+		});
 		throw new YouTubeMetadataError("Unknown metadata error");
 	} finally {
 		clearTimeout(timeoutId);

@@ -416,13 +416,10 @@ export const GET: RequestHandler = async ({ url }) => {
 					const success = NodeID3.write(tags, actualFilePath);
 					if (success === false) {
 						console.error("ID3 write returned false");
-						Sentry.captureException(
-							new Error("NodeID3.write returned false"),
-							{
-								tags: { service: "download-stream", operation: "id3-write" },
-								extra: { videoId, tags },
-							},
-						);
+						Sentry.captureException(new Error("NodeID3.write returned false"), {
+							tags: { service: "download-stream", operation: "id3-write" },
+							extra: { videoId, tags },
+						});
 					} else {
 						console.log("ID3 write success:", success);
 					}

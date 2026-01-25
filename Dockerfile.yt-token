@@ -8,6 +8,7 @@ RUN npm ci
 COPY services/yt-token/index.js ./
 
 ENV PORT=8080
+ENV NODE_OPTIONS="--max-old-space-size=512"
 EXPOSE 8080
 
 USER node

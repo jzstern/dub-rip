@@ -149,8 +149,9 @@ const server = http.createServer(async (req, res) => {
 			res.writeHead(200, NO_CACHE_HEADERS);
 			res.end(
 				JSON.stringify({
-					poToken: token.poToken,
+					potoken: token.poToken,
 					visitor_data: token.visitorData,
+					updated: Date.now(),
 				}),
 			);
 		} catch (err) {

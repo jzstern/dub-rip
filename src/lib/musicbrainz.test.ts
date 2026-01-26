@@ -120,6 +120,7 @@ describe("lookupTrack()", () => {
 			trackNumber: "11",
 			label: "EMI",
 			releaseId: "release-123",
+			candidateReleaseIds: ["release-123"],
 		} satisfies TrackMetadata);
 	});
 
@@ -200,6 +201,7 @@ describe("lookupTrack()", () => {
 			trackNumber: "11",
 			label: "EMI Records",
 			releaseId: "album-789",
+			candidateReleaseIds: ["album-789", "single-456"],
 		} satisfies TrackMetadata);
 	});
 

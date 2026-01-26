@@ -11,6 +11,7 @@ export interface TrackMetadata {
 	trackNumber: string;
 	label: string;
 	releaseId: string;
+	candidateReleaseIds: string[];
 }
 
 export interface CoverArtResult {
@@ -55,6 +56,28 @@ function pickBestRelease(releases: MusicBrainzRelease[]): MusicBrainzRelease {
 		(r) => r["release-group"]?.["primary-type"] === "Album",
 	);
 	return album ?? releases[0];
+}
+
+function collectCandidateReleaseIds(
+	recordings: MusicBrainzRecording[],
+): string[] {
+	const albums: string[] = [];
+	const others: string[] = [];
+	const seen = new Set<string>();
+
+	for (const recording of recordings) {
+		for (const release of recording.releases ?? []) {
+			if (seen.has(release.id)) continue;
+			seen.add(release.id);
+			if (release["release-group"]?.["primary-type"] === "Album") {
+				albums.push(release.id);
+			} else {
+				others.push(release.id);
+			}
+		}
+	}
+
+	return [...albums, ...others];
 }
 
 function extractGenre(tags?: MusicBrainzTag[]): string {
@@ -148,13 +171,13 @@ export async function lookupTrack(
 
 		if (!recordings || recordings.length === 0) return null;
 
-		const recording = recordings[0];
-		const releases = recording.releases;
+		const candidateReleaseIds = collectCandidateReleaseIds(recordings);
 
-		if (!releases || releases.length === 0) return null;
+		const allReleases = recordings.flatMap((r) => r.releases ?? []);
+		if (allReleases.length === 0) return null;
 
-		const release = pickBestRelease(releases);
-		const recordingId = recording.id;
+		const release = pickBestRelease(allReleases);
+		const recordingId = recordings[0].id;
 
 		const [tags, label] = await Promise.all([
 			recordingId
@@ -170,6 +193,7 @@ export async function lookupTrack(
 			trackNumber: release.media?.[0]?.track?.[0]?.number ?? "",
 			label,
 			releaseId: release.id,
+			candidateReleaseIds,
 		};
 	} catch {
 		return null;

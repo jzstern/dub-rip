@@ -113,8 +113,11 @@ async function enrichMetadata(
 		const metadata = await lookupTrack(artist, title);
 
 		let artwork: CoverArtResult | null = null;
-		if (metadata?.releaseId) {
-			artwork = await fetchCoverArt(metadata.releaseId);
+		if (metadata?.candidateReleaseIds) {
+			for (const releaseId of metadata.candidateReleaseIds) {
+				artwork = await fetchCoverArt(releaseId);
+				if (artwork) break;
+			}
 		}
 		if (!artwork) {
 			artwork = await fetchThumbnailArt(videoId);

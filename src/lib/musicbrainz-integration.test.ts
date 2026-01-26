@@ -76,6 +76,7 @@ describe("metadata enrichment integration", () => {
 				trackNumber: "2",
 				label: "Helium 3",
 				releaseId: "release-abc-123",
+				candidateReleaseIds: ["release-abc-123"],
 			} satisfies TrackMetadata);
 		});
 

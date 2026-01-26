@@ -42,6 +42,10 @@ jobs:
 
           railway link --project "$PROJECT_ID" --environment "$ENV_NAME"
 
+      - name: Clear internal-only variables
+        run: |
+          railway variables set COBALT_API_URL="" --service dub-rip
+
       - name: Deploy to PR environment
         id: deploy
         run: |

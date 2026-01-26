@@ -106,6 +106,7 @@ $effect(() => {
 			status = "";
 			progress = 0;
 			videoTitle = "";
+			enrichedMetadata = null;
 		}
 	}
 

@@ -7,7 +7,7 @@ export interface PoTokenResult {
 }
 
 export const CACHE_TTL_MS = 50 * 60 * 1000;
-export const GENERATION_TIMEOUT_MS = 30_000;
+export const GENERATION_TIMEOUT_MS = 60_000;
 export const FAILURE_BACKOFF_MS = 30_000;
 const MAX_STALE_MS = CACHE_TTL_MS * 2;
 

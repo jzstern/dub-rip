@@ -44,7 +44,7 @@ jobs:
 
       - name: Clear internal-only variables
         run: |
-          railway variables set COBALT_API_URL="" --service dub-rip
+          railway variables delete COBALT_API_URL --service dub-rip -y || true
 
       - name: Deploy to PR environment
         id: deploy

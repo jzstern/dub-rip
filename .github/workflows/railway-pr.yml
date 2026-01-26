@@ -44,7 +44,7 @@ jobs:
 
       - name: Override internal-only variables for PR
         run: |
-          railway variables set "COBALT_API_URL=https://api.cobalt.tools/" --service dub-rip
+          railway variables set "COBALT_API_URL=https://cobalt-8x3f-production.up.railway.app/" --service dub-rip
 
       - name: Deploy to PR environment
         id: deploy

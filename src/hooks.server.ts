@@ -1,7 +1,9 @@
 import * as Sentry from "@sentry/sveltekit";
 import { handleErrorWithSentry, sentryHandle } from "@sentry/sveltekit";
 import { sequence } from "@sveltejs/kit/hooks";
+import { dev } from "$app/environment";
 import { env } from "$env/dynamic/private";
+import { fetchPoToken } from "$lib/yt-token";
 
 Sentry.init({
 	dsn: env.SENTRY_DSN,
@@ -18,6 +20,10 @@ Sentry.init({
 
 // If you have custom handlers, make sure to place them after `sentryHandle()` in the `sequence` function.
 export const handle = sequence(sentryHandle());
+
+if (!dev) {
+	fetchPoToken().catch(() => {});
+}
 
 // If you have a custom error handler, pass it to `handleErrorWithSentry`
 export const handleError = handleErrorWithSentry();

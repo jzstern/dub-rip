@@ -6,7 +6,10 @@ import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
 import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
-import type { VideoPreview as VideoPreviewType } from "$lib/types";
+import type {
+	EnrichedMetadata,
+	VideoPreview as VideoPreviewType,
+} from "$lib/types";
 
 let url = $state("");
 let loading = $state(false);
@@ -35,6 +38,7 @@ let loadingPreview = $state(false);
 let downloadComplete = $state(false);
 let completedFilename = $state("");
 let currentDownloadId = 0;
+let enrichedMetadata = $state<EnrichedMetadata | null>(null);
 
 function formatDuration(seconds: number): string {
 	if (!seconds) return "";
@@ -102,6 +106,7 @@ $effect(() => {
 			status = "";
 			progress = 0;
 			videoTitle = "";
+			enrichedMetadata = null;
 		}
 	}
 
@@ -134,6 +139,7 @@ function handleDownload() {
 	videoTitle = "";
 	downloadComplete = false;
 	completedFilename = "";
+	enrichedMetadata = null;
 	const thisDownloadId = ++currentDownloadId;
 
 	const eventSource = new EventSource(
@@ -158,6 +164,10 @@ function handleDownload() {
 					progress = Math.round(data.percent) || 0;
 					speed = data.speed || "";
 					eta = data.eta || "";
+					break;
+
+				case "metadata":
+					enrichedMetadata = data.metadata;
 					break;
 
 				case "complete": {
@@ -208,6 +218,7 @@ function handleDownload() {
 					eventSource.close();
 					loading = false;
 					status = "";
+					enrichedMetadata = null;
 					break;
 			}
 		} catch (err) {
@@ -223,6 +234,7 @@ function handleDownload() {
 		eventSource.close();
 		loading = false;
 		status = "";
+		enrichedMetadata = null;
 	};
 }
 </script>
@@ -278,6 +290,22 @@ function handleDownload() {
 					<div class="space-y-3">
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
+						{/if}
+
+						{#if enrichedMetadata}
+							<div class="space-y-0.5 text-xs text-muted-foreground">
+								{#if enrichedMetadata.album}
+									<p>
+										<span class="font-medium">Album:</span> {enrichedMetadata.album}{#if enrichedMetadata.year} ({enrichedMetadata.year}){/if}
+									</p>
+								{/if}
+								{#if enrichedMetadata.genre}
+									<p><span class="font-medium">Genre:</span> {enrichedMetadata.genre}</p>
+								{/if}
+								{#if enrichedMetadata.label}
+									<p><span class="font-medium">Label:</span> {enrichedMetadata.label}</p>
+								{/if}
+							</div>
 						{/if}
 
 						<p class="text-xs text-muted-foreground">{status}</p>

@@ -19,8 +19,24 @@ export interface DownloadProgress {
 
 export type DownloadMethod = "cobalt" | "yt-dlp";
 
+export interface EnrichedMetadata {
+	album?: string;
+	year?: string;
+	genre?: string;
+	trackNumber?: string;
+	label?: string;
+	hasArtwork: boolean;
+}
+
 export interface StreamEvent {
-	type: "status" | "info" | "progress" | "complete" | "error" | "event";
+	type:
+		| "status"
+		| "info"
+		| "progress"
+		| "complete"
+		| "error"
+		| "event"
+		| "metadata";
 	message?: string;
 	title?: string;
 	artist?: string;
@@ -34,6 +50,7 @@ export interface StreamEvent {
 	eventType?: string;
 	eventData?: string;
 	downloadMethod?: DownloadMethod;
+	metadata?: EnrichedMetadata;
 }
 
 export interface ApiError {

@@ -56,8 +56,18 @@ Railway's `healthcheckPath` is intentionally pointed at `/health`, not `/ready`,
 |------|---------|---------|
 | `PORT` | `8080` | HTTP listen port. |
 | `NODE_OPTIONS` | `--max-old-space-size=1024` (from Dockerfile) | Raised heap limit; `jsdom` (used by `youtube-po-token-generator`) is memory-hungry — 512 MB was insufficient and token generation OOM'd mid-VM. |
+| `SENTRY_DSN` | *(unset)* | If set, initializes `@sentry/node` and forwards errors from `logError` + heap-pressure warnings. If unset, the service logs a single `Sentry DSN not set, skipping init` line on boot and keeps running. |
+| `SENTRY_ENVIRONMENT` | `NODE_ENV` | Optional Sentry environment tag (e.g. `production`, `pr-42`). |
+| `SENTRY_RELEASE` | *(unset)* | Optional release identifier. |
 
 Railway-injected vars (`RAILWAY_PRIVATE_DOMAIN`, etc.) are not read by the service.
+
+## Monitoring
+
+Stdout logging is the source of truth for Railway's log viewer. Sentry is layered on top when `SENTRY_DSN` is configured:
+
+- **Errors**: every call into `logError(context, err)` — the same code path triggered by `uncaughtException`, `unhandledRejection`, warmup failures, background-refresh failures, and per-request failures — is forwarded to Sentry as a captured exception with tags `{ service: "yt-token-service", context }`. Stdout logs are preserved so Railway history is unchanged.
+- **Heap pressure (early OOM signal)**: every 30s the service samples `process.memoryUsage()`. If `heapUsed / heapTotal` crosses 0.9, it emits a Sentry `warning` tagged `{ service: "yt-token-service", operation: "heap-pressure" }` with `{ heapUsedMB, heapTotalMB, rssMB }`. The same message is throttled to at most once per 5 minutes so the check loop does not spam Sentry when the process is actually near OOM. OOM-SIGABRT generally bypasses `uncaughtException`, so this warning fires *before* the process dies and gives us the signal the previous OOM loop didn't have.
 
 ## Dependencies
 
@@ -110,7 +120,10 @@ Check this service's `/status`. If `generationSuccesses` is 0 and `lastError` ke
 With the current code, only a real process crash can cause this (`/health` always returns 200 when the process is alive). `process.on('uncaughtException')` and `process.on('unhandledRejection')` log the full stack and *do not exit* — transient errors from `jsdom` during BotGuard evaluation shouldn't kill a service whose state is just a token cache, and a restart loop would be strictly worse than a zombie server that reports its own failures via `/status`. If you see a deploy marked REMOVED anyway, check the deploy logs for a synchronous fatal (e.g. `EADDRINUSE` on `server.on("error")`, which does `process.exit(1)`).
 
 **Symptom: `/token` returns 503 for extended periods.**
-The background refresh timer should keep trying every 30s. Hit `/status` to inspect `inBackoff`, `generationAttempts`, and `lastError`. If attempts are incrementing but `generationSuccesses` stays at 0, generation is broken upstream (YouTube or the library).
+The background refresh timer should keep trying every 30s. Hit `/status` to inspect `inBackoff`, `generationAttempts`, and `lastError`. If attempts are incrementing but `generationSuccesses` stays at 0, generation is broken upstream (YouTube or the library). Sentry (if configured) will have the matching `Token generation failed` events with full stack traces.
+
+**Symptom: Railway marks the deploy as OOM / repeated crashes with no Sentry errors.**
+OOM-SIGABRT bypasses `uncaughtException`, so a crash itself won't show up in Sentry. Instead, look for the `yt-token-service heap pressure` warning — it fires *before* OOM when `heapUsed / heapTotal > 0.9` and is the canary for memory leaks in `jsdom` / `tough-cookie`. If that warning is absent and OOMs still happen, bump `--max-old-space-size` or profile the service locally with `node --inspect`.
 
 **Escape hatch: swap to the upstream image.**
 If the Node service becomes persistently unreliable, replace the Railway service's build config with:

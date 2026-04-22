@@ -7,6 +7,13 @@ import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
+	buildID3Tags,
+	fetchThumbnailBuffer,
+	fetchVideoDetails,
+	type ThumbnailImage,
+	type VideoDetails,
+} from "$lib/video-metadata";
+import {
 	extractVideoId,
 	formatBytes,
 	parseArtistAndTitle,
@@ -143,6 +150,13 @@ export const GET: RequestHandler = async ({ url }) => {
 				let artist = "";
 				let trackTitle = "";
 				let uploader = "";
+
+				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
+					videoUrl,
+				).catch(() => null);
+				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
+					? fetchThumbnailBuffer(videoId).catch(() => null)
+					: Promise.resolve(null);
 
 				if (videoId) {
 					try {
@@ -405,13 +419,24 @@ export const GET: RequestHandler = async ({ url }) => {
 				const NodeID3 = require("node-id3");
 
 				try {
-					const tags = {
-						title: trackTitle || videoTitle,
-						artist: artist || "Unknown Artist",
-						albumArtist: artist || "Unknown Artist",
-					};
+					const [details, image] = await Promise.all([
+						detailsPromise,
+						thumbnailPromise,
+					]);
 
-					console.log("Writing ID3 tags:", tags);
+					const tags = buildID3Tags({
+						trackTitle,
+						videoTitle,
+						artist,
+						details,
+						image,
+					});
+
+					const { image: _image, ...tagsForLog } = tags;
+					console.log("Writing ID3 tags:", {
+						...tagsForLog,
+						image: image ? `[${image.buffer.byteLength} bytes]` : "none",
+					});
 
 					const success = NodeID3.write(tags, actualFilePath);
 					if (success !== true) {
@@ -422,7 +447,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						console.error("ID3 write failed:", error);
 						Sentry.captureException(error, {
 							tags: { service: "download-stream", operation: "id3-write" },
-							extra: { videoId, tags },
+							extra: { videoId, tags: tagsForLog },
 						});
 					} else {
 						console.log("ID3 write success");

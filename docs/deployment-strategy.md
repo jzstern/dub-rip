@@ -104,25 +104,31 @@ Generate a UUID for your API key:
 uuidgen
 ```
 
-### 3. yt-token-service (yt-session-generator)
+### 3. yt-token-service
 
 Generates poToken and visitor_data for YouTube BotGuard bypass.
 
-**Docker Image:** `ghcr.io/imputnet/yt-session-generator:webserver`
+**Build source:** Custom Node.js service in this repo at [`services/yt-token/`](../services/yt-token/README.md), built via [`Dockerfile.yt-token`](../Dockerfile.yt-token). See the service's [README](../services/yt-token/README.md) for full API, caching/retry behavior, and troubleshooting.
+
 **Railway Service Name:** `yt-token-service`
 
-> **Note:** The Railway service name is arbitrary — it doesn't need to match the Docker image name.
+> **Note:** The Railway service name is arbitrary — it doesn't need to match anything specific.
 > Whatever you name the service becomes its internal hostname (`{service-name}.railway.internal`),
 > which must match the `YOUTUBE_SESSION_SERVER` URL configured on Cobalt.
 
 **Configuration:**
-- No environment variables required
+- No environment variables required (PORT and NODE_OPTIONS are set in the Dockerfile)
 - Exposes HTTP API on port 8080
 - Only accessible internally (no public exposure needed)
+- `railway.toml` sets `healthcheckPath = "/health"` (liveness-only, always 200 while the process is alive — see service README for why this matters)
 
 **API Endpoints:**
-- `GET /token` - Returns current poToken and visitor_data
-- `GET /update` - Forces token refresh
+- `GET /token` (or `GET /`) - Returns `{ potoken, visitor_data, updated }`
+- `GET /health` - Liveness probe (always 200 if process alive)
+- `GET /ready` - Readiness probe (200 only when a token is cached)
+- `GET /status` - Diagnostics (cache age, backoff, attempt counters, last error)
+
+**Fallback option:** If the custom Node service becomes unreliable, swap the Railway service's build to the upstream image `ghcr.io/imputnet/yt-session-generator:webserver`. The response format is compatible — no app-side changes needed.
 
 ## Railway Setup Steps
 
@@ -133,11 +139,13 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 ### Step 2: Deploy yt-token-service
 
-1. Add a new service → Docker Image
-2. Image: `ghcr.io/imputnet/yt-session-generator:webserver`
+1. Add a new service → GitHub Repo (same repo as dub-rip)
+2. Override the build: set Dockerfile path to `Dockerfile.yt-token`
 3. Service name: `yt-token-service`
 4. No environment variables needed
 5. No public networking (internal only)
+
+> **Alternative:** If you'd rather not build a custom Node service, swap step 1–2 for "Docker Image: `ghcr.io/imputnet/yt-session-generator:webserver`". The response format is compatible with Cobalt.
 
 ### Step 3: Deploy Cobalt
 

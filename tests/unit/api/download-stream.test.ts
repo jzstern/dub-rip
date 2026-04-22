@@ -126,9 +126,7 @@ describe("parseYtDlpError", () => {
 
 	it("returns the generic auth message when poToken is available", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError(botCheckMessage, true);
@@ -141,9 +139,7 @@ describe("parseYtDlpError", () => {
 
 	it("returns the 'service unavailable' message when poToken is missing", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError(botCheckMessage, false);
@@ -156,9 +152,7 @@ describe("parseYtDlpError", () => {
 
 	it("defaults to the auth message when poTokenAvailable is not provided (backward compat)", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError(botCheckMessage);
@@ -171,9 +165,7 @@ describe("parseYtDlpError", () => {
 
 	it("matches on the 'cookies' keyword and still honors poTokenAvailable=false", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError(
@@ -189,9 +181,7 @@ describe("parseYtDlpError", () => {
 
 	it("is unaffected by poTokenAvailable for non-bot-check errors (video unavailable)", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError("ERROR: Video unavailable", false);
@@ -202,9 +192,7 @@ describe("parseYtDlpError", () => {
 
 	it("is unaffected by poTokenAvailable for age-restricted errors", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError("ERROR: age-restricted content", false);
@@ -217,9 +205,7 @@ describe("parseYtDlpError", () => {
 
 	it("falls through to the generic message when nothing matches", async () => {
 		// #given
-		const { parseYtDlpError } = await import(
-			"../../../src/routes/api/download-stream/+server"
-		);
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError("ERROR: network blip", false);

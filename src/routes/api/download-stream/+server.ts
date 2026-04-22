@@ -65,12 +65,18 @@ async function getYTDlp(): Promise<YtDlpInstance> {
 	}
 }
 
-function parseYtDlpError(errorMessage: string): string {
+export function parseYtDlpError(
+	errorMessage: string,
+	poTokenAvailable = true,
+): string {
 	const lowerMessage = errorMessage.toLowerCase();
 	if (
 		lowerMessage.includes("sign in to confirm you're not a bot") ||
 		lowerMessage.includes("cookies")
 	) {
+		if (!poTokenAvailable) {
+			return "Download service is temporarily unavailable (anti-bot token missing). Please try again in a few minutes.";
+		}
 		return "This video requires authentication. Please try a different video or try again later.";
 	}
 	if (lowerMessage.includes("video unavailable")) {
@@ -135,6 +141,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			const randomId = randomBytes(16).toString("hex");
 			const outputPath = join(tmpdir(), `${randomId}`);
+			let poTokenAvailable = true;
 
 			try {
 				send({ type: "status", message: "Getting video info..." });
@@ -288,10 +295,28 @@ export const GET: RequestHandler = async ({ url }) => {
 								`youtube:po_token=web+${tokenResult.poToken};visitor_data=${tokenResult.visitorData}`,
 							);
 						} else {
+							poTokenAvailable = false;
 							console.warn(
 								"[yt-token] Token contained unexpected characters, skipping",
 							);
 						}
+					} else {
+						poTokenAvailable = false;
+						console.warn(
+							"[yt-token] fetchPoToken returned null; yt-dlp will run without po_token",
+						);
+						Sentry.captureMessage(
+							"fetchPoToken returned null in download-stream fallback",
+							{
+								level: "warning",
+								tags: {
+									service: "download-stream",
+									operation: "fetchPoToken",
+									outcome: "null",
+								},
+								extra: { videoId },
+							},
+						);
 					}
 
 					const downloadProcess = ytDlp.exec(args);
@@ -366,7 +391,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 					downloadProcess.on("error", (error: Error) => {
 						console.error("Download process error:", error);
-						send({ type: "error", message: parseYtDlpError(error.message) });
+						send({
+							type: "error",
+							message: parseYtDlpError(error.message, poTokenAvailable),
+						});
 					});
 
 					await new Promise((resolve, reject) => {
@@ -498,7 +526,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				});
 				const rawMessage =
 					error instanceof Error ? error.message : "Unknown error";
-				const message = parseYtDlpError(rawMessage);
+				const message = parseYtDlpError(rawMessage, poTokenAvailable);
 				send({ type: "error", message });
 				closeStream();
 

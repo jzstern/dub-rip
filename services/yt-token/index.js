@@ -1,5 +1,11 @@
 import http from "node:http";
+import * as Sentry from "@sentry/node";
 import { generate } from "youtube-po-token-generator";
+import {
+	classifyHeapState,
+	HEAP_PRESSURE_RATIO,
+	HEAP_PRESSURE_THROTTLE_MS,
+} from "./heap.js";
 
 const PORT = process.env.PORT || 8080;
 const CACHE_TTL_MS = 60 * 60 * 1000;
@@ -9,6 +15,9 @@ const SHUTDOWN_GRACE_MS = 10_000;
 const PROACTIVE_REFRESH_MS = 10 * 60 * 1000;
 const BACKGROUND_MIN_INTERVAL_MS = 30_000;
 const BACKGROUND_MAX_INTERVAL_MS = 5 * 60 * 1000;
+const HEAP_CHECK_INTERVAL_MS = 30_000;
+
+const sentryEnabled = initSentry();
 
 let cachedToken = null;
 let lastGenerated = 0;
@@ -20,6 +29,26 @@ let generationSuccesses = 0;
 let isGenerating = false;
 let generationPromise = null;
 let backgroundTimer = null;
+let heapCheckTimer = null;
+let lastHeapPressureEmitAt = 0;
+
+function initSentry() {
+	const dsn = process.env.SENTRY_DSN;
+	if (!dsn) {
+		console.log(
+			`[${new Date().toISOString()}] Sentry DSN not set, skipping init`,
+		);
+		return false;
+	}
+	Sentry.init({
+		dsn,
+		environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+		release: process.env.SENTRY_RELEASE,
+		tracesSampleRate: 0,
+	});
+	console.log(`[${new Date().toISOString()}] Sentry initialized`);
+	return true;
+}
 
 function log(message) {
 	console.log(`[${new Date().toISOString()}] ${message}`);
@@ -32,6 +61,12 @@ function logError(context, err) {
 	console.error(
 		`[${new Date().toISOString()}] ${context}: ${message}${cause}\n${stack}`,
 	);
+	if (sentryEnabled) {
+		const normalized = err instanceof Error ? err : new Error(message);
+		Sentry.captureException(normalized, {
+			tags: { service: "yt-token-service", context },
+		});
+	}
 }
 
 async function generateToken() {
@@ -153,6 +188,35 @@ function scheduleBackgroundRefresh() {
 	backgroundTimer.unref?.();
 }
 
+function checkHeapPressure() {
+	const usage = process.memoryUsage();
+	const state = classifyHeapState(usage, Date.now(), lastHeapPressureEmitAt);
+	if (!state.shouldEmit) return;
+	lastHeapPressureEmitAt = Date.now();
+	log(
+		`Heap pressure detected: ${state.heapUsedMB}MB/${state.heapTotalMB}MB (rss ${state.rssMB}MB)`,
+	);
+	if (sentryEnabled) {
+		Sentry.captureMessage("yt-token-service heap pressure", {
+			level: "warning",
+			tags: { service: "yt-token-service", operation: "heap-pressure" },
+			extra: {
+				heapUsedMB: state.heapUsedMB,
+				heapTotalMB: state.heapTotalMB,
+				rssMB: state.rssMB,
+				thresholdRatio: HEAP_PRESSURE_RATIO,
+				throttleMs: HEAP_PRESSURE_THROTTLE_MS,
+			},
+		});
+	}
+}
+
+function scheduleHeapCheck() {
+	if (heapCheckTimer) clearInterval(heapCheckTimer);
+	heapCheckTimer = setInterval(checkHeapPressure, HEAP_CHECK_INTERVAL_MS);
+	heapCheckTimer.unref?.();
+}
+
 const NO_CACHE_HEADERS = {
 	"Content-Type": "application/json",
 	"Cache-Control": "no-store, max-age=0",
@@ -260,6 +324,7 @@ async function warmup() {
 function shutdown() {
 	log("Shutting down...");
 	if (backgroundTimer) clearTimeout(backgroundTimer);
+	if (heapCheckTimer) clearInterval(heapCheckTimer);
 	server.close(() => {
 		log("Server closed");
 		process.exit(0);
@@ -287,6 +352,7 @@ server.listen(PORT, () => {
 	log(`yt-token-service listening on port ${PORT}`);
 	log("Endpoints: /token, /health (liveness), /ready, /status");
 	warmup().finally(() => scheduleBackgroundRefresh());
+	scheduleHeapCheck();
 });
 
 process.on("SIGTERM", shutdown);

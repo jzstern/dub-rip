@@ -119,3 +119,112 @@ describe("GET /api/download-stream - input validation", () => {
 		expect(response.headers.get("Content-Type")).toBe("text/event-stream");
 	});
 });
+
+describe("parseYtDlpError", () => {
+	const botCheckMessage =
+		"ERROR: [youtube] abc123: Sign in to confirm you're not a bot. Use --cookies to pass cookies from your browser.";
+
+	it("returns the generic auth message when poToken is available", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError(botCheckMessage, true);
+
+		// #then
+		expect(result).toBe(
+			"This video requires authentication. Please try a different video or try again later.",
+		);
+	});
+
+	it("returns the 'service unavailable' message when poToken is missing", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError(botCheckMessage, false);
+
+		// #then
+		expect(result).toBe(
+			"Download service is temporarily unavailable (anti-bot token missing). Please try again in a few minutes.",
+		);
+	});
+
+	it("defaults to the auth message when poTokenAvailable is not provided (backward compat)", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError(botCheckMessage);
+
+		// #then
+		expect(result).toBe(
+			"This video requires authentication. Please try a different video or try again later.",
+		);
+	});
+
+	it("matches on the 'cookies' keyword and still honors poTokenAvailable=false", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError(
+			"ERROR: cookies required to access this video",
+			false,
+		);
+
+		// #then
+		expect(result).toBe(
+			"Download service is temporarily unavailable (anti-bot token missing). Please try again in a few minutes.",
+		);
+	});
+
+	it("is unaffected by poTokenAvailable for non-bot-check errors (video unavailable)", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError("ERROR: Video unavailable", false);
+
+		// #then
+		expect(result).toBe("This video is unavailable or private.");
+	});
+
+	it("is unaffected by poTokenAvailable for age-restricted errors", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError("ERROR: age-restricted content", false);
+
+		// #then
+		expect(result).toBe(
+			"This video is age-restricted and cannot be downloaded.",
+		);
+	});
+
+	it("falls through to the generic message when nothing matches", async () => {
+		// #given
+		const { parseYtDlpError } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+
+		// #when
+		const result = parseYtDlpError("ERROR: network blip", false);
+
+		// #then
+		expect(result).toBe("Download failed. Please try a different video.");
+	});
+});

@@ -12,12 +12,11 @@ import {
 	type ThumbnailImage,
 	type VideoDetails,
 } from "$lib/video-metadata";
+import { extractVideoId } from "$lib/video-utils";
 import {
-	extractVideoId,
-	parseArtistAndTitle,
-	sanitizeUploaderAsArtist,
-} from "$lib/video-utils";
-import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+	fetchYouTubeMetadata,
+	YouTubeMetadataError,
+} from "$lib/youtube-metadata";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -67,46 +66,29 @@ export const GET: RequestHandler = async ({ url }) => {
 			const outputPath = join(tmpdir(), `${randomId}.mp3`);
 
 			try {
-				send({ type: "status", message: "Initializing..." });
-
-				const binaryPath = await ensureYtDlpBinary();
 				send({ type: "status", message: "Getting video info..." });
-
-				const { execFile } = require("node:child_process");
-				const { promisify } = require("node:util");
-				const execFilePromise = promisify(execFile);
 
 				let videoTitle = "";
 				let artist = "";
 				let trackTitle = "";
-				let uploader = "";
 
 				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
 					videoUrl,
 				).catch(() => null);
-				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
-					? fetchThumbnailBuffer(videoId).catch(() => null)
-					: Promise.resolve(null);
+				const thumbnailPromise: Promise<ThumbnailImage | null> =
+					fetchThumbnailBuffer(videoId).catch(() => null);
 
 				try {
-					const result = await execFilePromise(
-						binaryPath,
-						["--print", "%(title)s\n%(uploader)s", "--no-warnings", videoUrl],
-						{ timeout: 15000 },
-					);
-					const lines = result.stdout.trim().split("\n");
-					videoTitle = lines[0] || "";
-					uploader = lines[1] || "";
-					console.log("[Cobalt] Got video title:", videoTitle);
-					console.log("[Cobalt] Got uploader:", uploader);
+					const metadata = await fetchYouTubeMetadata(videoId);
+					videoTitle = metadata.videoTitle;
+					artist = metadata.artist;
+					trackTitle = metadata.trackTitle;
 
-					const parsed = parseArtistAndTitle(videoTitle);
-					artist = parsed.artist;
-					trackTitle = parsed.title;
-
-					if (!artist && uploader) {
-						artist = sanitizeUploaderAsArtist(uploader);
-					}
+					console.log("[Cobalt] Got metadata from oEmbed:", {
+						videoTitle,
+						artist,
+						trackTitle,
+					});
 
 					send({
 						type: "info",
@@ -115,7 +97,19 @@ export const GET: RequestHandler = async ({ url }) => {
 						track: trackTitle,
 					});
 				} catch (err) {
-					console.error("[Cobalt] Failed to get video metadata:", err);
+					if (err instanceof YouTubeMetadataError) {
+						console.log("[Cobalt] oEmbed metadata failed:", err.message);
+						if (err.isUnavailable) {
+							send({
+								type: "error",
+								message: "Video not found or unavailable",
+							});
+							closeStream();
+							return;
+						}
+					} else {
+						console.error("[Cobalt] Metadata fetch error:", err);
+					}
 				}
 
 				send({ type: "status", message: "Requesting audio from Cobalt..." });

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const execFileMock = vi.fn();
+const { execFileMock } = vi.hoisted(() => ({
+	execFileMock: vi.fn(),
+}));
 vi.mock("node:child_process", () => ({
 	default: {
 		execFile: (...args: unknown[]) => execFileMock(...args),
@@ -234,7 +236,7 @@ describe("buildID3Tags", () => {
 		expect(tags).toMatchObject({
 			title: "Some Video",
 			artist: "Unknown Artist",
-			albumArtist: "Unknown Artist",
+			performerInfo: "Unknown Artist",
 			album: "Some Video",
 			composer: "Unknown Artist",
 		});
@@ -267,7 +269,7 @@ describe("buildID3Tags", () => {
 			title: "Real Track",
 			artist: "Real Artist",
 			album: "Real Album",
-			albumArtist: "Real Album Artist",
+			performerInfo: "Real Album Artist",
 			composer: "Real Composer",
 			year: "2020",
 			genre: "Pop",

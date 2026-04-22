@@ -69,8 +69,13 @@ export async function fetchVideoDetails(
 	videoUrl: string,
 	timeout: number = DETAILS_TIMEOUT,
 ): Promise<VideoDetails | null> {
+	const deadline = Date.now() + timeout;
+	const remaining = () => Math.max(1, deadline - Date.now());
 	try {
 		const binaryPath = await ensureYtDlpBinary();
+		if (Date.now() >= deadline) {
+			throw new Error("yt-dlp binary initialization exceeded timeout");
+		}
 		const result = await execFilePromise(
 			binaryPath,
 			[
@@ -80,7 +85,7 @@ export async function fetchVideoDetails(
 				"--skip-download",
 				videoUrl,
 			],
-			{ timeout, maxBuffer: 10 * 1024 * 1024 },
+			{ timeout: remaining(), maxBuffer: 10 * 1024 * 1024 },
 		);
 		const info = JSON.parse(result.stdout) as YtDlpJson;
 
@@ -134,6 +139,7 @@ export async function fetchThumbnailBuffer(
 	oembedUrl?: string,
 	timeout: number = THUMBNAIL_TIMEOUT,
 ): Promise<ThumbnailImage | null> {
+	const deadline = Date.now() + timeout;
 	const candidates = [
 		`https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
 		`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
@@ -142,7 +148,9 @@ export async function fetchThumbnailBuffer(
 		candidates.push(oembedUrl);
 	}
 	for (const url of candidates) {
-		const image = await tryFetchImage(url, timeout);
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) return null;
+		const image = await tryFetchImage(url, remaining);
 		if (image) return image;
 	}
 	return null;
@@ -159,7 +167,7 @@ export interface ID3TagInput {
 export interface ID3Tags {
 	title: string;
 	artist: string;
-	albumArtist: string;
+	performerInfo: string;
 	album: string;
 	composer: string;
 	genre?: string;
@@ -182,7 +190,7 @@ export function buildID3Tags({
 }: ID3TagInput): ID3Tags {
 	const title = (details?.track || trackTitle || videoTitle || "").trim();
 	const finalArtist = (details?.artist || artist || "Unknown Artist").trim();
-	const albumArtist = (
+	const performerInfo = (
 		details?.albumArtist ||
 		finalArtist ||
 		"Unknown Artist"
@@ -193,7 +201,7 @@ export function buildID3Tags({
 	const tags: ID3Tags = {
 		title: title || "Unknown Title",
 		artist: finalArtist,
-		albumArtist,
+		performerInfo,
 		album,
 		composer,
 	};

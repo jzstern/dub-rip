@@ -6,6 +6,13 @@ import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import {
+	buildID3Tags,
+	fetchThumbnailBuffer,
+	fetchVideoDetails,
+	type ThumbnailImage,
+	type VideoDetails,
+} from "$lib/video-metadata";
+import {
 	extractVideoId,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
@@ -74,6 +81,13 @@ export const GET: RequestHandler = async ({ url }) => {
 				let trackTitle = "";
 				let uploader = "";
 
+				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
+					videoUrl,
+				).catch(() => null);
+				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
+					? fetchThumbnailBuffer(videoId).catch(() => null)
+					: Promise.resolve(null);
+
 				try {
 					const result = await execFilePromise(
 						binaryPath,
@@ -133,13 +147,25 @@ export const GET: RequestHandler = async ({ url }) => {
 				const NodeID3 = require("node-id3");
 
 				try {
-					const tags = {
-						title: trackTitle || videoTitle,
-						artist: artist || "Unknown Artist",
-						albumArtist: artist || "Unknown Artist",
-					};
+					const [details, image] = await Promise.all([
+						detailsPromise,
+						thumbnailPromise,
+					]);
 
-					console.log("[Cobalt] Writing ID3 tags:", tags);
+					const tags = buildID3Tags({
+						trackTitle,
+						videoTitle,
+						artist,
+						details,
+						image,
+					});
+
+					const { image: _image, ...tagsForLog } = tags;
+					console.log("[Cobalt] Writing ID3 tags:", {
+						...tagsForLog,
+						image: image ? `[${image.buffer.byteLength} bytes]` : "none",
+					});
+
 					const success = NodeID3.write(tags, outputPath);
 					if (success !== true) {
 						const error =
@@ -149,7 +175,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						console.error("[Cobalt] ID3 write failed:", error);
 						Sentry.captureException(error, {
 							tags: { service: "download-cobalt", operation: "id3-write" },
-							extra: { videoId, tags },
+							extra: { videoId, tags: tagsForLog },
 						});
 					} else {
 						console.log("[Cobalt] ID3 write success");

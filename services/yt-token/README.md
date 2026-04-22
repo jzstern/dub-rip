@@ -55,7 +55,7 @@ Railway's `healthcheckPath` is intentionally pointed at `/health`, not `/ready`,
 | Name | Default | Purpose |
 |------|---------|---------|
 | `PORT` | `8080` | HTTP listen port. |
-| `NODE_OPTIONS` | `--max-old-space-size=512` (from Dockerfile) | Raised heap limit; `jsdom` (used by `youtube-po-token-generator`) is memory-hungry. |
+| `NODE_OPTIONS` | `--max-old-space-size=1024` (from Dockerfile) | Raised heap limit; `jsdom` (used by `youtube-po-token-generator`) is memory-hungry — 512 MB was insufficient and token generation OOM'd mid-VM. |
 
 Railway-injected vars (`RAILWAY_PRIVATE_DOMAIN`, etc.) are not read by the service.
 

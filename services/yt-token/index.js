@@ -67,10 +67,10 @@ function isValidToken(token) {
 	);
 }
 
-async function getToken() {
+async function getToken({ forceRefresh = false } = {}) {
 	const now = Date.now();
 
-	if (cachedToken && now - lastGenerated < CACHE_TTL_MS) {
+	if (!forceRefresh && cachedToken && now - lastGenerated < CACHE_TTL_MS) {
 		const age = Math.round((now - lastGenerated) / 1000);
 		log(`Returning cached token (age: ${age}s)`);
 		return cachedToken;
@@ -140,7 +140,10 @@ function scheduleBackgroundRefresh() {
 	log(`Next background refresh in ${Math.round(delay / 1000)}s`);
 	backgroundTimer = setTimeout(async () => {
 		try {
-			await getToken();
+			const inProactiveWindow =
+				!!cachedToken &&
+				Date.now() - lastGenerated >= CACHE_TTL_MS - PROACTIVE_REFRESH_MS;
+			await getToken({ forceRefresh: inProactiveWindow });
 		} catch {
 			// logged in getToken
 		} finally {

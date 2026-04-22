@@ -114,9 +114,11 @@ The background refresh timer should keep trying every 30s. Hit `/status` to insp
 
 **Escape hatch: swap to the upstream image.**
 If the Node service becomes persistently unreliable, replace the Railway service's build config with:
-```
+
+```text
 Docker image: ghcr.io/imputnet/yt-session-generator:webserver
 ```
+
 The response format is compatible; no app-side changes needed. See `docs/deployment-strategy.md` for details.
 
 ## Impact if this service is down

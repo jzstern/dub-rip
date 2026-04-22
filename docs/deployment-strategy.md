@@ -234,9 +234,9 @@ Railway provides $5/month in free credits. For personal use or low traffic, you 
 - Update Docker images when new versions release
 
 **When YouTube Changes:**
-- yt-session-generator is actively maintained
-- Pull latest image: Railway will auto-deploy on image update
-- Check [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) for issues
+- Bump [`youtube-po-token-generator`](https://www.npmjs.com/package/youtube-po-token-generator) in `services/yt-token/package.json` and redeploy — this is the most common response when YouTube updates BotGuard.
+- If the custom service can't keep up, swap to the upstream image (see "Fallback option" in the yt-token-service section above). The response format is compatible; no app-side changes needed.
+- Watch [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) issues for community signal on upstream BotGuard changes, even when running the custom service.
 
 **Troubleshooting Commands (via Railway Shell):**
 
@@ -245,11 +245,17 @@ To run these commands, open Railway dashboard → Select service → Click "Shel
 ```bash
 # From any Railway service shell:
 
-# Check yt-token-service health
-curl http://yt-token-service.railway.internal:8080/token
+# Liveness (always 200 while the process is alive)
+curl http://yt-token-service.railway.internal:8080/health
 
-# Force token refresh
-curl http://yt-token-service.railway.internal:8080/update
+# Readiness (200 only when a token is cached)
+curl http://yt-token-service.railway.internal:8080/ready
+
+# Full diagnostics: cache age, TTL remaining, backoff, attempt counters, last error
+curl http://yt-token-service.railway.internal:8080/status
+
+# Fetch an actual token (what Cobalt calls)
+curl http://yt-token-service.railway.internal:8080/token
 ```
 
 You can also check service logs directly in the Railway dashboard.

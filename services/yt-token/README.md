@@ -55,13 +55,40 @@ Railway's `healthcheckPath` is intentionally pointed at `/health`, not `/ready`,
 | Name | Default | Purpose |
 |------|---------|---------|
 | `PORT` | `8080` | HTTP listen port. |
-| `NODE_OPTIONS` | `--max-old-space-size=1024` (from Dockerfile) | Raised heap limit; `jsdom` (used by `youtube-po-token-generator`) is memory-hungry — 512 MB was insufficient and token generation OOM'd mid-VM. |
+| `NODE_OPTIONS` | `--max-old-space-size=256` (from Dockerfile) | Heap cap for the **parent HTTP server**. The parent never runs `jsdom`, so 256 MB is plenty; generation happens in a forked child (see below). |
+| `WORKER_HEAP_MB` | `1536` (from Dockerfile) | Heap cap for the **per-generation child process** that runs `youtube-po-token-generator`. Passed as `--max-old-space-size` when `index.js` spawns `generate-worker.js`. |
 
 Railway-injected vars (`RAILWAY_PRIVATE_DOMAIN`, etc.) are not read by the service.
+
+## Architecture: process-isolated token generation
+
+`index.js` is a small HTTP server that **never runs `youtube-po-token-generator` in-process**. On every cache miss it `spawn`s `generate-worker.js` as a short-lived Node child, gives it `--max-old-space-size=${WORKER_HEAP_MB}`, reads the token (or error) from the child's stdout, and returns. The child exits after a single generation.
+
+**Why:** `youtube-po-token-generator` internally loads `jsdom` with `runScripts: 'dangerously'` and evals YouTube's 2.3 MB minified player `base.js`. That VM execution is wildly memory-hungry: it allocates into Node's V8 heap, and on failed BotGuard challenges the library re-enters a `while (true)` retry loop that spins up fresh `JSDOM` instances. In production (see PR #50 / #48), a single generation peaked at 1015 MB of a 1024 MB cap and OOM'd the whole service. Running generation in a forked child contains that blast radius:
+
+- **Parent stays tiny** (~40-50 MB RSS in practice). When the child OOMs, the parent logs a failure, enters the existing 30 s backoff, and returns the stale cached token (or 503) to Cobalt — no service restart, no Railway restart loop.
+- **Worker heap is independent**, so we can grant it a generous cap (1536 MB) without inflating the parent's baseline footprint.
+- **Timeouts still fire from the parent** (`GENERATION_TIMEOUT_MS = 30 s`); a stuck child is `SIGKILL`'d and the failure path runs normally.
+
+### What didn't work (and why)
+
+- **Raising `NODE_OPTIONS=--max-old-space-size=2048+` on the in-process version.** Doesn't fix the root problem: V8 can't compact jsdom's closure-heavy retry graph fast enough, and one OOM still kills the HTTP server. Also inflates container memory even when idle.
+- **Explicit `global.gc()` between generations.** The failure happens *during* one generation (V8 thrashes Mark-Compact at the heap limit), not between them. Explicit GC doesn't help a single peak that exceeds the cap.
+- **Swapping to `brainicism/bgutil-ytdlp-pot-provider` as a Railway service.** A real alternative (and documented in [`docs/deployment-strategy.md`](../../docs/deployment-strategy.md)), but it replaces the library rather than fixing it, and conflicts with in-flight dep bumps. Keeping it as a documented escape hatch (see "Failure modes" below).
+
+### Verification evidence
+
+Locally reproduced the production OOM by running the in-process generator 5 times with `--max-old-space-size=1024`: `FATAL ERROR: Reached heap limit` at 1015 MB, parent crashed. After the fix, driving the same library through `generate-worker.js` with deliberately starved heaps (1536 MB):
+
+- 3 of 5 worker runs OOM'd (SIGABRT in the child).
+- Parent RSS stayed flat at 45-48 MB for the entire run.
+- Successful generations took ~1 s; failures ~10 s (jsdom retry-loop thrash before the OOM fires).
+- `/status` correctly reported `lastError` + `inBackoff` after each child failure, and served cached tokens for reads in between.
 
 ## Dependencies
 
 - **Runtime**: Node 20 (alpine).
+- **Two source files**: `index.js` (HTTP server + cache) and `generate-worker.js` (child process that calls the generator and writes JSON to stdout).
 - **Single production dep**: [`youtube-po-token-generator`](https://www.npmjs.com/package/youtube-po-token-generator) (pulls `jsdom`, `tough-cookie`, etc. transitively).
 
 `Dockerfile.yt-token` uses `npm ci` (not `npm ci --omit=dev`) because `youtube-po-token-generator` ships a nested shrinkwrap; `--omit=dev` at the top level incorrectly prunes transitively-required packages like `tough-cookie`. There are no top-level devDependencies, so the bundle size impact is zero.
@@ -107,7 +134,7 @@ Check this service's `/status`. If `generationSuccesses` is 0 and `lastError` ke
 - `jsdom` native-dep mismatch in Alpine → switch base image to `node:20-slim` and rebuild.
 
 **Symptom: Railway shows the deploy as "crashed" / "REMOVED".**
-With the current code, only a real process crash can cause this (`/health` always returns 200 when the process is alive). `process.on('uncaughtException')` and `process.on('unhandledRejection')` log the full stack and *do not exit* — transient errors from `jsdom` during BotGuard evaluation shouldn't kill a service whose state is just a token cache, and a restart loop would be strictly worse than a zombie server that reports its own failures via `/status`. If you see a deploy marked REMOVED anyway, check the deploy logs for a synchronous fatal (e.g. `EADDRINUSE` on `server.on("error")`, which does `process.exit(1)`).
+With the current code, only a real *parent* process crash can cause this (`/health` always returns 200 when the process is alive). Token generation runs in a forked child (see "Architecture" above), so a jsdom OOM during a BotGuard challenge kills the *child* — the parent logs `Worker failed (signal SIGABRT): worker ran out of memory ...` via `logError`, returns 503 to `/token`, and keeps serving. `process.on('uncaughtException')` and `process.on('unhandledRejection')` log the full stack and *do not exit*. If you see a deploy marked REMOVED, check the deploy logs for a synchronous fatal in the parent (e.g. `EADDRINUSE` on `server.on("error")`, which does `process.exit(1)`).
 
 **Symptom: `/token` returns 503 for extended periods.**
 The background refresh timer should keep trying every 30s. Hit `/status` to inspect `inBackoff`, `generationAttempts`, and `lastError`. If attempts are incrementing but `generationSuccesses` stays at 0, generation is broken upstream (YouTube or the library).

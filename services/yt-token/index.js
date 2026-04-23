@@ -240,10 +240,12 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
-	if (req.method !== "GET" && req.method !== "HEAD") {
+	const isGetPotPost = req.method === "POST" && pathname === "/get_pot";
+
+	if (req.method !== "GET" && req.method !== "HEAD" && !isGetPotPost) {
 		res.writeHead(405, {
 			"Content-Type": "text/plain",
-			Allow: "GET, HEAD",
+			Allow: pathname === "/get_pot" ? "GET, HEAD, POST" : "GET, HEAD",
 		});
 		res.end("Method Not Allowed");
 		return;
@@ -286,7 +288,7 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
-	if (pathname === "/token" || pathname === "/") {
+	if (pathname === "/token" || pathname === "/" || pathname === "/get_pot") {
 		log(`${req.method} ${req.url} from ${req.socket.remoteAddress}`);
 
 		try {
@@ -350,7 +352,9 @@ process.on("unhandledRejection", (reason) => {
 
 server.listen(PORT, () => {
 	log(`yt-token-service listening on port ${PORT}`);
-	log("Endpoints: /token, /health (liveness), /ready, /status");
+	log(
+		"Endpoints: /token, /get_pot (POST, for Cobalt 11.7+), /health (liveness), /ready, /status",
+	);
 	warmup().finally(() => scheduleBackgroundRefresh());
 	scheduleHeapCheck();
 });

@@ -273,10 +273,10 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
    railway logs --service cobalt --environment production | grep -E '\[YOUTUBEJS\]\[Player\]'
    ```
    `Failed to extract signature decipher algorithm.` confirms it.
-3. **Check the `youtubei.js` version in the running container:**
+3. **Check the `youtubei.js` version in the running container.** `railway ssh` passes the quoted string to a remote shell, so pipes work; anchor the grep so it matches only the pnpm directory entry for the package (not substring matches like `youtubei` parent or versioned deps):
    ```bash
    railway ssh --service cobalt --environment production \
-     "ls /app/node_modules/.pnpm/ | grep youtubei"
+     "ls /app/node_modules/.pnpm/ | grep '^youtubei.js@'"
    ```
    If the version is more than a few months behind [upstream](https://github.com/LuanRT/YouTube.js/releases), upgrade Cobalt (see [Cobalt version pinning](#cobalt-version-pinning)).
 

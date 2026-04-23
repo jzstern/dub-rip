@@ -181,7 +181,7 @@ const server = http.createServer(async (req, res) => {
 	if (req.method !== "GET" && req.method !== "HEAD" && !isGetPotPost) {
 		res.writeHead(405, {
 			"Content-Type": "text/plain",
-			Allow: "GET, HEAD, POST",
+			Allow: pathname === "/get_pot" ? "GET, HEAD, POST" : "GET, HEAD",
 		});
 		res.end("Method Not Allowed");
 		return;

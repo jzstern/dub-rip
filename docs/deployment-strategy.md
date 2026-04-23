@@ -75,7 +75,7 @@ SENTRY_DSN=https://your-key@sentry.io/project
 
 Self-hosted Cobalt API for YouTube downloads with BotGuard bypass.
 
-**Docker Image:** `ghcr.io/imputnet/cobalt:latest`
+**Docker Image:** `ghcr.io/imputnet/cobalt:11.7` (pin to a specific version, see [Cobalt version pinning](#cobalt-version-pinning) below — do NOT use `:latest`)
 
 **Environment Variables:**
 ```bash
@@ -150,7 +150,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 ### Step 3: Deploy Cobalt
 
 1. Add a new service → Docker Image
-2. Image: `ghcr.io/imputnet/cobalt:latest`
+2. Image: `ghcr.io/imputnet/cobalt:11.7` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning))
 3. Service name: `cobalt`
 4. Add environment variables:
    ```bash
@@ -226,12 +226,68 @@ Fallback path (if Cobalt fails):
 
 Railway provides $5/month in free credits. For personal use or low traffic, you may stay within the free tier.
 
+## Cobalt version pinning
+
+Pin the Cobalt service to a specific version tag (e.g. `ghcr.io/imputnet/cobalt:11.7`), not `:latest`.
+
+**Why:** Railway resolves `:latest` to an image digest at deploy time and caches that digest. The deployment keeps running the same digest forever — even when upstream `:latest` moves on. A plain "redeploy" redeploys the same digest. So `:latest` gives you the false sense of freshness without the freshness.
+
+**Why it matters specifically for Cobalt:** Cobalt's YouTube extractor depends on [`youtubei.js`](https://github.com/LuanRT/YouTube.js), which reverse-engineers YouTube's signature-decipher algorithm from `player.js`. YouTube ships player changes frequently (often weekly). When `youtubei.js` is more than a few months old, specific videos begin returning empty tunnel bodies (see [symptom: 0-byte tunnel responses](#symptom-0-byte-tunnel-responses-signature-decipher-failure) below).
+
+**To upgrade:**
+
+1. Check the [upstream Cobalt releases](https://github.com/imputnet/cobalt/releases) / [tags](https://github.com/imputnet/cobalt/tags) for the latest version.
+2. Railway dashboard → `cobalt` service → Settings → Source → Image → change the tag (e.g. `ghcr.io/imputnet/cobalt:11.7` → `ghcr.io/imputnet/cobalt:11.8`).
+3. Deploy. Verify with a known-bad video (see below) before closing the ticket.
+4. Update this doc's pinned tag to match.
+
+## Symptom: 0-byte tunnel responses (signature decipher failure)
+
+**User-visible symptom:** Some YouTube videos fail with _"This video requires authentication. Please try a different video or try again later."_ even though they are not age-restricted, private, or region-blocked. Other videos work fine.
+
+**What's happening under the hood:**
+
+1. dub-rip asks Cobalt for a tunnel URL — Cobalt responds `{status: "tunnel", url: ...}`, no error.
+2. dub-rip GETs the tunnel URL — it returns `HTTP 200` with a **0-byte body**.
+3. dub-rip treats that as a Cobalt failure and falls back to yt-dlp.
+4. yt-dlp also fails (YouTube bot-checks the Railway IP) and surfaces the generic auth error.
+
+The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's current player. Cobalt hands out tunnel URLs whose stream requests fail silently behind the scenes.
+
+**Diagnose in 3 steps:**
+
+1. **Confirm Cobalt itself is the layer that's failing.** Call Cobalt's `/api/json` directly, then curl the tunnel URL it returns:
+   ```bash
+   # From a Railway shell (or locally, using the public Cobalt URL + API key):
+   TUNNEL_URL=$(curl -s -X POST https://<cobalt-host>/ \
+     -H 'Content-Type: application/json' \
+     -H 'Authorization: Api-Key <COBALT_API_KEY>' \
+     -d '{"url":"https://www.youtube.com/watch?v=<id>","downloadMode":"audio","audioFormat":"mp3"}' \
+     | jq -r .url)
+   curl -sv "$TUNNEL_URL" -o /tmp/probe.bin
+   ls -la /tmp/probe.bin   # if this is 0 bytes, Cobalt is the problem
+   ```
+   Test a known-working video too (e.g. `dQw4w9WgXcQ`) for a working baseline.
+2. **Confirm the signature-decipher failure in Cobalt logs:**
+   ```bash
+   railway logs --service cobalt --environment production | grep -E '\[YOUTUBEJS\]\[Player\]'
+   ```
+   `Failed to extract signature decipher algorithm.` confirms it.
+3. **Check the `youtubei.js` version in the running container:**
+   ```bash
+   railway ssh --service cobalt --environment production \
+     "ls /app/node_modules/.pnpm/ | grep youtubei"
+   ```
+   If the version is more than a few months behind [upstream](https://github.com/LuanRT/YouTube.js/releases), upgrade Cobalt (see [Cobalt version pinning](#cobalt-version-pinning)).
+
+**Fix:** Upgrade Cobalt. It is almost never an app-side bug in dub-rip.
+
 ## Maintenance
 
 **Regular:**
 - Monitor Railway dashboard for resource usage
 - Check error logs for download failures
-- Update Docker images when new versions release
+- Update Docker images when new versions release — especially Cobalt (see [Cobalt version pinning](#cobalt-version-pinning))
 
 **When YouTube Changes:**
 - Bump [`youtube-po-token-generator`](https://www.npmjs.com/package/youtube-po-token-generator) in `services/yt-token/package.json` and redeploy — this is the most common response when YouTube updates BotGuard.
@@ -273,7 +329,8 @@ You can also check service logs directly in the Railway dashboard.
 | Risk | Mitigation |
 |------|------------|
 | Railway pricing changes | Monitor usage, set spending alerts |
-| Cobalt API changes | Pin Docker image tag, test before updating |
+| Cobalt API changes | Pin Docker image tag (never `:latest` — see [Cobalt version pinning](#cobalt-version-pinning)); test before updating |
+| Cobalt `youtubei.js` falls behind YouTube's player | Upgrade Cobalt image tag; diagnosis runbook at [symptom: 0-byte tunnel responses](#symptom-0-byte-tunnel-responses-signature-decipher-failure) |
 | YouTube blocks BotGuard bypass | yt-dlp fallback, community updates |
 | Service downtime | yt-dlp fallback provides resilience |
 

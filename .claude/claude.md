@@ -47,6 +47,8 @@ Required environment variables for production:
 - `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp fallback (Railway doesn't include Python by default)
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
 
+**Cobalt version pin:** the `cobalt` Railway service must use a specific image tag (`ghcr.io/imputnet/cobalt:<version>`), never `:latest`. Upstream updates `youtubei.js` frequently to keep up with YouTube's player; a stale Cobalt silently returns 0-byte tunnel bodies for some videos. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#cobalt-version-pinning) for the pinning rationale and the 0-byte-body diagnostic runbook.
+
 ### PR Preview Environments
 Same-repo PRs automatically get isolated Railway environments for testing (forked PRs are skipped since secrets aren't available). Setup requires:
 

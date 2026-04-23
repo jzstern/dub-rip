@@ -256,10 +256,15 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
 
 **Diagnose in 3 steps:**
 
-1. **Confirm Cobalt itself is the layer that's failing.** Call Cobalt's `/api/json` directly, then curl the tunnel URL it returns:
+1. **Confirm Cobalt itself is the layer that's failing.** POST to Cobalt's root endpoint directly (Cobalt 11.x takes the download request on `POST /` — the `/api/json` path was only used in pre-10.x releases), then curl the tunnel URL it returns:
    ```bash
-   # From a Railway shell (or locally, using the public Cobalt URL + API key):
-   TUNNEL_URL=$(curl -s -X POST https://<cobalt-host>/ \
+   # From a Railway shell — Cobalt is internal-only by default (see Step 3
+   # above), so target the .railway.internal hostname:
+   COBALT_URL=http://cobalt.railway.internal:9000/
+   # Or, when debugging with public networking temporarily enabled:
+   # COBALT_URL=https://<cobalt-host>/
+
+   TUNNEL_URL=$(curl -s -X POST "$COBALT_URL" \
      -H 'Content-Type: application/json' \
      -H 'Authorization: Api-Key <COBALT_API_KEY>' \
      -d '{"url":"https://www.youtube.com/watch?v=<id>","downloadMode":"audio","audioFormat":"mp3"}' \

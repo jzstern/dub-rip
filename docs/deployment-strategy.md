@@ -75,7 +75,7 @@ SENTRY_DSN=https://your-key@sentry.io/project
 
 Self-hosted Cobalt API for YouTube downloads with BotGuard bypass.
 
-**Docker Image:** `ghcr.io/imputnet/cobalt:11.7` (pin to a specific version, see [Cobalt version pinning](#cobalt-version-pinning) below — do NOT use `:latest`)
+**Docker Image:** `ghcr.io/imputnet/cobalt:11.7.1` (pin to a specific version, see [Cobalt version pinning](#cobalt-version-pinning) below — do NOT use `:latest`)
 
 **Environment Variables:**
 ```bash
@@ -150,7 +150,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 ### Step 3: Deploy Cobalt
 
 1. Add a new service → Docker Image
-2. Image: `ghcr.io/imputnet/cobalt:11.7` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning))
+2. Image: `ghcr.io/imputnet/cobalt:11.7.1` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning))
 3. Service name: `cobalt`
 4. Add environment variables:
    ```bash
@@ -228,7 +228,7 @@ Railway provides $5/month in free credits. For personal use or low traffic, you 
 
 ## Cobalt version pinning
 
-Pin the Cobalt service to a specific version tag (e.g. `ghcr.io/imputnet/cobalt:11.7`), not `:latest`.
+Pin the Cobalt service to a specific version tag (e.g. `ghcr.io/imputnet/cobalt:11.7.1`), not `:latest`.
 
 **Why:** Railway resolves `:latest` to an image digest at deploy time and caches that digest. The deployment keeps running the same digest forever — even when upstream `:latest` moves on. A plain "redeploy" redeploys the same digest. So `:latest` gives you the false sense of freshness without the freshness.
 
@@ -237,7 +237,7 @@ Pin the Cobalt service to a specific version tag (e.g. `ghcr.io/imputnet/cobalt:
 **To upgrade:**
 
 1. Check the [upstream Cobalt releases](https://github.com/imputnet/cobalt/releases) / [tags](https://github.com/imputnet/cobalt/tags) for the latest version.
-2. Railway dashboard → `cobalt` service → Settings → Source → Image → change the tag (e.g. `ghcr.io/imputnet/cobalt:11.7` → `ghcr.io/imputnet/cobalt:11.8`).
+2. Railway dashboard → `cobalt` service → Settings → Source → Image → change the tag (e.g. `ghcr.io/imputnet/cobalt:11.7.1` → `ghcr.io/imputnet/cobalt:11.8.0`).
 3. Deploy. Verify with a known-bad video (see below) before closing the ticket.
 4. Update this doc's pinned tag to match.
 

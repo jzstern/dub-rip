@@ -12,16 +12,17 @@ If this service becomes unreliable, switching back to `ghcr.io/imputnet/yt-sessi
 
 ## API
 
-All endpoints are `GET`/`HEAD` only. Response bodies are JSON unless noted.
+All read endpoints are `GET`/`HEAD`. `/get_pot` additionally accepts `POST` for Cobalt's [session-server protocol](https://github.com/imputnet/cobalt/blob/main/api/src/processing/helpers/youtube-session.js). Response bodies are JSON unless noted.
 
-| Path | Status | Purpose |
-|------|--------|---------|
-| `/` or `/token` | `200` / `503` | Main endpoint. Returns `{ potoken, visitor_data, updated }` on success, plain-text error on failure. Cobalt calls this. |
-| `/health` or `/healthz` | **always `200`** | **Liveness probe.** Reports only whether the process is alive. Used by Railway's `healthcheckPath`. |
-| `/ready` | `200` / `503` | **Readiness probe.** `200` only when a valid token is cached and ready to serve. |
-| `/status` | `200` | Diagnostics: cache age, TTL remaining, backoff state, attempt counters, last error message + age. Useful for debugging without shelling in. |
+| Path | Method(s) | Status | Purpose |
+|------|-----------|--------|---------|
+| `/` or `/token` | `GET`, `HEAD` | `200` / `503` | Legacy endpoint. Returns `{ potoken, visitor_data, updated }`. Kept for backwards compatibility and manual debugging. |
+| `/get_pot` | `GET`, `HEAD`, `POST` | `200` / `503` | **What Cobalt 11.7+ calls.** Same response shape as `/token`. Cobalt's `loadSession()` issues `POST` against the path `/get_pot` derived from its `YOUTUBE_SESSION_SERVER` env var. |
+| `/health` or `/healthz` | `GET`, `HEAD` | **always `200`** | **Liveness probe.** Reports only whether the process is alive. Used by Railway's `healthcheckPath`. |
+| `/ready` | `GET`, `HEAD` | `200` / `503` | **Readiness probe.** `200` only when a valid token is cached and ready to serve. |
+| `/status` | `GET`, `HEAD` | `200` | Diagnostics: cache age, TTL remaining, backoff state, attempt counters, last error message + age. Useful for debugging without shelling in. |
 
-**Response shape for `/token`** (matches Cobalt's expected format — lowercase `potoken`):
+**Response shape for `/token` and `/get_pot`** (matches Cobalt's expected format — lowercase `potoken`; Cobalt's `validateSession()` normalizes `potoken → poToken` and `visitor_data → contentBinding` internally):
 ```json
 {
   "potoken": "MnVjJj...",

@@ -5,7 +5,7 @@ WORKDIR /app
 COPY services/yt-token/package.json services/yt-token/package-lock.json ./
 RUN npm ci
 
-COPY services/yt-token/index.js services/yt-token/generate-worker.js ./
+COPY services/yt-token/index.js services/yt-token/generate-worker.js services/yt-token/heap.js ./
 
 ENV PORT=8080
 ENV NODE_OPTIONS="--max-old-space-size=256"

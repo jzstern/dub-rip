@@ -9,7 +9,8 @@
 		"dev": "node --watch index.js"
 	},
 	"dependencies": {
-		"youtube-po-token-generator": "^0.5.0"
+		"@sentry/node": "^10",
+		"youtube-po-token-generator": "^0.6.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"

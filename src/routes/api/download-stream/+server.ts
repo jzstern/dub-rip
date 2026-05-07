@@ -7,6 +7,13 @@ import * as Sentry from "@sentry/sveltekit";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
+	buildID3Tags,
+	fetchThumbnailBuffer,
+	fetchVideoDetails,
+	type ThumbnailImage,
+	type VideoDetails,
+} from "$lib/video-metadata";
+import {
 	extractVideoId,
 	formatBytes,
 	parseArtistAndTitle,
@@ -17,6 +24,7 @@ import {
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
 import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+import { parseYtDlpError } from "$lib/yt-dlp-errors";
 import { fetchPoToken } from "$lib/yt-token";
 import type { RequestHandler } from "./$types";
 
@@ -65,33 +73,6 @@ async function getYTDlp(): Promise<YtDlpInstance> {
 	}
 }
 
-function parseYtDlpError(errorMessage: string): string {
-	const lowerMessage = errorMessage.toLowerCase();
-	if (
-		lowerMessage.includes("sign in to confirm you're not a bot") ||
-		lowerMessage.includes("cookies")
-	) {
-		return "This video requires authentication. Please try a different video or try again later.";
-	}
-	if (lowerMessage.includes("video unavailable")) {
-		return "This video is unavailable or private.";
-	}
-	if (
-		lowerMessage.includes("age-restricted") ||
-		lowerMessage.includes("confirm your age") ||
-		lowerMessage.includes("verify your age")
-	) {
-		return "This video is age-restricted and cannot be downloaded.";
-	}
-	if (lowerMessage.includes("copyright")) {
-		return "This video is blocked due to copyright restrictions.";
-	}
-	if (lowerMessage.includes("private")) {
-		return "This video is private and cannot be downloaded.";
-	}
-	return "Download failed. Please try a different video.";
-}
-
 export const GET: RequestHandler = async ({ url }) => {
 	const videoUrl = url.searchParams.get("url");
 
@@ -135,6 +116,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			const randomId = randomBytes(16).toString("hex");
 			const outputPath = join(tmpdir(), `${randomId}`);
+			let poTokenAvailable = true;
 
 			try {
 				send({ type: "status", message: "Getting video info..." });
@@ -143,6 +125,13 @@ export const GET: RequestHandler = async ({ url }) => {
 				let artist = "";
 				let trackTitle = "";
 				let uploader = "";
+
+				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
+					videoUrl,
+				).catch(() => null);
+				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
+					? fetchThumbnailBuffer(videoId).catch(() => null)
+					: Promise.resolve(null);
 
 				if (videoId) {
 					try {
@@ -288,10 +277,28 @@ export const GET: RequestHandler = async ({ url }) => {
 								`youtube:po_token=web+${tokenResult.poToken};visitor_data=${tokenResult.visitorData}`,
 							);
 						} else {
+							poTokenAvailable = false;
 							console.warn(
 								"[yt-token] Token contained unexpected characters, skipping",
 							);
 						}
+					} else {
+						poTokenAvailable = false;
+						console.warn(
+							"[yt-token] fetchPoToken returned null; yt-dlp will run without po_token",
+						);
+						Sentry.captureMessage(
+							"fetchPoToken returned null in download-stream fallback",
+							{
+								level: "warning",
+								tags: {
+									service: "download-stream",
+									operation: "fetchPoToken",
+									outcome: "null",
+								},
+								extra: { videoId },
+							},
+						);
 					}
 
 					const downloadProcess = ytDlp.exec(args);
@@ -366,7 +373,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 					downloadProcess.on("error", (error: Error) => {
 						console.error("Download process error:", error);
-						send({ type: "error", message: parseYtDlpError(error.message) });
+						send({
+							type: "error",
+							message: parseYtDlpError(error.message, poTokenAvailable),
+						});
 					});
 
 					await new Promise((resolve, reject) => {
@@ -405,13 +415,24 @@ export const GET: RequestHandler = async ({ url }) => {
 				const NodeID3 = require("node-id3");
 
 				try {
-					const tags = {
-						title: trackTitle || videoTitle,
-						artist: artist || "Unknown Artist",
-						albumArtist: artist || "Unknown Artist",
-					};
+					const [details, image] = await Promise.all([
+						detailsPromise,
+						thumbnailPromise,
+					]);
 
-					console.log("Writing ID3 tags:", tags);
+					const tags = buildID3Tags({
+						trackTitle,
+						videoTitle,
+						artist,
+						details,
+						image,
+					});
+
+					const { image: _image, ...tagsForLog } = tags;
+					console.log("Writing ID3 tags:", {
+						...tagsForLog,
+						image: image ? `[${image.buffer.byteLength} bytes]` : "none",
+					});
 
 					const success = NodeID3.write(tags, actualFilePath);
 					if (success !== true) {
@@ -422,7 +443,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						console.error("ID3 write failed:", error);
 						Sentry.captureException(error, {
 							tags: { service: "download-stream", operation: "id3-write" },
-							extra: { videoId, tags },
+							extra: { videoId, tags: tagsForLog },
 						});
 					} else {
 						console.log("ID3 write success");
@@ -498,7 +519,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				});
 				const rawMessage =
 					error instanceof Error ? error.message : "Unknown error";
-				const message = parseYtDlpError(rawMessage);
+				const message = parseYtDlpError(rawMessage, poTokenAvailable);
 				send({ type: "error", message });
 				closeStream();
 

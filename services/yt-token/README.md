@@ -12,16 +12,17 @@ If this service becomes unreliable, switching back to `ghcr.io/imputnet/yt-sessi
 
 ## API
 
-All endpoints are `GET`/`HEAD` only. Response bodies are JSON unless noted.
+All read endpoints are `GET`/`HEAD`. `/get_pot` additionally accepts `POST` for Cobalt's [session-server protocol](https://github.com/imputnet/cobalt/blob/main/api/src/processing/helpers/youtube-session.js). Response bodies are JSON unless noted.
 
-| Path | Status | Purpose |
-|------|--------|---------|
-| `/` or `/token` | `200` / `503` | Main endpoint. Returns `{ potoken, visitor_data, updated }` on success, plain-text error on failure. Cobalt calls this. |
-| `/health` or `/healthz` | **always `200`** | **Liveness probe.** Reports only whether the process is alive. Used by Railway's `healthcheckPath`. |
-| `/ready` | `200` / `503` | **Readiness probe.** `200` only when a valid token is cached and ready to serve. |
-| `/status` | `200` | Diagnostics: cache age, TTL remaining, backoff state, attempt counters, last error message + age. Useful for debugging without shelling in. |
+| Path | Method(s) | Status | Purpose |
+|------|-----------|--------|---------|
+| `/` or `/token` | `GET`, `HEAD` | `200` / `503` | Legacy endpoint. Returns `{ potoken, visitor_data, updated }`. Kept for backwards compatibility and manual debugging. |
+| `/get_pot` | `GET`, `HEAD`, `POST` | `200` / `503` | **What Cobalt 11.7+ calls.** Same response shape as `/token`. Cobalt's `loadSession()` issues `POST` against the path `/get_pot` derived from its `YOUTUBE_SESSION_SERVER` env var. |
+| `/health` or `/healthz` | `GET`, `HEAD` | **always `200`** | **Liveness probe.** Reports only whether the process is alive. Used by Railway's `healthcheckPath`. |
+| `/ready` | `GET`, `HEAD` | `200` / `503` | **Readiness probe.** `200` only when a valid token is cached and ready to serve. |
+| `/status` | `GET`, `HEAD` | `200` | Diagnostics: cache age, TTL remaining, backoff state, attempt counters, last error message + age. Useful for debugging without shelling in. |
 
-**Response shape for `/token`** (matches Cobalt's expected format — lowercase `potoken`):
+**Response shape for `/token` and `/get_pot`** (matches Cobalt's expected format — lowercase `potoken`; Cobalt's `validateSession()` normalizes `potoken → poToken` and `visitor_data → contentBinding` internally):
 ```json
 {
   "potoken": "MnVjJj...",
@@ -55,8 +56,11 @@ Railway's `healthcheckPath` is intentionally pointed at `/health`, not `/ready`,
 | Name | Default | Purpose |
 |------|---------|---------|
 | `PORT` | `8080` | HTTP listen port. |
-| `NODE_OPTIONS` | `--max-old-space-size=256` (from Dockerfile) | Heap cap for the **parent HTTP server**. The parent never runs `jsdom`, so 256 MB is plenty; generation happens in a forked child (see below). |
+| `NODE_OPTIONS` | `--max-old-space-size=256` (from Dockerfile) | Heap cap for the **parent HTTP server**. The parent never runs `jsdom`, so 256 MB is plenty; generation happens in a forked child (see below). The parent's `NODE_OPTIONS` is **stripped** from the child's environment in `runGeneratorChild()` so the worker's `--max-old-space-size=${WORKER_HEAP_MB}` is unambiguous. |
 | `WORKER_HEAP_MB` | `1536` (from Dockerfile) | Heap cap for the **per-generation child process** that runs `youtube-po-token-generator`. Passed as `--max-old-space-size` when `index.js` spawns `generate-worker.js`. |
+| `SENTRY_DSN` | *(unset)* | If set, initializes `@sentry/node` and forwards errors from `logError` + heap-pressure warnings. If unset, the service logs a single `Sentry DSN not set, skipping init` line on boot and keeps running. |
+| `SENTRY_ENVIRONMENT` | `NODE_ENV` | Optional Sentry environment tag (e.g. `production`, `pr-42`). |
+| `SENTRY_RELEASE` | *(unset)* | Optional release identifier. |
 
 Railway-injected vars (`RAILWAY_PRIVATE_DOMAIN`, etc.) are not read by the service.
 
@@ -67,7 +71,7 @@ Railway-injected vars (`RAILWAY_PRIVATE_DOMAIN`, etc.) are not read by the servi
 **Why:** `youtube-po-token-generator` internally loads `jsdom` with `runScripts: 'dangerously'` and evals YouTube's 2.3 MB minified player `base.js`. That VM execution is wildly memory-hungry: it allocates into Node's V8 heap, and on failed BotGuard challenges the library re-enters a `while (true)` retry loop that spins up fresh `JSDOM` instances. In production (see PR #50 / #48), a single generation peaked at 1015 MB of a 1024 MB cap and OOM'd the whole service. Running generation in a forked child contains that blast radius:
 
 - **Parent stays tiny** (~40-50 MB RSS in practice). When the child OOMs, the parent logs a failure, enters the existing 30 s backoff, and returns the stale cached token (or 503) to Cobalt — no service restart, no Railway restart loop.
-- **Worker heap is independent**, so we can grant it a generous cap (1536 MB) without inflating the parent's baseline footprint.
+- **Worker heap is independent**, so we can grant it a generous cap (1536 MB) without inflating the parent's baseline footprint. The parent's restrictive `NODE_OPTIONS` is stripped from the child's env before spawning so there is no conflicting `--max-old-space-size` carried via env.
 - **Timeouts still fire from the parent** (`GENERATION_TIMEOUT_MS = 30 s`); a stuck child is `SIGKILL`'d and the failure path runs normally.
 
 ### What didn't work (and why)
@@ -84,6 +88,13 @@ Locally reproduced the production OOM by running the in-process generator 5 time
 - Parent RSS stayed flat at 45-48 MB for the entire run.
 - Successful generations took ~1 s; failures ~10 s (jsdom retry-loop thrash before the OOM fires).
 - `/status` correctly reported `lastError` + `inBackoff` after each child failure, and served cached tokens for reads in between.
+
+## Monitoring
+
+Stdout logging is the source of truth for Railway's log viewer. Sentry is layered on top when `SENTRY_DSN` is configured:
+
+- **Errors**: every call into `logError(context, err)` — the same code path triggered by `uncaughtException`, `unhandledRejection`, warmup failures, background-refresh failures, and per-request failures — is forwarded to Sentry as a captured exception with tags `{ service: "yt-token-service", context }`. Stdout logs are preserved so Railway history is unchanged.
+- **Heap pressure (early OOM signal)**: every 30s the **parent** samples `process.memoryUsage()`. If `heapUsed / heapTotal` crosses 0.9, it emits a Sentry `warning` tagged `{ service: "yt-token-service", operation: "heap-pressure" }` with `{ heapUsedMB, heapTotalMB, rssMB }`. The same message is throttled to at most once per 5 minutes so the check loop does not spam Sentry when the process is actually near OOM. With process-isolated generation the parent's heap normally stays well under 256 MB, so this canary now fires only on a leak or unexpected allocation in the parent itself — child OOMs are caught explicitly via the `Worker failed (signal SIGABRT): worker ran out of memory ...` `logError` path.
 
 ## Dependencies
 
@@ -137,7 +148,10 @@ Check this service's `/status`. If `generationSuccesses` is 0 and `lastError` ke
 With the current code, only a real *parent* process crash can cause this (`/health` always returns 200 when the process is alive). Token generation runs in a forked child (see "Architecture" above), so a jsdom OOM during a BotGuard challenge kills the *child* — the parent logs `Worker failed (signal SIGABRT): worker ran out of memory ...` via `logError`, returns 503 to `/token`, and keeps serving. `process.on('uncaughtException')` and `process.on('unhandledRejection')` log the full stack and *do not exit*. If you see a deploy marked REMOVED, check the deploy logs for a synchronous fatal in the parent (e.g. `EADDRINUSE` on `server.on("error")`, which does `process.exit(1)`).
 
 **Symptom: `/token` returns 503 for extended periods.**
-The background refresh timer should keep trying every 30s. Hit `/status` to inspect `inBackoff`, `generationAttempts`, and `lastError`. If attempts are incrementing but `generationSuccesses` stays at 0, generation is broken upstream (YouTube or the library).
+The background refresh timer should keep trying every 30s. Hit `/status` to inspect `inBackoff`, `generationAttempts`, and `lastError`. If attempts are incrementing but `generationSuccesses` stays at 0, generation is broken upstream (YouTube or the library). Sentry (if configured) will have the matching `Token generation failed` events with full stack traces.
+
+**Symptom: Railway marks the deploy as OOM / repeated crashes with no Sentry errors.**
+OOM-SIGABRT bypasses `uncaughtException`, so a crash itself won't show up in Sentry. Instead, look for the `yt-token-service heap pressure` warning — it fires *before* OOM when `heapUsed / heapTotal > 0.9` and is the canary for memory leaks in `jsdom` / `tough-cookie`. If that warning is absent and OOMs still happen, bump `--max-old-space-size` or profile the service locally with `node --inspect`.
 
 **Escape hatch: swap to the upstream image.**
 If the Node service becomes persistently unreliable, replace the Railway service's build config with:

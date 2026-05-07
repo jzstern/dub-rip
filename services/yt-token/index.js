@@ -1,6 +1,8 @@
+import { spawn } from "node:child_process";
 import http from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as Sentry from "@sentry/node";
-import { generate } from "youtube-po-token-generator";
 import {
 	classifyHeapState,
 	HEAP_PRESSURE_RATIO,
@@ -18,6 +20,12 @@ const BACKGROUND_MAX_INTERVAL_MS = 5 * 60 * 1000;
 const HEAP_CHECK_INTERVAL_MS = 30_000;
 
 const sentryEnabled = initSentry();
+
+const WORKER_PATH = path.join(
+	path.dirname(fileURLToPath(import.meta.url)),
+	"generate-worker.js",
+);
+const WORKER_HEAP_MB = Number(process.env.WORKER_HEAP_MB ?? 1536);
 
 let cachedToken = null;
 let lastGenerated = 0;
@@ -69,29 +77,85 @@ function logError(context, err) {
 	}
 }
 
+function runGeneratorChild() {
+	return new Promise((resolve, reject) => {
+		const { NODE_OPTIONS: _parentNodeOptions, ...childEnv } = process.env;
+		const child = spawn(
+			process.execPath,
+			[`--max-old-space-size=${WORKER_HEAP_MB}`, WORKER_PATH],
+			{ stdio: ["ignore", "pipe", "pipe"], env: childEnv },
+		);
+
+		let stdout = "";
+		let stderr = "";
+		let settled = false;
+		child.stdout.setEncoding("utf8");
+		child.stderr.setEncoding("utf8");
+		child.stdout.on("data", (chunk) => {
+			stdout += chunk;
+		});
+		child.stderr.on("data", (chunk) => {
+			stderr += chunk;
+		});
+
+		const timeoutId = setTimeout(() => {
+			if (settled) return;
+			settled = true;
+			child.kill("SIGKILL");
+			reject(new Error("Token generation timed out"));
+		}, GENERATION_TIMEOUT_MS);
+		timeoutId.unref?.();
+
+		child.on("error", (err) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timeoutId);
+			reject(new Error(`Worker spawn failed: ${err.message}`));
+		});
+
+		child.on("close", (code, signal) => {
+			if (settled) return;
+			settled = true;
+			clearTimeout(timeoutId);
+
+			const lastLine = stdout.trim().split("\n").pop() ?? "";
+			let parsed = null;
+			if (lastLine) {
+				try {
+					parsed = JSON.parse(lastLine);
+				} catch {
+					// fall through to error handling below
+				}
+			}
+
+			if (parsed?.ok && parsed.token) {
+				resolve(parsed.token);
+				return;
+			}
+
+			const reason = signal
+				? `signal ${signal}`
+				: `exit code ${code ?? "unknown"}`;
+			const oom =
+				/FATAL ERROR:.*heap (limit|out of memory)/i.test(stderr) ||
+				signal === "SIGABRT";
+			const detail =
+				parsed?.error ??
+				(oom
+					? "worker ran out of memory (heap exhausted during jsdom VM execution)"
+					: (stderr.trim().split("\n").pop() ?? "no output"));
+			reject(new Error(`Worker failed (${reason}): ${detail}`));
+		});
+	});
+}
+
 async function generateToken() {
 	generationAttempts += 1;
 	log(`Generating new token (attempt #${generationAttempts})...`);
 	const startTime = Date.now();
-
-	let timeoutId;
-	const timeoutPromise = new Promise((_, reject) => {
-		timeoutId = setTimeout(
-			() => reject(new Error("Token generation timed out")),
-			GENERATION_TIMEOUT_MS,
-		);
-	});
-
-	const generatePromise = generate();
-	generatePromise.catch(() => {});
-
-	try {
-		const result = await Promise.race([generatePromise, timeoutPromise]);
-		log(`Token generated in ${Date.now() - startTime}ms`);
-		return result;
-	} finally {
-		clearTimeout(timeoutId);
-	}
+	const result = await runGeneratorChild();
+	log(`Token generated in ${Date.now() - startTime}ms`);
+	return result;
 }
 
 function isValidToken(token) {

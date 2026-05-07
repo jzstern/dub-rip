@@ -46,7 +46,51 @@ jobs:
         id: deploy
         run: |
           set -o pipefail
-          railway up --service dub-rip --ci 2>&1 | tee deploy.log
+
+          # Drain any in-flight auto-deploys before uploading. Linking a
+          # pre-existing PR environment can race-trigger main-tracking deploys
+          # that supersede our CLI upload (observed: queued upload removed
+          # 1.7s after creation, replaced by a main-source deploy).
+          wait_for_idle() {
+            local svc="$1" elapsed=0 pending
+            while [ "$elapsed" -lt 240 ]; do
+              pending=$(railway deployment list --service "$svc" --limit 5 2>/dev/null \
+                | { grep -cE '\| (QUEUED|BUILDING|DEPLOYING|INITIALIZING) \|' || true; })
+              if [ "$pending" = "0" ]; then return 0; fi
+              echo "  [$svc] $pending deploy(s) in flight, waiting (${elapsed}s)..."
+              sleep 10
+              elapsed=$((elapsed + 10))
+            done
+            echo "::warning::[$svc] deploys still in flight after 240s, proceeding anyway"
+          }
+
+          deploy_with_retry() {
+            local svc="$1" attempt
+            for attempt in 1 2 3; do
+              if railway up --service "$svc" --ci 2>&1 | tee "deploy-${svc}.log"; then
+                return 0
+              fi
+              echo "[$svc] attempt $attempt failed; sleeping 30s before retry..."
+              sleep 30
+              wait_for_idle "$svc"
+            done
+            return 1
+          }
+
+          wait_for_idle dub-rip
+          if ! deploy_with_retry dub-rip; then
+            echo "::error::Failed to deploy dub-rip after 3 attempts"
+            exit 1
+          fi
+
+          # yt-token-service tracks main, so without this redeploy the PR
+          # preview never exercises PR changes to services/yt-token/ or
+          # Dockerfile.yt-token.
+          wait_for_idle yt-token-service
+          if ! deploy_with_retry yt-token-service; then
+            echo "::error::Failed to deploy yt-token-service after 3 attempts"
+            exit 1
+          fi
 
           DOMAIN=$(railway domain --service dub-rip 2>/dev/null || railway domain --service dub-rip)
           DOMAIN=$(echo "$DOMAIN" | grep -oE '[a-zA-Z0-9.-]+\.railway\.app' | head -1)

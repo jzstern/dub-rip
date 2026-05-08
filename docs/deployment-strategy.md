@@ -7,30 +7,35 @@ This document outlines the deployment architecture for dub-rip on Railway, using
 ### Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                        Users                                 │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Users                                         │
+└─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Railway Project                           │
-│                                                              │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │              dub-rip SvelteKit App                    │  │
-│  │  • Git-push deployment                                │  │
-│  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)   │  │
-│  │  • COBALT_API_URL points to internal Cobalt service   │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                              │                               │
-│                              ▼ (Internal API)                │
-│  ┌─────────────────────────────┐  ┌─────────────────────────────────┐ │
-│  │  yt-token-service            │◄─│         Cobalt Instance          │ │
-│  │  (port 8080)                 │  │         (port 9000)              │ │
-│  │  Generates poToken &         │  │                                  │ │
-│  │  visitor_data for BotGuard   │  │  Connects via Railway internal   │ │
-│  │                               │  │  networking (*.railway.internal) │ │
-│  └─────────────────────────────┘  └─────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                           Railway Project                                               │
+│                                                                                         │
+│  ┌───────────────────────────────────────────────────────────────┐                      │
+│  │              dub-rip SvelteKit App                            │                      │
+│  │  • Git-push deployment                                        │                      │
+│  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)           │                      │
+│  │  • COBALT_API_URL → cobalt.railway.internal                   │                      │
+│  │  • BGUTIL_POT_URL → bgutil-pot.railway.internal               │                      │
+│  └───────────────────────────────────────────────────────────────┘                      │
+│         (Internal API)            (yt-dlp PO tokens, fallback)                          │
+│                ▼                                ▼                                       │
+│   ┌─────────────────────────┐    ┌────────────────────────────┐                         │
+│   │  Cobalt Instance        │    │  bgutil-pot                │                         │
+│   │  (port 9000)            │    │  (port 4416)               │                         │
+│   └─────────────────────────┘    └────────────────────────────┘                         │
+│                │                                                                        │
+│                ▼ (poToken polling — currently dormant; see below)                       │
+│   ┌─────────────────────────┐                                                           │
+│   │  yt-token-service       │                                                           │
+│   │  (port 8080)            │                                                           │
+│   └─────────────────────────┘                                                           │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Why This Architecture
@@ -69,6 +74,9 @@ RAILPACK_DEPLOY_APT_PACKAGES=python3
 # Optional: Error monitoring
 PUBLIC_SENTRY_DSN=https://your-key@sentry.io/project
 SENTRY_DSN=https://your-key@sentry.io/project
+
+# Required: bgutil-pot sidecar for yt-dlp PO tokens
+BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
 ```
 
 ### 2. Cobalt Instance
@@ -130,6 +138,37 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 
 **Fallback option:** If the custom Node service becomes unreliable, swap the Railway service's build to the upstream image `ghcr.io/imputnet/yt-session-generator:webserver`. The response format is compatible — no app-side changes needed.
 
+### 4. bgutil-pot
+
+Sidecar HTTP server that generates YouTube PO tokens for the yt-dlp fallback path. Uses [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) (the same upstream Cobalt's `youtubei.js` depends on) to solve YouTube's BotGuard challenge headlessly without a Google account.
+
+**Why a separate service:** BotGuard requires loading and evaluating ~2.3 MB of YouTube's `base.js` in a JS runtime. Running this in-process inside the SvelteKit container allocated ~1 GB and SIGABRTed the entire web process mid-request. Isolating it in its own container caps the blast radius and lets the heavy runtime stay warm across requests.
+
+**Docker Image:** `brainicism/bgutil-ytdlp-pot-provider:1.3.1` — **pin to a specific version tag, not `:latest`** (same rationale as [Cobalt version pinning](#cobalt-version-pinning); the BgUtils → BotGuard binding breaks when YouTube updates the player).
+
+**Railway Service Name:** `bgutil-pot`
+
+**Configuration:**
+- No environment variables required (default port 4416 is fine)
+- Internal networking only (no public exposure)
+- Healthcheck: HTTP `GET /ping` returns 200 — set `healthcheckPath = "/ping"` if you add a `railway.toml` stanza for it (this project currently configures image-based services via the Railway dashboard, not `railway.toml`).
+
+**No Python dependencies needed in dub-rip:** in HTTP-server mode the plugin only needs to be reachable as a `.zip` on yt-dlp's plugin path (we drop it via `--plugin-dirs`). No `pip install bgutil-ytdlp-pot-provider` required in the dub-rip container — and **do not add one**, since it would cause yt-dlp to load the plugin twice and error.
+
+**Note on TOKEN_TTL:** the upstream README mentions a `TOKEN_TTL` env var, but it only applies to the script-method (option b) of the provider. When running as the HTTP server (option a, what we use), the cache TTL is fixed at the upstream default — there's no point setting it.
+
+**Local development:** `BGUTIL_POT_URL` is unset by default. The yt-dlp fallback fails fast in that case. This is acceptable because (a) Cobalt usually succeeds, and (b) developers can run the bgutil-pot Docker image locally if they need to exercise the fallback path:
+
+```bash
+docker run --rm -d --init -p 4416:4416 --name bgutil brainicism/bgutil-ytdlp-pot-provider:1.3.1
+# add BGUTIL_POT_URL=http://127.0.0.1:4416 to your dev Doppler config
+doppler run -- bun run dev
+```
+
+Production and PR-preview environments get the var via Railway service vars; no `.env` files involved.
+
+**Upgrade procedure:** Same shape as Cobalt — bump the tag, redeploy, verify with a known-bad video, update this doc's pinned tag.
+
 ## Railway Setup Steps
 
 ### Step 1: Create Railway Project
@@ -172,6 +211,16 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 > ```
 > Then enable public networking on port 9000. Remember to disable this after debugging.
 
+### Step 3.5: Deploy bgutil-pot
+
+1. Add a new service → Docker Image
+2. Image: `brainicism/bgutil-ytdlp-pot-provider:1.3.1` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning) for rationale; same logic applies here)
+3. Service name: `bgutil-pot`
+4. No environment variables required
+5. **Keep bgutil-pot internal-only** (no public networking needed)
+   - dub-rip communicates with bgutil-pot via Railway's private network at `http://bgutil-pot.railway.internal:4416`
+6. Healthcheck: `GET /ping` returns 200 when the service is ready
+
 ### Step 4: Deploy dub-rip
 
 1. Add a new service → GitHub Repo
@@ -181,6 +230,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
    COBALT_API_URL=http://cobalt.railway.internal:9000
    COBALT_API_KEY=your-api-key-uuid
    RAILPACK_DEPLOY_APT_PACKAGES=python3
+   BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
    ```
 4. Enable public networking
 
@@ -210,9 +260,10 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
 10. MP3 streamed back to user's browser
 
 Fallback path (if Cobalt fails):
-3b. dub-rip falls back to yt-dlp with ffmpeg
-4b. yt-dlp downloads audio directly
-5b. Continue from step 9
+3b. dub-rip falls back to yt-dlp
+4b. yt-dlp asks bgutil-pot for a PO token via http://bgutil-pot.railway.internal:4416
+5b. yt-dlp downloads audio with the PO token and `mweb` player client
+6b. Continue from step 9
 ```
 
 ## Cost Analysis
@@ -222,7 +273,8 @@ Fallback path (if Cobalt fails):
 | dub-rip | ~$2-3/month | Depends on traffic |
 | Cobalt | ~$2-3/month | Depends on downloads |
 | yt-token-service | ~$1/month | Lightweight service |
-| **Total** | **~$5-7/month** | Within free tier for low usage |
+| bgutil-pot | ~$1-2/month | Idle most of the time |
+| **Total** | **~$6-9/month** | Within free tier for low usage |
 
 Railway provides $5/month in free credits. For personal use or low traffic, you may stay within the free tier.
 

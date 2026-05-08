@@ -1,16 +1,10 @@
-export function parseYtDlpError(
-	errorMessage: string,
-	poTokenAvailable = true,
-): string {
+export function parseYtDlpError(errorMessage: string): string {
 	const lowerMessage = errorMessage.toLowerCase();
 	if (
 		lowerMessage.includes("sign in to confirm you're not a bot") ||
 		lowerMessage.includes("cookies")
 	) {
-		if (!poTokenAvailable) {
-			return "Download service is temporarily unavailable (anti-bot token missing). Please try again in a few minutes.";
-		}
-		return "This video requires authentication. Please try a different video or try again later.";
+		return "Download service couldn't verify with YouTube. Please try again in a few minutes.";
 	}
 	if (lowerMessage.includes("video unavailable")) {
 		return "This video is unavailable or private.";

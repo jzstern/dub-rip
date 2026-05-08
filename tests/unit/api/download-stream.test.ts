@@ -121,81 +121,53 @@ describe("GET /api/download-stream - input validation", () => {
 });
 
 describe("parseYtDlpError", () => {
-	const botCheckMessage =
-		"ERROR: [youtube] abc123: Sign in to confirm you're not a bot. Use --cookies to pass cookies from your browser.";
-
-	it("returns the generic auth message when poToken is available", async () => {
+	it("returns the bgutil-aware retry message for bot-check errors", async () => {
 		// #given
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
-
-		// #when
-		const result = parseYtDlpError(botCheckMessage, true);
-
-		// #then
-		expect(result).toBe(
-			"This video requires authentication. Please try a different video or try again later.",
-		);
-	});
-
-	it("returns the 'service unavailable' message when poToken is missing", async () => {
-		// #given
-		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
-
-		// #when
-		const result = parseYtDlpError(botCheckMessage, false);
-
-		// #then
-		expect(result).toBe(
-			"Download service is temporarily unavailable (anti-bot token missing). Please try again in a few minutes.",
-		);
-	});
-
-	it("defaults to the auth message when poTokenAvailable is not provided (backward compat)", async () => {
-		// #given
-		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
+		const botCheckMessage =
+			"ERROR: [youtube] abc123: Sign in to confirm you're not a bot. Use --cookies to pass cookies from your browser.";
 
 		// #when
 		const result = parseYtDlpError(botCheckMessage);
 
 		// #then
 		expect(result).toBe(
-			"This video requires authentication. Please try a different video or try again later.",
+			"Download service couldn't verify with YouTube. Please try again in a few minutes.",
 		);
 	});
 
-	it("matches on the 'cookies' keyword and still honors poTokenAvailable=false", async () => {
+	it("matches on the 'cookies' keyword (alternate phrasing of bot-check)", async () => {
 		// #given
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
 		const result = parseYtDlpError(
 			"ERROR: cookies required to access this video",
-			false,
 		);
 
 		// #then
 		expect(result).toBe(
-			"Download service is temporarily unavailable (anti-bot token missing). Please try again in a few minutes.",
+			"Download service couldn't verify with YouTube. Please try again in a few minutes.",
 		);
 	});
 
-	it("is unaffected by poTokenAvailable for non-bot-check errors (video unavailable)", async () => {
+	it("maps 'Video unavailable' to a clear user message", async () => {
 		// #given
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
-		const result = parseYtDlpError("ERROR: Video unavailable", false);
+		const result = parseYtDlpError("ERROR: Video unavailable");
 
 		// #then
 		expect(result).toBe("This video is unavailable or private.");
 	});
 
-	it("is unaffected by poTokenAvailable for age-restricted errors", async () => {
+	it("maps age-restricted errors to a clear user message", async () => {
 		// #given
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
-		const result = parseYtDlpError("ERROR: age-restricted content", false);
+		const result = parseYtDlpError("ERROR: age-restricted content");
 
 		// #then
 		expect(result).toBe(
@@ -208,9 +180,63 @@ describe("parseYtDlpError", () => {
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
-		const result = parseYtDlpError("ERROR: network blip", false);
+		const result = parseYtDlpError("ERROR: network blip");
 
 		// #then
 		expect(result).toBe("Download failed. Please try a different video.");
+	});
+});
+
+describe("GET /api/download-stream - bgutil-pot env requirement", () => {
+	beforeEach(() => {
+		vi.resetModules();
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.doUnmock("$env/dynamic/private");
+		vi.doUnmock("$lib/cobalt");
+	});
+
+	// We mock `$env/dynamic/private` rather than `vi.stubEnv` because SvelteKit's
+	// $env modules are virtual — they snapshot at module-resolve time, not from
+	// process.env at handler-invoke time, so stubEnv would land in the wrong place.
+	it("emits an SSE error event when BGUTIL_POT_URL is unset and Cobalt has failed", async () => {
+		// #given
+		vi.doMock("$env/dynamic/private", () => ({
+			env: { BGUTIL_POT_URL: "" },
+		}));
+		vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+		vi.doMock("$lib/cobalt", () => ({
+			CobaltError: class CobaltError extends Error {},
+			requestCobaltAudio: vi
+				.fn()
+				.mockRejectedValue(new Error("simulated cobalt failure")),
+			fetchCobaltAudio: vi.fn(),
+		}));
+
+		const { GET } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+		const event = {
+			url: createMockURL({ url: "https://youtube.com/watch?v=dQw4w9WgXcQ" }),
+		} as unknown as Parameters<typeof GET>[0];
+
+		// #when
+		const response = await GET(event);
+		const reader = response.body!.getReader();
+		const decoder = new TextDecoder();
+		let buffer = "";
+		let sawError = false;
+		while (!sawError) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value);
+			if (buffer.includes('"type":"error"')) sawError = true;
+		}
+
+		// #then
+		expect(sawError).toBe(true);
+		expect(buffer).toMatch(/BGUTIL_POT_URL/);
 	});
 });

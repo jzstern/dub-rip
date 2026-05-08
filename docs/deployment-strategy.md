@@ -85,7 +85,7 @@ API_PORT=9000
 API_KEY_URL=file://keys.json
 
 # YouTube BotGuard bypass
-YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/
+# YOUTUBE_SESSION_SERVER intentionally unset — see "Why YOUTUBE_SESSION_SERVER is unset" below
 YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
 ```
 
@@ -156,7 +156,7 @@ Generates poToken and visitor_data for YouTube BotGuard bypass.
    ```bash
    API_PORT=9000
    API_KEY_URL=file://keys.json
-   YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/
+   # YOUTUBE_SESSION_SERVER intentionally unset — see "Why YOUTUBE_SESSION_SERVER is unset" below
    YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
    ```
 5. Add a volume mount for `keys.json`:
@@ -286,6 +286,20 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
    If the version is more than a few months behind [upstream](https://github.com/LuanRT/YouTube.js/releases), upgrade Cobalt (see [Cobalt version pinning](#cobalt-version-pinning)).
 
 **Fix:** Upgrade Cobalt. It is almost never an app-side bug in dub-rip.
+
+## Why `YOUTUBE_SESSION_SERVER` is unset
+
+The Cobalt service used to set `YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/`, which would have caused Cobalt to fetch a PO token from `yt-token-service` and attach it to outbound YouTube requests. In practice this never happened for our workload:
+
+- Cobalt's [`useSession` gate](https://github.com/imputnet/cobalt/blob/main/api/src/processing/services/youtube.js#L176-L186) is the only path that attaches the token from the session server.
+- That gate evaluates to false for audio-only requests (the only kind dub-rip makes).
+- The result: `yt-token-service` was being polled every ~5 minutes by Cobalt, generating a steady stream of `UND_ERR_CONNECT_TIMEOUT` log lines, and the token it returned was being thrown away.
+
+Unsetting the var on the Cobalt service stops the polling. The `yt-token-service` itself remains deployed: it's cheap (~$1/mo), and if a future Cobalt config change re-enables `useSession` (e.g. `CUSTOM_INNERTUBE_CLIENT=TV_EMBEDDED`) we want the service in place rather than scrambling to redeploy.
+
+This is **separate** from the yt-dlp fallback's PO-token needs. yt-dlp gets its PO token from the new [`bgutil-pot`](#4-bgutil-pot) sidecar, not from `yt-token-service`.
+
+Background: [PR #52 research notes](https://github.com/jzstern/dub-rip/pull/52) (closed; investigation only).
 
 ## Maintenance
 

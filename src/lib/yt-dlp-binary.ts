@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import {
 	chmodSync,
 	existsSync,
+	mkdirSync,
 	renameSync,
 	unlinkSync,
 	writeFileSync,
@@ -28,6 +29,16 @@ import { env } from "$env/dynamic/private";
 const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
 const API_TIMEOUT_MS = 15_000;
 const BINARY_DOWNLOAD_TIMEOUT_MS = 120_000;
+
+const BGUTIL_PLUGIN_VERSION = "1.3.1";
+const BGUTIL_PLUGIN_DIR = join(tmpdir(), "yt-dlp-plugins");
+const BGUTIL_PLUGIN_PATH = join(
+	BGUTIL_PLUGIN_DIR,
+	"bgutil-ytdlp-pot-provider.zip",
+);
+const BGUTIL_PLUGIN_URL = `https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_PLUGIN_VERSION}/bgutil-ytdlp-pot-provider.zip`;
+
+let bgutilPluginPromise: Promise<string> | null = null;
 
 let downloadPromise: Promise<string> | null = null;
 
@@ -155,4 +166,44 @@ export async function ensureYtDlpBinary(): Promise<string> {
 
 export function getYtDlpBinaryPath(): string {
 	return YTDLP_BINARY_PATH;
+}
+
+export async function ensureBgutilPlugin(): Promise<string> {
+	if (existsSync(BGUTIL_PLUGIN_PATH)) {
+		return BGUTIL_PLUGIN_DIR;
+	}
+	if (bgutilPluginPromise) {
+		return bgutilPluginPromise;
+	}
+	bgutilPluginPromise = (async (): Promise<string> => {
+		try {
+			const headers: HeadersInit = {};
+			if (env.GITHUB_TOKEN) {
+				headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+			}
+			const res = await fetch(BGUTIL_PLUGIN_URL, {
+				headers,
+				signal: AbortSignal.timeout(BINARY_DOWNLOAD_TIMEOUT_MS),
+			});
+			if (!res.ok) {
+				throw new Error(
+					`bgutil plugin download failed: ${res.status} ${res.statusText}`,
+				);
+			}
+			const buf = Buffer.from(await res.arrayBuffer());
+			mkdirSync(BGUTIL_PLUGIN_DIR, { recursive: true });
+			writeFileSync(BGUTIL_PLUGIN_PATH, buf);
+			return BGUTIL_PLUGIN_DIR;
+		} catch (err) {
+			bgutilPluginPromise = null;
+			Sentry.captureException(err, {
+				tags: {
+					service: "yt-dlp-binary",
+					operation: "ensure-bgutil-plugin",
+				},
+			});
+			throw err;
+		}
+	})();
+	return bgutilPluginPromise;
 }

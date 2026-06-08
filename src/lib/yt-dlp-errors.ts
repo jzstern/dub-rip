@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/sveltekit";
+
 export function parseYtDlpError(errorMessage: string): string {
 	const lowerMessage = errorMessage.toLowerCase();
 	if (
@@ -22,5 +24,12 @@ export function parseYtDlpError(errorMessage: string): string {
 	if (lowerMessage.includes("private")) {
 		return "This video is private and cannot be downloaded.";
 	}
+	Sentry.captureMessage(
+		`Unmatched yt-dlp error: ${errorMessage.slice(0, 500)}`,
+		{
+			level: "warning",
+			tags: { service: "yt-dlp-errors", operation: "unmatched-fallthrough" },
+		},
+	);
 	return "Download failed. Please try a different video.";
 }

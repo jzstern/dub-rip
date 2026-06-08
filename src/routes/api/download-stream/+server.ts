@@ -49,28 +49,26 @@ interface YtDlpInstance {
 }
 
 let ytDlpWrap: YtDlpInstance | null = null;
-let isInitializing = false;
+let ytDlpPromise: Promise<YtDlpInstance> | null = null;
 
 async function getYTDlp(): Promise<YtDlpInstance> {
 	if (ytDlpWrap) return ytDlpWrap;
+	if (ytDlpPromise) return ytDlpPromise;
 
-	while (isInitializing) {
-		await new Promise((resolve) => setTimeout(resolve, 100));
-	}
+	ytDlpPromise = (async (): Promise<YtDlpInstance> => {
+		try {
+			const YTDlpWrapModule = require("yt-dlp-wrap");
+			const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
+			const binaryPath = await ensureYtDlpBinary();
+			ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
+			return ytDlpWrap;
+		} catch (err) {
+			ytDlpPromise = null;
+			throw err;
+		}
+	})();
 
-	if (ytDlpWrap) return ytDlpWrap;
-
-	isInitializing = true;
-	try {
-		const YTDlpWrapModule = require("yt-dlp-wrap");
-		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-
-		const binaryPath = await ensureYtDlpBinary();
-		ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
-		return ytDlpWrap;
-	} finally {
-		isInitializing = false;
-	}
+	return ytDlpPromise;
 }
 
 export const GET: RequestHandler = async ({ url }) => {

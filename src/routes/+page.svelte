@@ -1,5 +1,5 @@
 <script lang="ts">
-import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
+import CassetteReels from "$lib/components/CassetteReels.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import * as Card from "$lib/components/ui/card";
@@ -228,16 +228,22 @@ function handleDownload() {
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
+	<div class="w-full max-w-md space-y-7">
 		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+		<div class="flex flex-col items-center space-y-3 text-center">
+			<CassetteReels />
+			<h1 class="font-display text-5xl font-bold tracking-wordmark text-foreground">
+				dub<span class="text-primary">·</span>rip
+			</h1>
+			<p class="text-sm text-muted-foreground">Rip YouTube to warm, tagged MP3s</p>
 		</div>
 
 		<!-- Main Card -->
-		<Card.Root class="p-6">
+		<Card.Root class="tape-faceplate rounded-lg border-border/60 bg-card/70 p-6 backdrop-blur-sm">
+			<div class="mb-4 flex items-center justify-between">
+				<span class="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-muted-foreground">Tape Deck</span>
+				<span class="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]" aria-hidden="true"></span>
+			</div>
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
 				<div class="space-y-2">
@@ -247,7 +253,7 @@ function handleDownload() {
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-11 bg-background/60 font-mono text-sm focus-visible:ring-2 focus-visible:ring-primary/40"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -280,12 +286,14 @@ function handleDownload() {
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">{status}</p>
 
 						<div class="space-y-2">
-							<Progress value={progress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{progress}%</span>
+							<div class="vu-tick rounded-full p-px">
+								<Progress value={progress} class="h-2.5 bg-secondary/60" />
+							</div>
+							<div class="flex justify-between font-mono text-xs text-muted-foreground">
+								<span class="text-primary">{progress}%</span>
 								<div class="flex gap-2">
 									{#if speed}<span>{speed}</span>{/if}
 									{#if eta}<span>ETA: {eta}</span>{/if}

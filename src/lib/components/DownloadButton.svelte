@@ -11,7 +11,11 @@ interface Props {
 let { loading, disabled, onClick }: Props = $props();
 </script>
 
-<Button onclick={onClick} disabled={disabled} class="w-full h-11">
+<Button
+	onclick={onClick}
+	disabled={disabled}
+	class="w-full h-11 font-mono text-xs font-semibold uppercase tracking-[0.22em] shadow-[0_2px_0_hsl(var(--vignette)/0.4)]"
+>
 	{#if loading}
 		<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 		Downloading

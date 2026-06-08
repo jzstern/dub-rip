@@ -1,51 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
 	:root {
-		--background: 0 0% 100%;
-		--foreground: 222.2 84% 4.9%;
-		--card: 0 0% 100%;
-		--card-foreground: 222.2 84% 4.9%;
-		--popover: 0 0% 100%;
-		--popover-foreground: 222.2 84% 4.9%;
-		--primary: 222.2 47.4% 11.2%;
-		--primary-foreground: 210 40% 98%;
-		--secondary: 210 40% 96.1%;
-		--secondary-foreground: 222.2 47.4% 11.2%;
-		--muted: 210 40% 96.1%;
-		--muted-foreground: 215.4 16.3% 46.9%;
-		--accent: 210 40% 96.1%;
-		--accent-foreground: 222.2 47.4% 11.2%;
-		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 214.3 31.8% 91.4%;
-		--input: 214.3 31.8% 91.4%;
-		--ring: 222.2 84% 4.9%;
+		--background: 39 43% 96%;
+		--foreground: 24 10% 10%;
+		--card: 38 38% 93%;
+		--card-foreground: 24 10% 10%;
+		--popover: 38 38% 93%;
+		--popover-foreground: 24 10% 10%;
+		--primary: 38 92% 50%;
+		--primary-foreground: 24 30% 12%;
+		--secondary: 36 25% 88%;
+		--secondary-foreground: 24 10% 14%;
+		--muted: 36 24% 89%;
+		--muted-foreground: 28 8% 38%;
+		--accent: 38 92% 50%;
+		--accent-foreground: 24 30% 12%;
+		--destructive: 0 72% 45%;
+		--destructive-foreground: 39 43% 96%;
+		--border: 33 18% 78%;
+		--input: 33 18% 78%;
+		--ring: 38 92% 50%;
 		--radius: 0.5rem;
+
+		--reel: 24 10% 18%;
+		--reel-spoke: 36 25% 80%;
+		--vignette: 24 30% 8%;
 	}
 
 	.dark {
-		--background: 222.2 84% 4.9%;
-		--foreground: 210 40% 98%;
-		--card: 222.2 84% 4.9%;
-		--card-foreground: 210 40% 98%;
-		--popover: 222.2 84% 4.9%;
-		--popover-foreground: 210 40% 98%;
-		--primary: 210 40% 98%;
-		--primary-foreground: 222.2 47.4% 11.2%;
-		--secondary: 217.2 32.6% 17.5%;
-		--secondary-foreground: 210 40% 98%;
-		--muted: 217.2 32.6% 17.5%;
-		--muted-foreground: 215 20.2% 65.1%;
-		--accent: 217.2 32.6% 17.5%;
-		--accent-foreground: 210 40% 98%;
-		--destructive: 0 62.8% 30.6%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 217.2 32.6% 17.5%;
-		--input: 217.2 32.6% 17.5%;
-		--ring: 212.7 26.8% 83.9%;
+		--background: 24 17% 10%;
+		--foreground: 39 43% 96%;
+		--card: 24 14% 14%;
+		--card-foreground: 39 43% 96%;
+		--popover: 24 14% 14%;
+		--popover-foreground: 39 43% 96%;
+		--primary: 38 92% 50%;
+		--primary-foreground: 24 30% 10%;
+		--secondary: 24 11% 20%;
+		--secondary-foreground: 39 43% 96%;
+		--muted: 24 11% 20%;
+		--muted-foreground: 36 14% 64%;
+		--accent: 38 92% 50%;
+		--accent-foreground: 24 30% 10%;
+		--destructive: 0 72% 51%;
+		--destructive-foreground: 39 43% 96%;
+		--border: 26 10% 26%;
+		--input: 26 10% 26%;
+		--ring: 38 92% 50%;
+
+		--reel: 39 30% 88%;
+		--reel-spoke: 24 14% 16%;
+		--vignette: 0 0% 0%;
 	}
 }
 
@@ -53,7 +63,62 @@
 	* {
 		@apply border-border;
 	}
+
 	body {
 		@apply bg-background text-foreground;
+		position: relative;
+		font-feature-settings: "ss01", "cv01";
+	}
+
+	body::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		z-index: -2;
+		pointer-events: none;
+		background-image: radial-gradient(
+			ellipse at 50% 0%,
+			hsl(var(--primary) / 0.06),
+			transparent 55%
+		);
+	}
+
+	body::after {
+		content: "";
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		opacity: 0.5;
+		mix-blend-mode: multiply;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+	}
+
+	.dark body::after {
+		mix-blend-mode: screen;
+		opacity: 0.4;
+	}
+}
+
+@layer components {
+	.tape-faceplate {
+		background-image: linear-gradient(
+			180deg,
+			hsl(var(--card) / 0.6),
+			hsl(var(--background) / 0.2)
+		);
+		box-shadow:
+			inset 0 1px 0 hsl(var(--foreground) / 0.06),
+			inset 0 0 0 1px hsl(var(--border) / 0.5),
+			0 1px 2px hsl(var(--vignette) / 0.25),
+			0 18px 40px -24px hsl(var(--vignette) / 0.55);
+	}
+
+	.vu-tick {
+		background-image: repeating-linear-gradient(
+			90deg,
+			hsl(var(--muted-foreground) / 0.35) 0 1px,
+			transparent 1px 7px
+		);
 	}
 }

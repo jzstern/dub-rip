@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
+import { env } from "$env/dynamic/private";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
@@ -23,9 +24,8 @@ import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
-import { ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+import { ensureBgutilPlugin, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
 import { parseYtDlpError } from "$lib/yt-dlp-errors";
-import { fetchPoToken } from "$lib/yt-token";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -116,7 +116,6 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			const randomId = randomBytes(16).toString("hex");
 			const outputPath = join(tmpdir(), `${randomId}`);
-			let poTokenAvailable = true;
 
 			try {
 				send({ type: "status", message: "Getting video info..." });
@@ -240,8 +239,26 @@ export const GET: RequestHandler = async ({ url }) => {
 				if (cobaltFailed) {
 					send({ type: "status", message: "Starting download..." });
 
+					if (!env.BGUTIL_POT_URL) {
+						send({
+							type: "error",
+							message:
+								"Server is misconfigured: BGUTIL_POT_URL is not set. The yt-dlp fallback cannot run without the bgutil-pot sidecar.",
+						});
+						Sentry.captureMessage("BGUTIL_POT_URL is unset", {
+							level: "error",
+							tags: {
+								service: "download-stream",
+								operation: "bgutil-pot-config",
+							},
+						});
+						closeStream();
+						return;
+					}
+
 					const ytDlp = await getYTDlp();
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+					const pluginDir = await ensureBgutilPlugin();
 
 					const args = [
 						videoUrl,
@@ -261,45 +278,15 @@ export const GET: RequestHandler = async ({ url }) => {
 						"--parse-metadata",
 						"%(artist)s:%(meta_artist)s",
 						"--no-playlist",
+						"--plugin-dirs",
+						pluginDir,
+						"--extractor-args",
+						"youtube:player_client=mweb",
+						"--extractor-args",
+						`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
 						"-o",
 						`${outputPath}.%(ext)s`,
 					];
-
-					const tokenResult = await fetchPoToken();
-					if (tokenResult) {
-						const safeTokenChars = /^[A-Za-z0-9._\-+/=%]+$/;
-						if (
-							safeTokenChars.test(tokenResult.poToken) &&
-							safeTokenChars.test(tokenResult.visitorData)
-						) {
-							args.push(
-								"--extractor-args",
-								`youtube:po_token=web+${tokenResult.poToken};visitor_data=${tokenResult.visitorData}`,
-							);
-						} else {
-							poTokenAvailable = false;
-							console.warn(
-								"[yt-token] Token contained unexpected characters, skipping",
-							);
-						}
-					} else {
-						poTokenAvailable = false;
-						console.warn(
-							"[yt-token] fetchPoToken returned null; yt-dlp will run without po_token",
-						);
-						Sentry.captureMessage(
-							"fetchPoToken returned null in download-stream fallback",
-							{
-								level: "warning",
-								tags: {
-									service: "download-stream",
-									operation: "fetchPoToken",
-									outcome: "null",
-								},
-								extra: { videoId },
-							},
-						);
-					}
 
 					const downloadProcess = ytDlp.exec(args);
 
@@ -375,7 +362,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						console.error("Download process error:", error);
 						send({
 							type: "error",
-							message: parseYtDlpError(error.message, poTokenAvailable),
+							message: parseYtDlpError(error.message),
 						});
 					});
 
@@ -519,7 +506,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				});
 				const rawMessage =
 					error instanceof Error ? error.message : "Unknown error";
-				const message = parseYtDlpError(rawMessage, poTokenAvailable);
+				const message = parseYtDlpError(rawMessage);
 				send({ type: "error", message });
 				closeStream();
 

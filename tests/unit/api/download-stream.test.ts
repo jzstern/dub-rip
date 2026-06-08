@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$lib/video-utils", () => ({
@@ -121,6 +122,10 @@ describe("GET /api/download-stream - input validation", () => {
 });
 
 describe("parseYtDlpError", () => {
+	beforeEach(() => {
+		vi.mocked(Sentry.captureMessage).mockClear();
+	});
+
 	it("returns the bgutil-aware retry message for bot-check errors", async () => {
 		// #given
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
@@ -134,6 +139,7 @@ describe("parseYtDlpError", () => {
 		expect(result).toBe(
 			"Download service couldn't verify with YouTube. Please try again in a few minutes.",
 		);
+		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 
 	it("matches on the 'cookies' keyword (alternate phrasing of bot-check)", async () => {
@@ -149,6 +155,7 @@ describe("parseYtDlpError", () => {
 		expect(result).toBe(
 			"Download service couldn't verify with YouTube. Please try again in a few minutes.",
 		);
+		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 
 	it("maps 'Video unavailable' to a clear user message", async () => {
@@ -160,6 +167,7 @@ describe("parseYtDlpError", () => {
 
 		// #then
 		expect(result).toBe("This video is unavailable or private.");
+		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 
 	it("maps age-restricted errors to a clear user message", async () => {
@@ -173,10 +181,12 @@ describe("parseYtDlpError", () => {
 		expect(result).toBe(
 			"This video is age-restricted and cannot be downloaded.",
 		);
+		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 
 	it("falls through to the generic message when nothing matches", async () => {
 		// #given
+		vi.mocked(Sentry.captureMessage).mockClear();
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
@@ -184,6 +194,10 @@ describe("parseYtDlpError", () => {
 
 		// #then
 		expect(result).toBe("Download failed. Please try a different video.");
+		expect(Sentry.captureMessage).toHaveBeenCalledWith(
+			expect.stringContaining("Unmatched yt-dlp error: ERROR: network blip"),
+			expect.objectContaining({ level: "warning" }),
+		);
 	});
 });
 
@@ -224,14 +238,14 @@ describe("GET /api/download-stream - bgutil-pot env requirement", () => {
 
 		// #when
 		const response = await GET(event);
-		const reader = response.body!.getReader();
+		const reader = response.body?.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
 		let sawError = false;
 		while (!sawError) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			buffer += decoder.decode(value);
+			const chunk = await reader?.read();
+			if (!chunk || chunk.done) break;
+			buffer += decoder.decode(chunk.value);
 			if (buffer.includes('"type":"error"')) sawError = true;
 		}
 

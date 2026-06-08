@@ -77,7 +77,7 @@ BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
 
 Self-hosted Cobalt API for YouTube downloads with BotGuard bypass.
 
-**Docker Image:** `ghcr.io/imputnet/cobalt:11.7.1` (pin to a specific version, see [Cobalt version pinning](#cobalt-version-pinning) below — do NOT use `:latest`)
+**Docker Image:** `ghcr.io/imputnet/cobalt:11.7.1@sha256:63186dd68afd57ce3bb1f62cc4c139f5fa95b9c3e87a3cf5c6e4c7a570523f62` — pinned by both tag (human-readable) and digest (what Railway actually pulls). See [Cobalt version pinning](#cobalt-version-pinning) below. Do NOT use `:latest`.
 
 **Environment Variables:**
 ```bash
@@ -112,14 +112,14 @@ Sidecar HTTP server that generates YouTube PO tokens for the yt-dlp fallback pat
 
 **Why a separate service:** BotGuard requires loading and evaluating ~2.3 MB of YouTube's `base.js` in a JS runtime. Running this in-process inside the SvelteKit container allocated ~1 GB and SIGABRTed the entire web process mid-request. Isolating it in its own container caps the blast radius and lets the heavy runtime stay warm across requests.
 
-**Docker Image:** `brainicism/bgutil-ytdlp-pot-provider:1.3.1` — **pin to a specific version tag, not `:latest`** (same rationale as [Cobalt version pinning](#cobalt-version-pinning); the BgUtils → BotGuard binding breaks when YouTube updates the player).
+**Docker Image:** `brainicism/bgutil-ytdlp-pot-provider:1.3.1@sha256:1aaa43a0ca72dfca6a6d2129a0fb4a23465c25adb1b043f8aff829a20825646b` — pinned by both tag and digest (same rationale as [Cobalt version pinning](#cobalt-version-pinning); the BgUtils → BotGuard binding breaks when YouTube updates the player). Do NOT use `:latest`.
 
 **Railway Service Name:** `bgutil-pot`
 
 **Configuration:**
 - No environment variables required (default port 4416 is fine)
 - Internal networking only (no public exposure)
-- Healthcheck: HTTP `GET /ping` returns 200 — set `healthcheckPath = "/ping"` if you add a `railway.toml` stanza for it (this project currently configures image-based services via the Railway dashboard, not `railway.toml`).
+- Healthcheck: HTTP `GET /ping` returns 200 — `healthcheckPath = "/ping"` is set in `railway.toml`.
 
 **No Python dependencies needed in dub-rip:** in HTTP-server mode the plugin only needs to be reachable as a `.zip` on yt-dlp's plugin path (we drop it via `--plugin-dirs`). No `pip install bgutil-ytdlp-pot-provider` required in the dub-rip container — and **do not add one**, since it would cause yt-dlp to load the plugin twice and error.
 
@@ -135,7 +135,7 @@ doppler run -- bun run dev
 
 Production and PR-preview environments get the var via Railway service vars; no `.env` files involved.
 
-**Upgrade procedure:** Same shape as Cobalt — bump the tag, redeploy, verify with a known-bad video, update this doc's pinned tag.
+**Upgrade procedure:** Same shape as Cobalt — bump both the tag and digest in `railway.toml` and in this doc (see [Capturing a digest](#capturing-a-digest)), redeploy, verify with a known-bad video.
 
 ## Railway Setup Steps
 
@@ -146,9 +146,11 @@ Production and PR-preview environments get the var via Railway service vars; no 
 
 ### Step 2: Deploy Cobalt
 
+> **`railway.toml` handles this.** The `cobalt-8x3f` service is now declared in `railway.toml` with a digest-pinned image. For a clean install, Railway will provision it automatically — no manual dashboard step required. The steps below remain for reference or when re-provisioning into an existing project.
+
 1. Add a new service → Docker Image
-2. Image: `ghcr.io/imputnet/cobalt:11.7.1` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning))
-3. Service name: `cobalt`
+2. Image: `ghcr.io/imputnet/cobalt:11.7.1@sha256:63186dd68afd57ce3bb1f62cc4c139f5fa95b9c3e87a3cf5c6e4c7a570523f62` — pinned by tag and digest (see [Cobalt version pinning](#cobalt-version-pinning))
+3. Service name: `cobalt-8x3f`
 4. Add environment variables:
    ```bash
    API_PORT=9000
@@ -171,13 +173,15 @@ Production and PR-preview environments get the var via Railway service vars; no 
 
 ### Step 3: Deploy bgutil-pot
 
+> **`railway.toml` handles this.** The `bgutil-pot` service is now declared in `railway.toml` with a digest-pinned image. For a clean install, Railway will provision it automatically — no manual dashboard step required. The steps below remain for reference or when re-provisioning into an existing project.
+
 1. Add a new service → Docker Image
-2. Image: `brainicism/bgutil-ytdlp-pot-provider:1.3.1` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning) for rationale; same logic applies here)
+2. Image: `brainicism/bgutil-ytdlp-pot-provider:1.3.1@sha256:1aaa43a0ca72dfca6a6d2129a0fb4a23465c25adb1b043f8aff829a20825646b` — pinned by tag and digest (see [Cobalt version pinning](#cobalt-version-pinning) for rationale; same logic applies here)
 3. Service name: `bgutil-pot`
 4. No environment variables required
 5. **Keep bgutil-pot internal-only** (no public networking needed)
    - dub-rip communicates with bgutil-pot via Railway's private network at `http://bgutil-pot.railway.internal:4416`
-6. Healthcheck: `GET /ping` returns 200 when the service is ready
+6. Healthcheck: `GET /ping` returns 200 when the service is ready — set via `healthcheckPath` in `railway.toml`
 
 ### Step 3.5: Deploy dub-rip
 
@@ -240,12 +244,38 @@ Pin the Cobalt service to a specific version tag (e.g. `ghcr.io/imputnet/cobalt:
 
 **Why it matters specifically for Cobalt:** Cobalt's YouTube extractor depends on [`youtubei.js`](https://github.com/LuanRT/YouTube.js), which reverse-engineers YouTube's signature-decipher algorithm from `player.js`. YouTube ships player changes frequently (often weekly). When `youtubei.js` is more than a few months old, specific videos begin returning empty tunnel bodies (see [symptom: 0-byte tunnel responses](#symptom-0-byte-tunnel-responses-signature-decipher-failure) below).
 
+**Digest pinning:** Both `cobalt-8x3f` and `bgutil-pot` are pinned by digest in `railway.toml`. The tag is kept for human readability; the `@sha256:…` suffix is what Railway actually resolves and caches. This eliminates supply-chain risk from upstream image swaps under a tag.
+
+### Capturing a digest
+
+Use these commands to capture a digest for a new image version:
+
+```bash
+# GHCR (cobalt) — get an anonymous token, then fetch the manifest headers:
+TOKEN=$(curl -s "https://ghcr.io/token?service=ghcr.io&scope=repository:imputnet/cobalt:pull" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+curl -sI "https://ghcr.io/v2/imputnet/cobalt/manifests/<TAG>" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.oci.image.index.v1+json" \
+  -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+  | grep -i "docker-content-digest"
+
+# Docker Hub (bgutil-pot):
+TOKEN=$(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:brainicism/bgutil-ytdlp-pot-provider:pull" \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+curl -sI "https://registry-1.docker.io/v2/brainicism/bgutil-ytdlp-pot-provider/manifests/<TAG>" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+  -H "Accept: application/vnd.oci.image.index.v1+json" \
+  | grep -i "docker-content-digest"
+```
+
 **To upgrade:**
 
 1. Check the [upstream Cobalt releases](https://github.com/imputnet/cobalt/releases) / [tags](https://github.com/imputnet/cobalt/tags) for the latest version.
-2. Railway dashboard → `cobalt` service → Settings → Source → Image → change the tag (e.g. `ghcr.io/imputnet/cobalt:11.7.1` → `ghcr.io/imputnet/cobalt:11.8.0`).
-3. Deploy. Verify with a known-bad video (see below) before closing the ticket.
-4. Update this doc's pinned tag to match.
+2. Capture the new digest using the commands in [Capturing a digest](#capturing-a-digest) above.
+3. Update both `railway.toml` (`services.cobalt-8x3f.source.image`) and this doc's pinned tag + digest.
+4. Deploy. Verify with a known-bad video (see below) before closing the ticket.
 
 ## Symptom: 0-byte tunnel responses (signature decipher failure)
 

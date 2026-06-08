@@ -7,6 +7,10 @@ import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
 import { tryCobaltDownload } from "$lib/download-pipeline/try-cobalt";
+import {
+	tryYtDlpDownload,
+	type YtDlpInstance,
+} from "$lib/download-pipeline/try-yt-dlp";
 import type { DownloadMethod } from "$lib/types";
 import {
 	fetchThumbnailBuffer,
@@ -14,11 +18,7 @@ import {
 	type ThumbnailImage,
 	type VideoDetails,
 } from "$lib/video-metadata";
-import {
-	extractVideoId,
-	parseArtistAndTitle,
-	sanitizeUploaderAsArtist,
-} from "$lib/video-utils";
+import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -28,24 +28,6 @@ import { parseYtDlpError } from "$lib/yt-dlp-errors";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
-
-interface YtDlpProcess {
-	on(
-		event: "progress",
-		callback: (progress: Record<string, unknown>) => void,
-	): void;
-	on(
-		event: "ytDlpEvent",
-		callback: (eventType: string, eventData: string) => void,
-	): void;
-	on(event: "error", callback: (error: Error) => void): void;
-	on(event: "close", callback: (code: number) => void): void;
-	stderr?: { on(event: string, callback: (data: Buffer) => void): void };
-}
-
-interface YtDlpInstance {
-	exec(args: string[]): YtDlpProcess;
-}
 
 let ytDlpWrap: YtDlpInstance | null = null;
 let isInitializing = false;
@@ -119,10 +101,12 @@ export const GET: RequestHandler = async ({ url }) => {
 			try {
 				send({ type: "status", message: "Getting video info..." });
 
-				let videoTitle = "";
-				let artist = "";
-				let trackTitle = "";
-				let uploader = "";
+				const titleState = {
+					videoTitle: "",
+					artist: "",
+					trackTitle: "",
+					uploader: "",
+				};
 
 				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
 					videoUrl,
@@ -134,23 +118,23 @@ export const GET: RequestHandler = async ({ url }) => {
 				if (videoId) {
 					try {
 						const metadata = await fetchYouTubeMetadata(videoId);
-						videoTitle = metadata.videoTitle;
-						artist = metadata.artist;
-						trackTitle = metadata.trackTitle;
-						uploader = metadata.uploader;
+						titleState.videoTitle = metadata.videoTitle;
+						titleState.artist = metadata.artist;
+						titleState.trackTitle = metadata.trackTitle;
+						titleState.uploader = metadata.uploader;
 
 						console.log("Got metadata from oEmbed:", {
-							videoTitle,
-							artist,
-							trackTitle,
-							uploader,
+							videoTitle: titleState.videoTitle,
+							artist: titleState.artist,
+							trackTitle: titleState.trackTitle,
+							uploader: titleState.uploader,
 						});
 
 						send({
 							type: "info",
-							title: videoTitle,
-							artist: artist,
-							track: trackTitle,
+							title: titleState.videoTitle,
+							artist: titleState.artist,
+							track: titleState.trackTitle,
 						});
 					} catch (err) {
 						if (err instanceof YouTubeMetadataError) {
@@ -203,138 +187,20 @@ export const GET: RequestHandler = async ({ url }) => {
 					}
 
 					const debugMode = url.searchParams.get("debug") === "1";
-
 					const ytDlp = await getYTDlp();
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 					const pluginDir = await ensureBgutilPlugin();
 
-					const args = [
+					await tryYtDlpDownload({
 						videoUrl,
-						"-x",
-						"--audio-format",
-						"mp3",
-						"--audio-quality",
-						"0",
-						"-f",
-						"bestaudio/best",
-						"--embed-thumbnail",
-						"--add-metadata",
-						"--ffmpeg-location",
-						ffmpegInstaller.path,
-						"--newline",
-						"--no-warnings",
-						"--parse-metadata",
-						"%(title)s:%(meta_title)s",
-						"--parse-metadata",
-						"%(artist)s:%(meta_artist)s",
-						"--no-playlist",
-						"--plugin-dirs",
+						outputPath,
+						bgutilPotUrl: env.BGUTIL_POT_URL,
+						ffmpegPath: ffmpegInstaller.path,
 						pluginDir,
-						// player_client=default,mweb: try yt-dlp's default chain first (web → ios → android
-						// → ...) then fall back to mweb. mweb requires a PO token (provided by bgutil-pot)
-						// but returns a narrower format set than web; some videos have no `bestaudio`-matching
-						// format in mweb's response. Multi-client mode handles both cases.
-						"--extractor-args",
-						"youtube:player_client=default,mweb",
-						"--extractor-args",
-						`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
-						"-o",
-						`${outputPath}.%(ext)s`,
-					];
-
-					if (debugMode) {
-						args.push("-v", "--list-formats");
-					}
-
-					const downloadProcess = ytDlp.exec(args);
-
-					downloadProcess.on(
-						"progress",
-						(progress: Record<string, unknown>) => {
-							const rawPercent = Math.min(
-								100,
-								Math.max(0, (progress.percent as number) || 0),
-							);
-							send({
-								type: "progress",
-								percent: Math.round(5 + (rawPercent / 100) * 70),
-								speed: (progress.currentSpeed as string) || "",
-								eta: (progress.eta as string) || "",
-							});
-						},
-					);
-
-					downloadProcess.on(
-						"ytDlpEvent",
-						(eventType: string, eventData: string) => {
-							console.log("yt-dlp event:", eventType, "|", eventData);
-
-							if (!videoTitle) {
-								if (eventType === "Destination") {
-									const match = eventData.match(/\/([^/]+)\.\w+$/);
-									if (match) {
-										videoTitle = match[1].replace(/_/g, " ");
-									}
-								} else if (
-									eventData.includes(".mp3") ||
-									eventData.includes(".webm")
-								) {
-									const match = eventData.match(/([^/]+)\.\w+/);
-									if (match) {
-										videoTitle = match[1].replace(/_/g, " ");
-									}
-								}
-
-								if (videoTitle) {
-									const parsed = parseArtistAndTitle(videoTitle);
-									artist = parsed.artist;
-									trackTitle = parsed.title;
-
-									if (!artist && uploader) {
-										artist = sanitizeUploaderAsArtist(uploader);
-									}
-
-									send({
-										type: "info",
-										title: videoTitle,
-										artist: artist,
-										track: trackTitle,
-									});
-								}
-							}
-
-							send({ type: "event", eventType, eventData });
-						},
-					);
-
-					let errorMessage = "";
-					downloadProcess.stderr?.on("data", (data: Buffer) => {
-						const text = data.toString();
-						console.error("yt-dlp stderr:", text);
-						if (text.includes("ERROR:")) {
-							errorMessage += text;
-						}
-					});
-
-					downloadProcess.on("error", (error: Error) => {
-						console.error("Download process error:", error);
-						send({
-							type: "error",
-							message: parseYtDlpError(error.message),
-						});
-					});
-
-					await new Promise((resolve, reject) => {
-						downloadProcess.on("close", (code: number) => {
-							if (code === 0) {
-								resolve(code);
-							} else {
-								reject(
-									new Error(errorMessage || `Process exited with code ${code}`),
-								);
-							}
-						});
-						downloadProcess.on("error", reject);
+						debugMode,
+						ytDlp,
+						titleState,
+						send,
 					});
 
 					actualFilePath = `${outputPath}.mp3`;
@@ -350,18 +216,18 @@ export const GET: RequestHandler = async ({ url }) => {
 					return;
 				}
 
-				console.log("Video title:", videoTitle);
-				console.log("Parsed artist:", artist);
-				console.log("Parsed track title:", trackTitle);
+				console.log("Video title:", titleState.videoTitle);
+				console.log("Parsed artist:", titleState.artist);
+				console.log("Parsed track title:", titleState.trackTitle);
 
 				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
 				const result = await encodeAndStreamMp3({
 					filePath: actualFilePath,
-					videoTitle,
-					artist,
-					trackTitle,
+					videoTitle: titleState.videoTitle,
+					artist: titleState.artist,
+					trackTitle: titleState.trackTitle,
 					downloadMethod,
 					videoId,
 					detailsPromise,

@@ -256,6 +256,8 @@ export const GET: RequestHandler = async ({ url }) => {
 						return;
 					}
 
+					const debugMode = url.searchParams.get("debug") === "1";
+
 					const ytDlp = await getYTDlp();
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 					const pluginDir = await ensureBgutilPlugin();
@@ -282,6 +284,10 @@ export const GET: RequestHandler = async ({ url }) => {
 						"--no-playlist",
 						"--plugin-dirs",
 						pluginDir,
+						// player_client=default,mweb: try yt-dlp's default chain first (web → ios → android
+						// → ...) then fall back to mweb. mweb requires a PO token (provided by bgutil-pot)
+						// but returns a narrower format set than web; some videos have no `bestaudio`-matching
+						// format in mweb's response. Multi-client mode handles both cases.
 						"--extractor-args",
 						"youtube:player_client=default,mweb",
 						"--extractor-args",
@@ -289,6 +295,10 @@ export const GET: RequestHandler = async ({ url }) => {
 						"-o",
 						`${outputPath}.%(ext)s`,
 					];
+
+					if (debugMode) {
+						args.push("-v", "--list-formats");
+					}
 
 					const downloadProcess = ytDlp.exec(args);
 
@@ -509,7 +519,11 @@ export const GET: RequestHandler = async ({ url }) => {
 				const rawMessage =
 					error instanceof Error ? error.message : "Unknown error";
 				const message = parseYtDlpError(rawMessage);
-				send({ type: "error", message });
+				try {
+					send({ type: "error", message });
+				} catch (sendErr) {
+					console.error("Failed to send final error SSE event:", sendErr);
+				}
 				closeStream();
 
 				try {

@@ -227,23 +227,42 @@ function handleDownload() {
 }
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
+<div class="crt-scanlines flex min-h-screen items-center justify-center p-4">
+	<div class="w-full max-w-md space-y-5">
 		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
+		<div class="flex flex-col items-center space-y-3 text-center">
 			<AsciiVinyl />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+			<h1 class="crt-glow font-mono text-4xl font-bold tracking-[0.35em] text-primary">dub-rip</h1>
+			<p class="text-xs tracking-wide text-muted-foreground">
+				<span class="text-primary">#</span> download youtube audio with rich metadata
+			</p>
 		</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
+		<!-- Terminal Window -->
+		<Card.Root class="overflow-hidden rounded-sm border-2 border-border bg-card p-0 shadow-[0_0_24px_hsl(var(--phosphor)/0.12)]">
+			<!-- Title Bar -->
+			<div class="flex items-center gap-2 border-b border-border bg-secondary/60 px-3 py-2">
+				<span class="flex gap-1.5" aria-hidden="true">
+					<span class="h-3 w-3 rounded-full bg-destructive/80"></span>
+					<span class="h-3 w-3 rounded-full bg-muted-foreground/60"></span>
+					<span class="h-3 w-3 rounded-full bg-primary/80"></span>
+				</span>
+				<span class="flex-1 text-center text-xs tracking-wide text-muted-foreground">dub-rip — zsh</span>
+				<span class="w-12" aria-hidden="true"></span>
+			</div>
+
+			<Card.Content class="space-y-4 p-5">
 				<!-- Input -->
 				<div class="space-y-2">
+					<label class="flex items-center gap-2 text-xs text-primary" for="url-input">
+						<span class="crt-glow font-bold">λ</span>
+						<span class="text-muted-foreground">paste-url</span>
+						<span class="text-primary">❯</span>
+					</label>
 					<Input
+						id="url-input"
 						bind:value={url}
-						placeholder="Paste YouTube URL"
+						placeholder="https://youtube.com/watch?v=…"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
@@ -268,24 +287,31 @@ function handleDownload() {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="rounded-sm border border-destructive/40 bg-destructive/10 p-3">
+						<p class="text-xs text-destructive">
+							<span class="font-bold">[err]</span> {error}
+						</p>
 					</div>
 				{/if}
 
 				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="space-y-3 border-t border-border/60 pt-3">
 						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
+							<p class="truncate text-xs text-foreground">
+								<span class="text-muted-foreground">▸</span> {videoTitle}
+							</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="text-xs text-primary">
+							<span class="text-muted-foreground">{downloadComplete ? "[ok]" : "▸"}</span>
+							{status}{#if loading && !downloadComplete}<span class="terminal-cursor"></span>{/if}
+						</p>
 
 						<div class="space-y-2">
 							<Progress value={progress} class="h-2" />
 							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{progress}%</span>
+								<span class="text-primary">{progress}%</span>
 								<div class="flex gap-2">
 									{#if speed}<span>{speed}</span>{/if}
 									{#if eta}<span>ETA: {eta}</span>{/if}
@@ -294,7 +320,9 @@ function handleDownload() {
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate text-xs text-muted-foreground">
+								<span class="text-primary">$</span> saved {completedFilename}
+							</p>
 						{/if}
 					</div>
 				{/if}

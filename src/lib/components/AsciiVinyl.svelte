@@ -88,6 +88,6 @@ function handleClick() {
 	aria-label={isPaused ? "Play animation" : "Pause animation"}
 >
 	<pre
-		class="font-mono text-[0.53rem] leading-[0.45rem] text-muted-foreground transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {isHovering ? 'text-primary scale-105' : ''} {isPaused ? 'opacity-60' : ''}"
+		class="crt-glow font-mono text-[0.53rem] leading-[0.45rem] text-primary/80 transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {isHovering ? 'text-primary scale-105' : ''} {isPaused ? 'opacity-50' : ''}"
 	>{vinylLines.join("\n")}</pre>
 </button>

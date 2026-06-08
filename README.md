@@ -93,6 +93,14 @@ Pull requests from the same repository automatically get isolated Railway enviro
 1. Add `RAILWAY_API_TOKEN` secret (Railway Account Token from Account Settings → Tokens, NOT a project token) to GitHub repository settings
 2. Add `RAILWAY_PROJECT_ID` variable (Railway project ID) to GitHub repository settings
 
+> **Note on adding new env vars:** PR preview environments clone variables from the production env at creation time. If you add a new env var to the `dub-rip` service after a PR preview env was created, the preview env won't pick it up automatically. For env vars that the PR's code path depends on:
+>
+> - Add the var to production *before* opening the PR (preview clones from current production state), OR
+> - Set the var manually on the PR preview env via the Railway dashboard / `railway variables --set` after the env is provisioned, OR
+> - Re-trigger the env-creation step in the GitHub Actions workflow (close + reopen the PR).
+>
+> This caught us during the bgutil-pot rollout: `BGUTIL_POT_URL` was set on production after the bgutil-cutover PR's preview env was created, so the preview env failed fast on the yt-dlp fallback path even though production worked.
+
 ## How It Works
 
 1. User enters a YouTube URL

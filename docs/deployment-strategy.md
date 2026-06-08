@@ -293,6 +293,34 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
 
 **Fix:** Upgrade Cobalt. It is almost never an app-side bug in dub-rip.
 
+## Symptom: yt-dlp fallback fails on all videos with "Unmatched yt-dlp error" / "Requested format is not available"
+
+**User-visible symptom:** Videos that previously worked via the yt-dlp fallback (when Cobalt failed) now also fail. Users see _"Download service couldn't verify with YouTube"_ or _"Download failed. Please try a different video."_ even for videos Cobalt itself can't handle.
+
+**What's happening under the hood:**
+
+YouTube ships changes to its BotGuard implementation periodically. The `bgutil-ytdlp-pot-provider` plugin and the [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) library track those changes upstream, but there's a lag — sometimes hours, sometimes a few days. While the upstream catches up, bgutil-pot generates PO tokens that YouTube rejects, and yt-dlp comes back empty-handed.
+
+**Diagnose in 3 steps:**
+
+1. **Confirm bgutil-pot is the failing layer.** From a Railway shell:
+   ```bash
+   curl -X POST http://bgutil-pot.railway.internal:4416/get_pot \
+     -H 'Content-Type: application/json' \
+     -d '{"content_binding":"hQrmtwhztnc"}'
+   ```
+   Compare against the bgutil-pot deploy logs for `Failed to generate IntegrityToken` or `Challenge timeout` lines. If those appear and persist across multiple `/get_pot` requests, BotGuard is the issue.
+
+2. **Check the upstream tracker.** Open [Brainicism/bgutil-ytdlp-pot-provider issues](https://github.com/Brainicism/bgutil-ytdlp-pot-provider/issues) and [LuanRT/BgUtils issues](https://github.com/LuanRT/BgUtils/issues). A recent "BotGuard broken after YouTube update" issue means you're in a known window.
+
+3. **Check Sentry for the pattern.** The `Unmatched yt-dlp error` warnings (added by the parseYtDlpError breadcrumb improvement) will surface unusual yt-dlp error shapes. A flood of these starting around the same wall-clock time strongly suggests a YouTube-side change.
+
+**Fix:**
+
+Bump the bgutil-pot tag. Check [the bgutil-ytdlp-pot-provider releases](https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases) for a release published after YouTube's change. Update `railway.toml` (or the Railway dashboard if not yet declarative) and redeploy. Verify with a known-bad video before closing the ticket.
+
+If the upstream hasn't released a fix yet, there's no app-side action — wait. dub-rip will degrade to "Cobalt-only" for videos that need PO tokens, which still covers most real traffic.
+
 ## Why `YOUTUBE_SESSION_SERVER` is unset
 
 Cobalt's `YOUTUBE_SESSION_SERVER` env var was previously set to `http://yt-token-service.railway.internal:8080/`, which caused Cobalt to poll `yt-token-service` for a PO token to attach to outbound YouTube requests. In practice this never did anything for our workload:

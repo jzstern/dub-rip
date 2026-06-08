@@ -16,6 +16,35 @@ Sentry.init({
 	sendDefaultPii: true,
 });
 
+const PROCESS_HANDLER_TAG = Symbol.for("dub-rip.process-error-handlers");
+
+interface TaggedGlobal {
+	[PROCESS_HANDLER_TAG]?: true;
+}
+
+export function registerProcessErrorHandlers(): void {
+	const tagged = globalThis as TaggedGlobal;
+	if (tagged[PROCESS_HANDLER_TAG]) return;
+	tagged[PROCESS_HANDLER_TAG] = true;
+
+	const handle = (err: unknown): void => {
+		const normalized =
+			err instanceof Error
+				? err
+				: new Error(`Non-error thrown: ${String(err)}`);
+		Sentry.captureException(normalized);
+		Sentry.flush(2000).then(
+			() => process.exit(1),
+			() => process.exit(1),
+		);
+	};
+
+	process.on("uncaughtException", handle);
+	process.on("unhandledRejection", handle);
+}
+
+registerProcessErrorHandlers();
+
 // If you have custom handlers, make sure to place them after `sentryHandle()` in the `sequence` function.
 export const handle = sequence(sentryHandle());
 

@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
-import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
 import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
+import { tryCobaltDownload } from "$lib/download-pipeline/try-cobalt";
 import type { DownloadMethod } from "$lib/types";
 import {
 	fetchThumbnailBuffer,
@@ -16,7 +16,6 @@ import {
 } from "$lib/video-metadata";
 import {
 	extractVideoId,
-	formatBytes,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
@@ -172,71 +171,18 @@ export const GET: RequestHandler = async ({ url }) => {
 
 				let actualFilePath = `${outputPath}.mp3`;
 				let downloadMethod: DownloadMethod = "yt-dlp";
-				let cobaltFailed = false;
 
 				send({ type: "status", message: "Trying fast download..." });
 
-				try {
-					const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
-					console.log("[Cobalt] Got download URL");
+				const cobaltResult = await tryCobaltDownload({
+					videoUrl,
+					outputPath: actualFilePath,
+					send,
+				});
 
-					send({ type: "progress", percent: 5 });
-
-					const audioBuffer = await fetchCobaltAudio(
-						downloadUrl,
-						55000,
-						(p) => {
-							if (p.totalBytes) {
-								send({
-									type: "progress",
-									percent: Math.round(5 + (p.percent / 100) * 70),
-								});
-							} else {
-								const pseudo = Math.min(
-									70,
-									Math.log10(1 + p.bytesReceived) * 10,
-								);
-								send({
-									type: "progress",
-									percent: Math.round(5 + pseudo),
-								});
-								send({
-									type: "status",
-									message: `Downloading... (${formatBytes(p.bytesReceived)})`,
-								});
-							}
-						},
-					);
-					console.log(
-						"[Cobalt] Downloaded audio, size:",
-						audioBuffer.byteLength,
-					);
-
-					if (audioBuffer.byteLength === 0) {
-						throw new CobaltError(
-							"Cobalt returned empty content (video may be blocked)",
-						);
-					}
-
-					send({ type: "progress", percent: 75 });
-
-					writeFileSync(actualFilePath, Buffer.from(audioBuffer));
-					downloadMethod = "cobalt";
-					console.log("[Cobalt] Download successful");
-				} catch (err) {
-					cobaltFailed = true;
-					if (err instanceof CobaltError) {
-						console.log(
-							"[Cobalt] Failed, falling back to yt-dlp:",
-							err.message,
-						);
-					} else {
-						const errMsg = err instanceof Error ? err.message : "Unknown error";
-						console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
-					}
-				}
-
-				if (cobaltFailed) {
+				if (cobaltResult.ok) {
+					downloadMethod = cobaltResult.method;
+				} else {
 					send({ type: "status", message: "Starting download..." });
 
 					if (!env.BGUTIL_POT_URL) {

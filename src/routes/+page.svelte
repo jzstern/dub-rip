@@ -6,6 +6,7 @@ import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
 import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
+import { formatDuration } from "$lib/format-duration";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
 
 let url = $state("");
@@ -35,13 +36,6 @@ let loadingPreview = $state(false);
 let downloadComplete = $state(false);
 let completedFilename = $state("");
 let currentDownloadId = 0;
-
-function formatDuration(seconds: number): string {
-	if (!seconds) return "";
-	const mins = Math.floor(seconds / 60);
-	const secs = Math.floor(seconds % 60);
-	return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
 
 async function loadPreview(targetUrl: string) {
 	loadingPreview = true;

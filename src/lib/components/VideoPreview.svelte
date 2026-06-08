@@ -10,11 +10,20 @@ let { preview, formatDuration }: Props = $props();
 </script>
 
 <div class="flex items-center gap-3 p-3 rounded-md border bg-muted/50">
-	<img
-		src={preview.thumbnail}
-		alt={preview.title}
-		class="w-12 h-12 rounded object-cover flex-shrink-0"
-	/>
+	<div class="relative flex-shrink-0">
+		<img
+			src={preview.thumbnail}
+			alt={preview.title}
+			class="w-12 h-12 rounded object-cover"
+		/>
+		{#if preview.duration}
+			<span
+				class="absolute bottom-1 right-1 rounded bg-black/80 px-1 py-0.5 text-[10px] font-medium text-white"
+			>
+				{formatDuration(preview.duration)}
+			</span>
+		{/if}
+	</div>
 	<div class="flex-1 min-w-0 space-y-0.5">
 		<p class="text-sm font-medium truncate">{preview.title || preview.videoTitle}</p>
 		<div class="flex items-center gap-2 text-xs text-muted-foreground">

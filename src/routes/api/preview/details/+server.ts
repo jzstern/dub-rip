@@ -6,6 +6,8 @@ import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
 
+const DURATION_EXTRACTION_TIMEOUT_MS = 12_000;
+
 let ytDlpWrap: unknown = null;
 let isInitializing = false;
 
@@ -53,20 +55,31 @@ export const POST: RequestHandler = async ({ request }) => {
 		const binaryPath = getYtDlpBinaryPath();
 		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-		const result = await execFilePromise(binaryPath, [
-			"--dump-json",
-			"--no-warnings",
-			"--no-playlist",
-			normalizedUrl,
-		]);
-		const videoInfo = JSON.parse(result.stdout);
+		const result = await execFilePromise(
+			binaryPath,
+			[
+				"--skip-download",
+				"--no-warnings",
+				"--no-playlist",
+				"--print",
+				"%(duration)s",
+				normalizedUrl,
+			],
+			{ timeout: DURATION_EXTRACTION_TIMEOUT_MS },
+		);
+
+		const duration = Number.parseInt(result.stdout.trim(), 10);
+		if (Number.isNaN(duration)) {
+			throw new Error("Could not parse duration from yt-dlp output");
+		}
 
 		return json({
 			success: true,
-			duration: videoInfo.duration,
+			duration,
 		});
-	} catch (error: any) {
-		console.error("Preview details error:", error.message);
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error("Preview details error:", message);
 
 		return json(
 			{

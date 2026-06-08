@@ -12,30 +12,24 @@ This document outlines the deployment architecture for dub-rip on Railway, using
 └─────────────────────────────────────────────────────────────────────┘
                               │
                               ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                           Railway Project                                               │
-│                                                                                         │
-│  ┌───────────────────────────────────────────────────────────────┐                      │
-│  │              dub-rip SvelteKit App                            │                      │
-│  │  • Git-push deployment                                        │                      │
-│  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)           │                      │
-│  │  • COBALT_API_URL → cobalt.railway.internal                   │                      │
-│  │  • BGUTIL_POT_URL → bgutil-pot.railway.internal               │                      │
-│  └───────────────────────────────────────────────────────────────┘                      │
-│         (Internal API)            (yt-dlp PO tokens, fallback)                          │
-│                ▼                                ▼                                       │
-│   ┌─────────────────────────┐    ┌────────────────────────────┐                         │
-│   │  Cobalt Instance        │    │  bgutil-pot                │                         │
-│   │  (port 9000)            │    │  (port 4416)               │                         │
-│   └─────────────────────────┘    └────────────────────────────┘                         │
-│                │                                                                        │
-│                ▼ (poToken polling — currently dormant; see below)                       │
-│   ┌─────────────────────────┐                                                           │
-│   │  yt-token-service       │                                                           │
-│   │  (port 8080)            │                                                           │
-│   └─────────────────────────┘                                                           │
-│                                                                                         │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Railway Project                              │
+│                                                                     │
+│  ┌───────────────────────────────────────────────────────────┐      │
+│  │              dub-rip SvelteKit App                        │      │
+│  │  • Git-push deployment                                    │      │
+│  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)       │      │
+│  │  • COBALT_API_URL → cobalt.railway.internal               │      │
+│  │  • BGUTIL_POT_URL → bgutil-pot.railway.internal           │      │
+│  └───────────────────────────────────────────────────────────┘      │
+│         (Internal API)          (yt-dlp PO tokens, fallback)        │
+│                ▼                              ▼                      │
+│   ┌─────────────────────────┐    ┌────────────────────────┐         │
+│   │  Cobalt Instance        │    │  bgutil-pot            │         │
+│   │  (port 9000)            │    │  (port 4416)           │         │
+│   └─────────────────────────┘    └────────────────────────┘         │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Why This Architecture
@@ -112,32 +106,6 @@ Generate a UUID for your API key:
 uuidgen
 ```
 
-### 3. yt-token-service
-
-Generates poToken and visitor_data for YouTube BotGuard bypass.
-
-**Build source:** Custom Node.js service in this repo at [`services/yt-token/`](../services/yt-token/README.md), built via [`Dockerfile.yt-token`](../Dockerfile.yt-token). See the service's [README](../services/yt-token/README.md) for full API, caching/retry behavior, and troubleshooting.
-
-**Railway Service Name:** `yt-token-service`
-
-> **Note:** The Railway service name is arbitrary — it doesn't need to match anything specific.
-> Whatever you name the service becomes its internal hostname (`{service-name}.railway.internal`),
-> which must match the `YOUTUBE_SESSION_SERVER` URL configured on Cobalt.
-
-**Configuration:**
-- No environment variables required (PORT and NODE_OPTIONS are set in the Dockerfile)
-- Exposes HTTP API on port 8080
-- Only accessible internally (no public exposure needed)
-- `railway.toml` sets `healthcheckPath = "/health"` (liveness-only, always 200 while the process is alive — see service README for why this matters)
-
-**API Endpoints:**
-- `GET /token` (or `GET /`) - Returns `{ potoken, visitor_data, updated }`
-- `GET /health` - Liveness probe (always 200 if process alive)
-- `GET /ready` - Readiness probe (200 only when a token is cached)
-- `GET /status` - Diagnostics (cache age, backoff, attempt counters, last error)
-
-**Fallback option:** If the custom Node service becomes unreliable, swap the Railway service's build to the upstream image `ghcr.io/imputnet/yt-session-generator:webserver`. The response format is compatible — no app-side changes needed.
-
 ### 4. bgutil-pot
 
 Sidecar HTTP server that generates YouTube PO tokens for the yt-dlp fallback path. Uses [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) (the same upstream Cobalt's `youtubei.js` depends on) to solve YouTube's BotGuard challenge headlessly without a Google account.
@@ -176,17 +144,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
 1. Go to [Railway](https://railway.app) and create a new project
 2. Name it something like `dub-rip-production`
 
-### Step 2: Deploy yt-token-service
-
-1. Add a new service → GitHub Repo (same repo as dub-rip)
-2. Override the build: set Dockerfile path to `Dockerfile.yt-token`
-3. Service name: `yt-token-service`
-4. No environment variables needed
-5. No public networking (internal only)
-
-> **Alternative:** If you'd rather not build a custom Node service, swap step 1–2 for "Docker Image: `ghcr.io/imputnet/yt-session-generator:webserver`". The response format is compatible with Cobalt.
-
-### Step 3: Deploy Cobalt
+### Step 2: Deploy Cobalt
 
 1. Add a new service → Docker Image
 2. Image: `ghcr.io/imputnet/cobalt:11.7.1` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning))
@@ -211,7 +169,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
 > ```
 > Then enable public networking on port 9000. Remember to disable this after debugging.
 
-### Step 3.5: Deploy bgutil-pot
+### Step 3: Deploy bgutil-pot
 
 1. Add a new service → Docker Image
 2. Image: `brainicism/bgutil-ytdlp-pot-provider:1.3.1` — **pin to a specific version tag, not `:latest`** (see [Cobalt version pinning](#cobalt-version-pinning) for rationale; same logic applies here)
@@ -221,7 +179,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
    - dub-rip communicates with bgutil-pot via Railway's private network at `http://bgutil-pot.railway.internal:4416`
 6. Healthcheck: `GET /ping` returns 200 when the service is ready
 
-### Step 4: Deploy dub-rip
+### Step 3.5: Deploy dub-rip
 
 1. Add a new service → GitHub Repo
 2. Select your dub-rip repository
@@ -234,7 +192,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
    ```
 4. Enable public networking
 
-### Step 5: Verify Deployment
+### Step 4: Verify Deployment
 
 1. Check yt-token-service logs in Railway dashboard for successful startup
 2. Check Cobalt logs for successful connection to yt-token-service
@@ -251,13 +209,10 @@ Production and PR-preview environments get the var via Railway service vars; no 
 1. User enters YouTube URL
 2. dub-rip validates URL and extracts video ID
 3. dub-rip calls Cobalt API with authenticated request
-4. Cobalt checks if it needs a fresh poToken
-5. If needed, Cobalt requests token from yt-token-service
-6. yt-token-service solves BotGuard challenge, returns tokens
-7. Cobalt uses tokens to fetch YouTube stream
-8. Cobalt returns stream URL to dub-rip
-9. dub-rip fetches audio, applies ID3 metadata
-10. MP3 streamed back to user's browser
+4. Cobalt fetches YouTube stream
+5. Cobalt returns stream URL to dub-rip
+6. dub-rip fetches audio, applies ID3 metadata
+7. MP3 streamed back to user's browser
 
 Fallback path (if Cobalt fails):
 3b. dub-rip falls back to yt-dlp
@@ -272,9 +227,8 @@ Fallback path (if Cobalt fails):
 |---------|-----------------|-------|
 | dub-rip | ~$2-3/month | Depends on traffic |
 | Cobalt | ~$2-3/month | Depends on downloads |
-| yt-token-service | ~$1/month | Lightweight service |
 | bgutil-pot | ~$1-2/month | Idle most of the time |
-| **Total** | **~$6-9/month** | Within free tier for low usage |
+| **Total** | **~$5-8/month** | Within free tier for low usage |
 
 Railway provides $5/month in free credits. For personal use or low traffic, you may stay within the free tier.
 
@@ -341,17 +295,25 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
 
 ## Why `YOUTUBE_SESSION_SERVER` is unset
 
-The Cobalt service used to set `YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/`, which would have caused Cobalt to fetch a PO token from `yt-token-service` and attach it to outbound YouTube requests. In practice this never happened for our workload:
+Cobalt's `YOUTUBE_SESSION_SERVER` env var was previously set to `http://yt-token-service.railway.internal:8080/`, which caused Cobalt to poll `yt-token-service` for a PO token to attach to outbound YouTube requests. In practice this never did anything for our workload:
 
 - Cobalt's [`useSession` gate](https://github.com/imputnet/cobalt/blob/main/api/src/processing/services/youtube.js#L176-L186) is the only path that attaches the token from the session server.
 - That gate evaluates to false for audio-only requests (the only kind dub-rip makes).
 - The result: `yt-token-service` was being polled every ~5 minutes by Cobalt, generating a steady stream of `UND_ERR_CONNECT_TIMEOUT` log lines, and the token it returned was being thrown away.
 
-Unsetting the var on the Cobalt service stops the polling. The `yt-token-service` itself remains deployed: it's cheap (~$1/mo), and if a future Cobalt config change re-enables `useSession` (e.g. `CUSTOM_INNERTUBE_CLIENT=TV_EMBEDDED`) we want the service in place rather than scrambling to redeploy.
+Unsetting `YOUTUBE_SESSION_SERVER` on the Cobalt service stopped the polling. With the service confirmed to have no active callers, `yt-token-service` was subsequently decommissioned (see [§ Decommissioned: yt-token-service](#decommissioned-yt-token-service-2026-06)).
 
-This is **separate** from the yt-dlp fallback's PO-token needs. yt-dlp gets its PO token from the new [`bgutil-pot`](#4-bgutil-pot) sidecar, not from `yt-token-service`.
+This is **separate** from the yt-dlp fallback's PO-token needs. yt-dlp gets its PO token from the [`bgutil-pot`](#4-bgutil-pot) sidecar, not from `yt-token-service`.
 
 Background: [PR #52 research notes](https://github.com/jzstern/dub-rip/pull/52) (closed; investigation only).
+
+## Decommissioned: yt-token-service (2026-06)
+
+`yt-token-service` was a Node sidecar that generated PO tokens for Cobalt via `YOUTUBE_SESSION_SERVER`. After confirming Cobalt's `useSession` gate never fires for audio-only requests (see [§ Why YOUTUBE_SESSION_SERVER is unset](#why-youtube_session_server-is-unset)), the service had no active callers. We carried it for several weeks in case the session path got re-enabled, then removed it for the operational simplification.
+
+If you need PO tokens for Cobalt again, restoring the service is `git revert <this commit>` plus redeploying. The custom Node implementation had forked-child OOM isolation; if you don't need that resilience, the upstream image `ghcr.io/imputnet/yt-session-generator:webserver` is a drop-in alternative.
+
+PO tokens for the yt-dlp fallback path are still served by `bgutil-pot` (see [§ 4. bgutil-pot](#4-bgutil-pot)). That's a separate concern from Cobalt's session server and is unaffected.
 
 ## Maintenance
 
@@ -361,36 +323,19 @@ Background: [PR #52 research notes](https://github.com/jzstern/dub-rip/pull/52) 
 - Update Docker images when new versions release — especially Cobalt (see [Cobalt version pinning](#cobalt-version-pinning))
 
 **When YouTube Changes:**
-- Bump [`youtube-po-token-generator`](https://www.npmjs.com/package/youtube-po-token-generator) in `services/yt-token/package.json` and redeploy — this is the most common response when YouTube updates BotGuard.
-- If the custom service can't keep up, swap to the upstream image (see "Fallback option" in the yt-token-service section above). The response format is compatible; no app-side changes needed.
-- Watch [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) issues for community signal on upstream BotGuard changes, even when running the custom service.
+- Monitor [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) and Cobalt release notes for BotGuard-related updates.
+- If Cobalt's `useSession` gate is ever re-enabled (e.g. via `CUSTOM_INNERTUBE_CLIENT=TV_EMBEDDED`), see [§ Decommissioned: yt-token-service](#decommissioned-yt-token-service-2026-06) for restore options.
 
 **Troubleshooting Commands (via Railway Shell):**
 
-To run these commands, open Railway dashboard → Select service → Click "Shell":
+To run these commands, open Railway dashboard → Select service → Click "Shell".
 
-```bash
-# From any Railway service shell:
-
-# Liveness (always 200 while the process is alive)
-curl http://yt-token-service.railway.internal:8080/health
-
-# Readiness (200 only when a token is cached)
-curl http://yt-token-service.railway.internal:8080/ready
-
-# Full diagnostics: cache age, TTL remaining, backoff, attempt counters, last error
-curl http://yt-token-service.railway.internal:8080/status
-
-# Fetch an actual token (what Cobalt calls)
-curl http://yt-token-service.railway.internal:8080/token
-```
-
-You can also check service logs directly in the Railway dashboard.
+You can check service logs directly in the Railway dashboard.
 
 ## Security Considerations
 
 1. **API Key Protection**: Store in Railway environment variables
-2. **Internal Networking**: yt-token-service not exposed publicly
+2. **Internal Networking**: Cobalt and bgutil-pot are not exposed publicly
 3. **HTTPS Only**: Railway provides automatic SSL
 4. **Rate Limiting**: Cobalt has built-in rate limiting
 5. **SSRF Protection**: Implemented in dub-rip's cobalt.ts

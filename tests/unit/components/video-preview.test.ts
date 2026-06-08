@@ -101,7 +101,7 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getByText("3:32")).toBeInTheDocument();
+			expect(screen.getAllByText("3:32")).toHaveLength(2);
 		});
 
 		it("does not display duration when not provided", () => {
@@ -157,7 +157,7 @@ describe("VideoPreview", () => {
 
 			// #then
 			expect(screen.getByText("Just a Title")).toBeInTheDocument();
-			expect(screen.getByText("1:00")).toBeInTheDocument();
+			expect(screen.getAllByText("1:00")).toHaveLength(2);
 			expect(screen.queryByText("•")).not.toBeInTheDocument();
 		});
 

@@ -6,9 +6,9 @@ import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
+import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
 import type { DownloadMethod } from "$lib/types";
 import {
-	buildID3Tags,
 	fetchThumbnailBuffer,
 	fetchVideoDetails,
 	type ThumbnailImage,
@@ -411,94 +411,24 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
-				const NodeID3 = require("node-id3");
-
-				try {
-					const [details, image] = await Promise.all([
-						detailsPromise,
-						thumbnailPromise,
-					]);
-
-					const tags = buildID3Tags({
-						trackTitle,
-						videoTitle,
-						artist,
-						details,
-						image,
-					});
-
-					const { image: _image, ...tagsForLog } = tags;
-					console.log("Writing ID3 tags:", {
-						...tagsForLog,
-						image: image ? `[${image.buffer.byteLength} bytes]` : "none",
-					});
-
-					const success = NodeID3.write(tags, actualFilePath);
-					if (success !== true) {
-						const error =
-							success instanceof Error
-								? success
-								: new Error("NodeID3.write returned non-true value");
-						console.error("ID3 write failed:", error);
-						Sentry.captureException(error, {
-							tags: { service: "download-stream", operation: "id3-write" },
-							extra: { videoId, tags: tagsForLog },
-						});
-					} else {
-						console.log("ID3 write success");
-					}
-				} catch (err) {
-					console.error("Metadata processing error:", err);
-					const normalizedError =
-						err instanceof Error
-							? err
-							: new Error(`ID3 processing failed: ${String(err)}`);
-					Sentry.captureException(normalizedError, {
-						tags: { service: "download-stream", operation: "id3-write" },
-						extra: { videoId },
-					});
-				}
-
-				send({ type: "progress", percent: 85 });
-				send({ type: "status", message: "Preparing download..." });
-
-				const fs = await import("node:fs/promises");
-				const stats = await fs.stat(actualFilePath);
-
-				send({ type: "progress", percent: 88 });
-
-				const fileContent = await fs.readFile(actualFilePath);
-				const base64Data = Buffer.from(fileContent).toString("base64");
-
-				send({ type: "progress", percent: 95 });
-
-				let finalFilename: string;
-				if (artist && trackTitle) {
-					const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
-					const safeTrack = trackTitle.replace(/[<>:"/\\|?*]/g, "").trim();
-					if (safeArtist && safeTrack) {
-						finalFilename = `${safeArtist} - ${safeTrack}.mp3`;
-					} else {
-						finalFilename = `${(videoTitle || "audio")
-							.replace(/[<>:"/\\|?*]/g, "_")
-							.replace(/_+/g, "_")}.mp3`;
-					}
-				} else if (videoTitle) {
-					finalFilename =
-						videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_") +
-						".mp3";
-				} else {
-					finalFilename = "audio.mp3";
-				}
-
-				console.log("Final filename:", finalFilename);
+				const result = await encodeAndStreamMp3({
+					filePath: actualFilePath,
+					videoTitle,
+					artist,
+					trackTitle,
+					downloadMethod,
+					videoId,
+					detailsPromise,
+					thumbnailPromise,
+					send,
+				});
 
 				send({
 					type: "complete",
-					filename: finalFilename,
-					size: stats.size,
-					data: base64Data,
-					downloadMethod,
+					filename: result.filename,
+					size: result.size,
+					data: result.data,
+					downloadMethod: result.downloadMethod,
 				});
 
 				try {

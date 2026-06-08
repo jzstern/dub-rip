@@ -1,25 +1,24 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
-import { CobaltError, fetchCobaltAudio, requestCobaltAudio } from "$lib/cobalt";
+import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
+import { tryCobaltDownload } from "$lib/download-pipeline/try-cobalt";
+import {
+	tryYtDlpDownload,
+	type YtDlpInstance,
+} from "$lib/download-pipeline/try-yt-dlp";
 import type { DownloadMethod } from "$lib/types";
 import {
-	buildID3Tags,
 	fetchThumbnailBuffer,
 	fetchVideoDetails,
 	type ThumbnailImage,
 	type VideoDetails,
 } from "$lib/video-metadata";
-import {
-	extractVideoId,
-	formatBytes,
-	parseArtistAndTitle,
-	sanitizeUploaderAsArtist,
-} from "$lib/video-utils";
+import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -29,24 +28,6 @@ import { parseYtDlpError } from "$lib/yt-dlp-errors";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
-
-interface YtDlpProcess {
-	on(
-		event: "progress",
-		callback: (progress: Record<string, unknown>) => void,
-	): void;
-	on(
-		event: "ytDlpEvent",
-		callback: (eventType: string, eventData: string) => void,
-	): void;
-	on(event: "error", callback: (error: Error) => void): void;
-	on(event: "close", callback: (code: number) => void): void;
-	stderr?: { on(event: string, callback: (data: Buffer) => void): void };
-}
-
-interface YtDlpInstance {
-	exec(args: string[]): YtDlpProcess;
-}
 
 let ytDlpWrap: YtDlpInstance | null = null;
 let ytDlpPromise: Promise<YtDlpInstance> | null = null;
@@ -118,10 +99,12 @@ export const GET: RequestHandler = async ({ url }) => {
 			try {
 				send({ type: "status", message: "Getting video info..." });
 
-				let videoTitle = "";
-				let artist = "";
-				let trackTitle = "";
-				let uploader = "";
+				const titleState = {
+					videoTitle: "",
+					artist: "",
+					trackTitle: "",
+					uploader: "",
+				};
 
 				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
 					videoUrl,
@@ -133,23 +116,23 @@ export const GET: RequestHandler = async ({ url }) => {
 				if (videoId) {
 					try {
 						const metadata = await fetchYouTubeMetadata(videoId);
-						videoTitle = metadata.videoTitle;
-						artist = metadata.artist;
-						trackTitle = metadata.trackTitle;
-						uploader = metadata.uploader;
+						titleState.videoTitle = metadata.videoTitle;
+						titleState.artist = metadata.artist;
+						titleState.trackTitle = metadata.trackTitle;
+						titleState.uploader = metadata.uploader;
 
 						console.log("Got metadata from oEmbed:", {
-							videoTitle,
-							artist,
-							trackTitle,
-							uploader,
+							videoTitle: titleState.videoTitle,
+							artist: titleState.artist,
+							trackTitle: titleState.trackTitle,
+							uploader: titleState.uploader,
 						});
 
 						send({
 							type: "info",
-							title: videoTitle,
-							artist: artist,
-							track: trackTitle,
+							title: titleState.videoTitle,
+							artist: titleState.artist,
+							track: titleState.trackTitle,
 						});
 					} catch (err) {
 						if (err instanceof YouTubeMetadataError) {
@@ -170,71 +153,18 @@ export const GET: RequestHandler = async ({ url }) => {
 
 				let actualFilePath = `${outputPath}.mp3`;
 				let downloadMethod: DownloadMethod = "yt-dlp";
-				let cobaltFailed = false;
 
 				send({ type: "status", message: "Trying fast download..." });
 
-				try {
-					const downloadUrl = await requestCobaltAudio(videoUrl, 20000);
-					console.log("[Cobalt] Got download URL");
+				const cobaltResult = await tryCobaltDownload({
+					videoUrl,
+					outputPath: actualFilePath,
+					send,
+				});
 
-					send({ type: "progress", percent: 5 });
-
-					const audioBuffer = await fetchCobaltAudio(
-						downloadUrl,
-						55000,
-						(p) => {
-							if (p.totalBytes) {
-								send({
-									type: "progress",
-									percent: Math.round(5 + (p.percent / 100) * 70),
-								});
-							} else {
-								const pseudo = Math.min(
-									70,
-									Math.log10(1 + p.bytesReceived) * 10,
-								);
-								send({
-									type: "progress",
-									percent: Math.round(5 + pseudo),
-								});
-								send({
-									type: "status",
-									message: `Downloading... (${formatBytes(p.bytesReceived)})`,
-								});
-							}
-						},
-					);
-					console.log(
-						"[Cobalt] Downloaded audio, size:",
-						audioBuffer.byteLength,
-					);
-
-					if (audioBuffer.byteLength === 0) {
-						throw new CobaltError(
-							"Cobalt returned empty content (video may be blocked)",
-						);
-					}
-
-					send({ type: "progress", percent: 75 });
-
-					writeFileSync(actualFilePath, Buffer.from(audioBuffer));
-					downloadMethod = "cobalt";
-					console.log("[Cobalt] Download successful");
-				} catch (err) {
-					cobaltFailed = true;
-					if (err instanceof CobaltError) {
-						console.log(
-							"[Cobalt] Failed, falling back to yt-dlp:",
-							err.message,
-						);
-					} else {
-						const errMsg = err instanceof Error ? err.message : "Unknown error";
-						console.log("[Cobalt] Failed, falling back to yt-dlp:", errMsg);
-					}
-				}
-
-				if (cobaltFailed) {
+				if (cobaltResult.ok) {
+					downloadMethod = cobaltResult.method;
+				} else {
 					send({ type: "status", message: "Starting download..." });
 
 					if (!env.BGUTIL_POT_URL) {
@@ -255,138 +185,20 @@ export const GET: RequestHandler = async ({ url }) => {
 					}
 
 					const debugMode = url.searchParams.get("debug") === "1";
-
 					const ytDlp = await getYTDlp();
 					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 					const pluginDir = await ensureBgutilPlugin();
 
-					const args = [
+					await tryYtDlpDownload({
 						videoUrl,
-						"-x",
-						"--audio-format",
-						"mp3",
-						"--audio-quality",
-						"0",
-						"-f",
-						"bestaudio/best",
-						"--embed-thumbnail",
-						"--add-metadata",
-						"--ffmpeg-location",
-						ffmpegInstaller.path,
-						"--newline",
-						"--no-warnings",
-						"--parse-metadata",
-						"%(title)s:%(meta_title)s",
-						"--parse-metadata",
-						"%(artist)s:%(meta_artist)s",
-						"--no-playlist",
-						"--plugin-dirs",
+						outputPath,
+						bgutilPotUrl: env.BGUTIL_POT_URL,
+						ffmpegPath: ffmpegInstaller.path,
 						pluginDir,
-						// player_client=default,mweb: try yt-dlp's default chain first (web → ios → android
-						// → ...) then fall back to mweb. mweb requires a PO token (provided by bgutil-pot)
-						// but returns a narrower format set than web; some videos have no `bestaudio`-matching
-						// format in mweb's response. Multi-client mode handles both cases.
-						"--extractor-args",
-						"youtube:player_client=default,mweb",
-						"--extractor-args",
-						`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
-						"-o",
-						`${outputPath}.%(ext)s`,
-					];
-
-					if (debugMode) {
-						args.push("-v", "--list-formats");
-					}
-
-					const downloadProcess = ytDlp.exec(args);
-
-					downloadProcess.on(
-						"progress",
-						(progress: Record<string, unknown>) => {
-							const rawPercent = Math.min(
-								100,
-								Math.max(0, (progress.percent as number) || 0),
-							);
-							send({
-								type: "progress",
-								percent: Math.round(5 + (rawPercent / 100) * 70),
-								speed: (progress.currentSpeed as string) || "",
-								eta: (progress.eta as string) || "",
-							});
-						},
-					);
-
-					downloadProcess.on(
-						"ytDlpEvent",
-						(eventType: string, eventData: string) => {
-							console.log("yt-dlp event:", eventType, "|", eventData);
-
-							if (!videoTitle) {
-								if (eventType === "Destination") {
-									const match = eventData.match(/\/([^/]+)\.\w+$/);
-									if (match) {
-										videoTitle = match[1].replace(/_/g, " ");
-									}
-								} else if (
-									eventData.includes(".mp3") ||
-									eventData.includes(".webm")
-								) {
-									const match = eventData.match(/([^/]+)\.\w+/);
-									if (match) {
-										videoTitle = match[1].replace(/_/g, " ");
-									}
-								}
-
-								if (videoTitle) {
-									const parsed = parseArtistAndTitle(videoTitle);
-									artist = parsed.artist;
-									trackTitle = parsed.title;
-
-									if (!artist && uploader) {
-										artist = sanitizeUploaderAsArtist(uploader);
-									}
-
-									send({
-										type: "info",
-										title: videoTitle,
-										artist: artist,
-										track: trackTitle,
-									});
-								}
-							}
-
-							send({ type: "event", eventType, eventData });
-						},
-					);
-
-					let errorMessage = "";
-					downloadProcess.stderr?.on("data", (data: Buffer) => {
-						const text = data.toString();
-						console.error("yt-dlp stderr:", text);
-						if (text.includes("ERROR:")) {
-							errorMessage += text;
-						}
-					});
-
-					downloadProcess.on("error", (error: Error) => {
-						console.error("Download process error:", error);
-						send({
-							type: "error",
-							message: parseYtDlpError(error.message),
-						});
-					});
-
-					await new Promise((resolve, reject) => {
-						downloadProcess.on("close", (code: number) => {
-							if (code === 0) {
-								resolve(code);
-							} else {
-								reject(
-									new Error(errorMessage || `Process exited with code ${code}`),
-								);
-							}
-						});
-						downloadProcess.on("error", reject);
+						debugMode,
+						ytDlp,
+						titleState,
+						send,
 					});
 
 					actualFilePath = `${outputPath}.mp3`;
@@ -402,101 +214,31 @@ export const GET: RequestHandler = async ({ url }) => {
 					return;
 				}
 
-				console.log("Video title:", videoTitle);
-				console.log("Parsed artist:", artist);
-				console.log("Parsed track title:", trackTitle);
+				console.log("Video title:", titleState.videoTitle);
+				console.log("Parsed artist:", titleState.artist);
+				console.log("Parsed track title:", titleState.trackTitle);
 
 				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
-				const NodeID3 = require("node-id3");
-
-				try {
-					const [details, image] = await Promise.all([
-						detailsPromise,
-						thumbnailPromise,
-					]);
-
-					const tags = buildID3Tags({
-						trackTitle,
-						videoTitle,
-						artist,
-						details,
-						image,
-					});
-
-					const { image: _image, ...tagsForLog } = tags;
-					console.log("Writing ID3 tags:", {
-						...tagsForLog,
-						image: image ? `[${image.buffer.byteLength} bytes]` : "none",
-					});
-
-					const success = NodeID3.write(tags, actualFilePath);
-					if (success !== true) {
-						const error =
-							success instanceof Error
-								? success
-								: new Error("NodeID3.write returned non-true value");
-						console.error("ID3 write failed:", error);
-						Sentry.captureException(error, {
-							tags: { service: "download-stream", operation: "id3-write" },
-							extra: { videoId, tags: tagsForLog },
-						});
-					} else {
-						console.log("ID3 write success");
-					}
-				} catch (err) {
-					console.error("Metadata processing error:", err);
-					const normalizedError =
-						err instanceof Error
-							? err
-							: new Error(`ID3 processing failed: ${String(err)}`);
-					Sentry.captureException(normalizedError, {
-						tags: { service: "download-stream", operation: "id3-write" },
-						extra: { videoId },
-					});
-				}
-
-				send({ type: "progress", percent: 85 });
-				send({ type: "status", message: "Preparing download..." });
-
-				const fs = await import("node:fs/promises");
-				const stats = await fs.stat(actualFilePath);
-
-				send({ type: "progress", percent: 88 });
-
-				const fileContent = await fs.readFile(actualFilePath);
-				const base64Data = Buffer.from(fileContent).toString("base64");
-
-				send({ type: "progress", percent: 95 });
-
-				let finalFilename: string;
-				if (artist && trackTitle) {
-					const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
-					const safeTrack = trackTitle.replace(/[<>:"/\\|?*]/g, "").trim();
-					if (safeArtist && safeTrack) {
-						finalFilename = `${safeArtist} - ${safeTrack}.mp3`;
-					} else {
-						finalFilename = `${(videoTitle || "audio")
-							.replace(/[<>:"/\\|?*]/g, "_")
-							.replace(/_+/g, "_")}.mp3`;
-					}
-				} else if (videoTitle) {
-					finalFilename =
-						videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_") +
-						".mp3";
-				} else {
-					finalFilename = "audio.mp3";
-				}
-
-				console.log("Final filename:", finalFilename);
+				const result = await encodeAndStreamMp3({
+					filePath: actualFilePath,
+					videoTitle: titleState.videoTitle,
+					artist: titleState.artist,
+					trackTitle: titleState.trackTitle,
+					downloadMethod,
+					videoId,
+					detailsPromise,
+					thumbnailPromise,
+					send,
+				});
 
 				send({
 					type: "complete",
-					filename: finalFilename,
-					size: stats.size,
-					data: base64Data,
-					downloadMethod,
+					filename: result.filename,
+					size: result.size,
+					data: result.data,
+					downloadMethod: result.downloadMethod,
 				});
 
 				try {

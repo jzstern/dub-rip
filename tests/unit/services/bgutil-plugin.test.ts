@@ -1,3 +1,7 @@
+// Verified via `vitest --no-isolate`: this file's vi.mock("node:fs") does
+// NOT bleed into adjacent test files. Vitest's worker-level isolation
+// handles the boundary, but if you ever change vitest config or worker
+// pool settings, re-run that command to confirm.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMock = vi.fn();

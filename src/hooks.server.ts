@@ -41,9 +41,33 @@ export function registerProcessErrorHandlers(): void {
 
 	process.on("uncaughtException", handle);
 	process.on("unhandledRejection", handle);
+
+	process.on("warning", (warning) => {
+		Sentry.captureException(warning, {
+			level: "warning",
+			tags: { service: "hooks.server", operation: "process-warning" },
+		});
+	});
 }
 
 registerProcessErrorHandlers();
+
+import("$lib/yt-dlp-binary")
+	.then(({ ensureYtDlpBinary, ensureBgutilPlugin }) => {
+		ensureYtDlpBinary().catch((err) =>
+			Sentry.captureException(err, {
+				tags: { service: "hooks.server", operation: "prewarm-ytdlp" },
+			}),
+		);
+		ensureBgutilPlugin().catch((err) =>
+			Sentry.captureException(err, {
+				tags: { service: "hooks.server", operation: "prewarm-bgutil" },
+			}),
+		);
+	})
+	.catch((err) => {
+		console.error("Failed to import yt-dlp-binary for prewarm:", err);
+	});
 
 // If you have custom handlers, make sure to place them after `sentryHandle()` in the `sequence` function.
 export const handle = sequence(sentryHandle());

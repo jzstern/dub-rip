@@ -9,21 +9,21 @@ interface Props {
 let { preview, formatDuration }: Props = $props();
 </script>
 
-<div class="flex items-center gap-3 p-3 rounded-md border bg-muted/50">
+<div class="flex items-stretch gap-0 border-2 border-foreground">
 	<img
 		src={preview.thumbnail}
 		alt={preview.title}
-		class="w-12 h-12 rounded object-cover flex-shrink-0"
+		class="h-16 w-16 flex-shrink-0 border-r-2 border-foreground object-cover"
 	/>
-	<div class="flex-1 min-w-0 space-y-0.5">
-		<p class="text-sm font-medium truncate">{preview.title || preview.videoTitle}</p>
-		<div class="flex items-center gap-2 text-xs text-muted-foreground">
+	<div class="min-w-0 flex-1 space-y-1 p-3">
+		<p class="truncate text-sm font-bold leading-tight">{preview.title || preview.videoTitle}</p>
+		<div class="flex items-center gap-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
 			{#if preview.artist}
 				<span class="truncate">{preview.artist}</span>
 			{/if}
 			{#if preview.duration}
 				{#if preview.artist}
-					<span>•</span>
+					<span class="text-accent">/</span>
 				{/if}
 				<span>{formatDuration(preview.duration)}</span>
 			{/if}

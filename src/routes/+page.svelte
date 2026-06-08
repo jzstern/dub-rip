@@ -2,7 +2,6 @@
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
-import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
 import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
@@ -227,79 +226,103 @@ function handleDownload() {
 }
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
-		</div>
+<div class="flex min-h-screen flex-col">
+	<header class="flex items-center justify-between border-b-2 border-foreground px-5 py-3 font-mono text-xs uppercase tracking-[0.2em]">
+		<span>YouTube → MP3</span>
+		<span class="text-accent">●&nbsp;Audio Ripper</span>
+	</header>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
-					<Input
-						bind:value={url}
-						placeholder="Paste YouTube URL"
-						disabled={loading}
-						autofocus
-						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
-					/>
-					<DownloadButton
-						loading={loading}
-						disabled={loading || !isValidUrl}
-						onClick={handleDownload}
-					/>
+	<main class="flex flex-1 items-center justify-center p-5">
+		<div class="w-full max-w-xl">
+			<!-- Hero -->
+			<div class="mb-8 flex items-end gap-4">
+				<AsciiVinyl />
+				<div class="-mb-1 flex-1">
+					<h1 class="font-display text-6xl font-bold leading-[0.85] tracking-tighter sm:text-7xl">
+						dub<span class="text-accent">-</span>rip
+					</h1>
+					<p class="mt-3 max-w-xs text-sm leading-snug text-muted-foreground">
+						Download YouTube audio with rich metadata.
+					</p>
+				</div>
+			</div>
+
+			<!-- Main panel -->
+			<div class="border-2 border-foreground">
+				<div class="flex items-center justify-between border-b-2 border-foreground bg-foreground px-4 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.25em] text-background">
+					<span>Source URL</span>
+					<span>01</span>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
-
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
-
-				<!-- Error -->
-				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
-					</div>
-				{/if}
-
-				<!-- Progress -->
-				{#if loading || status}
+				<div class="space-y-4 p-4 sm:p-5">
+					<!-- Input -->
 					<div class="space-y-3">
-						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
-						{/if}
+						<Input
+							bind:value={url}
+							placeholder="Paste YouTube URL"
+							disabled={loading}
+							autofocus
+							onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
+							class="h-14 rounded-none border-2 border-foreground px-4 font-mono text-base shadow-none focus-visible:ring-0"
+						/>
+						<DownloadButton
+							loading={loading}
+							disabled={loading || !isValidUrl}
+							onClick={handleDownload}
+						/>
+					</div>
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+					<!-- Preview -->
+					{#if preview && !loading && !loadingPreview}
+						<VideoPreview preview={preview} formatDuration={formatDuration} />
+					{/if}
 
-						<div class="space-y-2">
-							<Progress value={progress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{progress}%</span>
-								<div class="flex gap-2">
-									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
+					<!-- Loading Preview -->
+					{#if loadingPreview}
+						<PreviewSkeleton />
+					{/if}
+
+					<!-- Error -->
+					{#if error}
+						<div class="border-2 border-accent bg-accent/10 p-3">
+							<p class="font-mono text-sm font-bold uppercase tracking-wide text-accent">{error}</p>
+						</div>
+					{/if}
+
+					<!-- Progress -->
+					{#if loading || status}
+						<div class="space-y-4 border-t-2 border-foreground pt-4">
+							{#if videoTitle}
+								<p class="truncate text-sm font-bold">{videoTitle}</p>
+							{/if}
+
+							<div class="flex items-end justify-between gap-4">
+								<span class="font-display text-6xl font-bold leading-none tracking-tighter tabular-nums sm:text-7xl">{progress}<span class="text-accent">%</span></span>
+								<p class="pb-2 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">{status}</p>
+							</div>
+
+							<div class="space-y-2">
+								<Progress value={progress} class="h-3 rounded-none border-2 border-foreground bg-transparent" />
+								<div class="flex justify-between font-mono text-xs uppercase tracking-wide text-muted-foreground">
+									<span>{progress}% Complete</span>
+									<div class="flex gap-3">
+										{#if speed}<span>{speed}</span>{/if}
+										{#if eta}<span>ETA {eta}</span>{/if}
+									</div>
 								</div>
 							</div>
+
+							{#if downloadComplete && completedFilename}
+								<p class="truncate border-t-2 border-foreground pt-3 font-mono text-xs text-muted-foreground">{completedFilename}</p>
+							{/if}
 						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	</main>
 
-						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
-						{/if}
-					</div>
-				{/if}
-
-			</Card.Content>
-		</Card.Root>
-	</div>
+	<footer class="border-t-2 border-foreground px-5 py-3 font-mono text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
+		dub-rip / no ads / no tracking
+	</footer>
 </div>

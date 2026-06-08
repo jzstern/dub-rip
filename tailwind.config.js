@@ -55,7 +55,8 @@ export default {
 				sm: "calc(var(--radius) - 4px)",
 			},
 			fontFamily: {
-				sans: [...fontFamily.sans],
+				sans: ['"Space Grotesk"', ...fontFamily.sans],
+				display: ['"Space Grotesk"', ...fontFamily.sans],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},

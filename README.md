@@ -18,7 +18,7 @@ A simple web app to download YouTube audio with rich metadata including song tit
 
 - **Frontend**: Svelte 5 + SvelteKit
 - **Backend**: SvelteKit API routes
-- **Deployment**: Railway (with Cobalt + yt-token-service)
+- **Deployment**: Railway (with Cobalt + bgutil-pot)
 - **Audio Processing**: Cobalt API (primary) + yt-dlp (fallback)
 
 ## Development
@@ -48,21 +48,20 @@ This project is configured to deploy on Railway with a self-hosted Cobalt instan
 ### Architecture
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                    Railway Project                                           │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌────────────┐  ┌──────────────┐  │
-│  │   dub-rip app   │──│     Cobalt      │──│yt-token-   │  │ bgutil-pot   │  │
-│  │   (SvelteKit)   │  │   (port 9000)   │  │  service   │  │ (port 4416)  │  │
-│  └─────────────────┘  └─────────────────┘  └────────────┘  └──────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                         Railway Project                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────────┐  │
+│  │   dub-rip app   │──│     Cobalt      │  │     bgutil-pot       │  │
+│  │   (SvelteKit)   │  │   (port 9000)   │  │     (port 4416)      │  │
+│  └─────────────────┘  └─────────────────┘  └──────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Services Required
 
 1. **dub-rip** - This app (SvelteKit + Node.js)
 2. **Cobalt** - YouTube download API (`ghcr.io/imputnet/cobalt:11.7.1`)
-3. **yt-token-service** - BotGuard token generator for Cobalt (`ghcr.io/imputnet/yt-session-generator:webserver`)
-4. **bgutil-pot** - PO token sidecar for yt-dlp fallback (`brainicism/bgutil-ytdlp-pot-provider:1.3.1`)
+3. **bgutil-pot** - PO token sidecar for yt-dlp fallback (`brainicism/bgutil-ytdlp-pot-provider:1.3.1`)
 
 ### Environment Variables
 
@@ -77,8 +76,8 @@ BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
 # Cobalt service
 API_URL=https://your-cobalt-url.up.railway.app/
 API_KEY_URL=file://keys.json
-YOUTUBE_SESSION_SERVER=http://yt-token-service.railway.internal:8080/
 YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
+# YOUTUBE_SESSION_SERVER intentionally unset — see docs/deployment-strategy.md
 ```
 
 See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions.
@@ -99,7 +98,6 @@ Pull requests from the same repository automatically get isolated Railway enviro
 1. User enters a YouTube URL
 2. The frontend sends a request to `/api/download-stream`
 3. The backend attempts to download via Cobalt API:
-   - Cobalt requests a `poToken` from yt-token-service (BotGuard bypass)
    - Cobalt fetches the audio stream from YouTube
    - On success: streams audio back to dub-rip
    - On failure: falls back to yt-dlp + ffmpeg, which requests a PO token from the bgutil-pot sidecar before downloading

@@ -83,15 +83,6 @@ jobs:
             exit 1
           fi
 
-          # yt-token-service tracks main, so without this redeploy the PR
-          # preview never exercises PR changes to services/yt-token/ or
-          # Dockerfile.yt-token.
-          wait_for_idle yt-token-service
-          if ! deploy_with_retry yt-token-service; then
-            echo "::error::Failed to deploy yt-token-service after 3 attempts"
-            exit 1
-          fi
-
           DOMAIN=$(railway domain --service dub-rip 2>/dev/null || railway domain --service dub-rip)
           DOMAIN=$(echo "$DOMAIN" | grep -oE '[a-zA-Z0-9.-]+\.railway\.app' | head -1)
 

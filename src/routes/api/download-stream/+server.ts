@@ -267,6 +267,8 @@ export const GET: RequestHandler = async ({ url }) => {
 						"mp3",
 						"--audio-quality",
 						"0",
+						"-f",
+						"bestaudio/best",
 						"--embed-thumbnail",
 						"--add-metadata",
 						"--ffmpeg-location",

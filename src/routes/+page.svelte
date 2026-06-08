@@ -227,17 +227,17 @@ function handleDownload() {
 }
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
+<div class="relative z-10 flex min-h-screen items-center justify-center p-4">
 	<div class="w-full max-w-md space-y-6">
 		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
+		<div class="flex flex-col items-center space-y-3 text-center">
 			<AsciiVinyl />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+			<h1 class="chrome-text font-display text-4xl font-black uppercase tracking-[0.35em] pl-[0.35em] drop-shadow-[0_0_18px_hsl(var(--chrome-cyan)/0.35)]">dub-rip</h1>
+			<p class="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
 
 		<!-- Main Card -->
-		<Card.Root class="p-6">
+		<Card.Root class="glass-panel neon-glow p-6">
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
 				<div class="space-y-2">
@@ -247,7 +247,7 @@ function handleDownload() {
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-11 border-chrome-cyan/30 bg-background/40 font-mono tracking-wide placeholder:text-muted-foreground/70 focus-visible:border-chrome-cyan focus-visible:shadow-[0_0_18px_-2px_hsl(var(--chrome-cyan)/0.6)]"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -268,8 +268,8 @@ function handleDownload() {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="rounded-md border border-destructive/40 bg-destructive/10 p-3 shadow-[0_0_16px_-6px_hsl(var(--destructive)/0.7)]">
+						<p class="font-mono text-sm text-destructive">{error}</p>
 					</div>
 				{/if}
 
@@ -280,11 +280,11 @@ function handleDownload() {
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="font-mono text-xs uppercase tracking-[0.15em] text-chrome-cyan">{status}</p>
 
 						<div class="space-y-2">
-							<Progress value={progress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
+							<Progress value={progress} class="h-2 bg-chrome-cyan/15 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-chrome-cyan [&_[data-slot=progress-indicator]]:to-chrome-magenta [&_[data-slot=progress-indicator]]:shadow-[0_0_12px_hsl(var(--chrome-cyan)/0.7)]" />
+							<div class="flex justify-between font-mono text-xs text-muted-foreground">
 								<span>{progress}%</span>
 								<div class="flex gap-2">
 									{#if speed}<span>{speed}</span>{/if}

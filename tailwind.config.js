@@ -48,6 +48,8 @@ export default {
 					DEFAULT: "hsl(var(--card) / <alpha-value>)",
 					foreground: "hsl(var(--card-foreground) / <alpha-value>)",
 				},
+				"chrome-cyan": "hsl(var(--chrome-cyan) / <alpha-value>)",
+				"chrome-magenta": "hsl(var(--chrome-magenta) / <alpha-value>)",
 			},
 			borderRadius: {
 				lg: "var(--radius)",
@@ -57,6 +59,7 @@ export default {
 			fontFamily: {
 				sans: [...fontFamily.sans],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
+				display: ['"Orbitron"', ...fontFamily.sans],
 			},
 		},
 	},

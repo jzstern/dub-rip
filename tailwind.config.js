@@ -55,7 +55,7 @@ export default {
 				sm: "calc(var(--radius) - 4px)",
 			},
 			fontFamily: {
-				sans: [...fontFamily.sans],
+				sans: ['"Plus Jakarta Sans"', ...fontFamily.sans],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},

@@ -227,27 +227,33 @@ function handleDownload() {
 }
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
+<div class="aurora-orbs" aria-hidden="true">
+	<div class="aurora-orb aurora-orb--violet"></div>
+	<div class="aurora-orb aurora-orb--magenta"></div>
+	<div class="aurora-orb aurora-orb--cyan"></div>
+</div>
+
+<div class="relative z-10 flex min-h-screen items-center justify-center p-4">
+	<div class="w-full max-w-md space-y-8">
 		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
+		<div class="flex flex-col items-center space-y-3 text-center">
 			<AsciiVinyl />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+			<h1 class="bg-gradient-to-r from-[#a78bfa] via-[#f0abfc] to-[#67e8f9] bg-clip-text text-5xl font-extrabold tracking-tight text-transparent">dub-rip</h1>
+			<p class="text-sm font-medium text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
 
 		<!-- Main Card -->
-		<Card.Root class="p-6">
+		<Card.Root class="glass-card p-6">
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
-				<div class="space-y-2">
+				<div class="space-y-3">
 					<Input
 						bind:value={url}
 						placeholder="Paste YouTube URL"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="glass-input h-12 rounded-xl text-foreground placeholder:text-muted-foreground/70"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -268,14 +274,14 @@ function handleDownload() {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="rounded-xl border border-destructive/30 bg-destructive/10 p-3 backdrop-blur-sm">
+						<p class="text-sm font-medium text-destructive">{error}</p>
 					</div>
 				{/if}
 
 				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="glass-panel space-y-3 rounded-xl p-4">
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}

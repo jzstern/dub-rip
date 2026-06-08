@@ -26,12 +26,14 @@ describe("registerProcessErrorHandlers()", () => {
 		delete (globalThis as Record<symbol, unknown>)[HANDLER_TAG];
 		process.removeAllListeners("uncaughtException");
 		process.removeAllListeners("unhandledRejection");
+		process.removeAllListeners("warning");
 		vi.resetModules();
 	});
 
 	afterEach(() => {
 		process.removeAllListeners("uncaughtException");
 		process.removeAllListeners("unhandledRejection");
+		process.removeAllListeners("warning");
 		delete (globalThis as Record<symbol, unknown>)[HANDLER_TAG];
 		vi.restoreAllMocks();
 	});
@@ -106,5 +108,25 @@ describe("registerProcessErrorHandlers()", () => {
 		// #then
 		expect(process.listenerCount("uncaughtException")).toBe(1);
 		expect(process.listenerCount("unhandledRejection")).toBe(1);
+		expect(process.listenerCount("warning")).toBe(1);
+	});
+
+	it("captures process warnings to Sentry at warning level", async () => {
+		// #given
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const warning = new Error("test warning");
+
+		// #when
+		process.emit("warning", warning);
+
+		// #then
+		expect(captureExceptionMock).toHaveBeenCalledWith(warning, {
+			level: "warning",
+			tags: { service: "hooks.server", operation: "process-warning" },
+		});
 	});
 });

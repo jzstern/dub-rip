@@ -1,60 +1,74 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
+
+// Mutable env carrier — tests write here before importing the module.
+// vi.mock is hoisted, so the factory captures this reference and each
+// fresh import sees the current value.
+const mockEnv: Record<string, string> = {};
+
+vi.mock("$env/dynamic/private", () => ({
+	get env() {
+		return mockEnv;
+	},
+}));
 
 describe("GET /api/health", () => {
 	beforeEach(() => {
+		fetchMock.mockReset();
 		vi.resetModules();
+		// Clear env between tests
+		for (const key of Object.keys(mockEnv)) delete mockEnv[key];
 	});
 
-	afterEach(() => {
-		vi.resetAllMocks();
+	it("returns 200 when both downstream services respond", async () => {
+		// #given
+		mockEnv.COBALT_API_URL = "http://c";
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
+
+		// #then
+		expect(res.status).toBe(200);
+		expect(body.ok).toBe(true);
+		expect(body.checks.cobalt.ok).toBe(true);
+		expect(body.checks.bgutil_pot.ok).toBe(true);
 	});
 
-	describe("successful health check", () => {
-		it("returns ok status when dependencies load successfully", async () => {
-			// #given
-			vi.doMock("yt-dlp-wrap", () => ({
-				default: class MockYTDlpWrap {},
-			}));
-			vi.doMock("@ffmpeg-installer/ffmpeg", () => ({
-				default: { path: "/usr/local/bin/ffmpeg" },
-			}));
+	it("returns 503 when bgutil-pot is unreachable", async () => {
+		// #given
+		mockEnv.COBALT_API_URL = "http://c";
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		fetchMock
+			.mockResolvedValueOnce({ ok: true, status: 200 })
+			.mockRejectedValueOnce(new Error("ECONNREFUSED"));
 
-			const module = await import("../../../src/routes/api/health/+server");
-			const GET = module.GET;
-			const event = {} as Parameters<typeof GET>[0];
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
 
-			// #when
-			const response = await GET(event);
-			const data = await response.json();
+		// #then
+		expect(res.status).toBe(503);
+		expect(body.checks.bgutil_pot.error).toMatch(/ECONNREFUSED/);
+	});
 
-			// #then
-			expect(response.status).toBe(200);
-			expect(data.status).toBe("ok");
-			expect(data.ytdlp).toBe("imported");
-			expect(data.ffmpeg).toBe("/usr/local/bin/ffmpeg");
-			expect(data.timestamp).toBeDefined();
-		});
+	it("flags missing env vars as 'not configured'", async () => {
+		// #given — mockEnv is empty (cleared in beforeEach)
 
-		it("returns valid ISO timestamp", async () => {
-			// #given
-			vi.doMock("yt-dlp-wrap", () => ({
-				default: class MockYTDlpWrap {},
-			}));
-			vi.doMock("@ffmpeg-installer/ffmpeg", () => ({
-				default: { path: "/usr/bin/ffmpeg" },
-			}));
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
 
-			const module = await import("../../../src/routes/api/health/+server");
-			const GET = module.GET;
-			const event = {} as Parameters<typeof GET>[0];
-
-			// #when
-			const response = await GET(event);
-			const data = await response.json();
-
-			// #then
-			const timestamp = new Date(data.timestamp);
-			expect(timestamp.getTime()).not.toBeNaN();
-		});
+		// #then
+		expect(res.status).toBe(503);
+		expect(body.checks.cobalt.error).toBe("not configured");
+		expect(body.checks.bgutil_pot.error).toBe("not configured");
 	});
 });

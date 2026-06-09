@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
@@ -83,6 +83,50 @@ describe("VideoPreview", () => {
 			);
 			expect(img).toHaveAttribute("alt", "My Song");
 		});
+
+		it("prefers official artwork over the thumbnail when provided", () => {
+			// #given
+			const preview: VideoPreviewType = {
+				success: true,
+				videoTitle: "Test Video",
+				artist: "Test Artist",
+				title: "My Song",
+				thumbnail: "https://i.ytimg.com/vi/xyz789/hqdefault.jpg",
+				artwork: "https://art/itunes/300x300bb.jpg",
+			};
+
+			// #when
+			render(VideoPreview, { props: { preview, formatDuration } });
+
+			// #then
+			expect(screen.getByRole("img")).toHaveAttribute(
+				"src",
+				"https://art/itunes/300x300bb.jpg",
+			);
+		});
+
+		it("falls back to the thumbnail when official artwork fails to load", async () => {
+			// #given
+			const preview: VideoPreviewType = {
+				success: true,
+				videoTitle: "Test Video",
+				artist: "Test Artist",
+				title: "My Song",
+				thumbnail: "https://i.ytimg.com/vi/xyz789/hqdefault.jpg",
+				artwork: "https://art/itunes/300x300bb.jpg",
+			};
+			render(VideoPreview, { props: { preview, formatDuration } });
+			const img = screen.getByRole("img");
+
+			// #when
+			await fireEvent.error(img);
+
+			// #then
+			expect(img).toHaveAttribute(
+				"src",
+				"https://i.ytimg.com/vi/xyz789/hqdefault.jpg",
+			);
+		});
 	});
 
 	describe("duration display", () => {
@@ -101,7 +145,7 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getAllByText("3:32")).toHaveLength(2);
+			expect(screen.getByText("3:32")).toBeInTheDocument();
 		});
 
 		it("does not display duration when not provided", () => {
@@ -157,7 +201,7 @@ describe("VideoPreview", () => {
 
 			// #then
 			expect(screen.getByText("Just a Title")).toBeInTheDocument();
-			expect(screen.getAllByText("1:00")).toHaveLength(2);
+			expect(screen.getByText("1:00")).toBeInTheDocument();
 			expect(screen.queryByText("•")).not.toBeInTheDocument();
 		});
 

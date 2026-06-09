@@ -8,6 +8,7 @@ export interface VideoPreview {
 	artist: string;
 	title: string;
 	thumbnail: string;
+	artwork?: string;
 	duration?: number;
 }
 

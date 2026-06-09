@@ -52,15 +52,21 @@ async function fetchBufferWithTimeout(
 	}
 }
 
-export async function fetchOfficialArtwork(
+interface ArtworkUrlOptions {
+	size?: number;
+	timeout?: number;
+}
+
+export async function fetchOfficialArtworkUrl(
 	artist: string,
 	title: string,
-): Promise<Buffer | null> {
+	{ size = ARTWORK_SIZE, timeout = ITUNES_TIMEOUT }: ArtworkUrlOptions = {},
+): Promise<string | null> {
 	const term = `${artist} ${title}`.trim();
 	if (!term) return null;
 
 	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), ITUNES_TIMEOUT);
+	const timer = setTimeout(() => controller.abort(), timeout);
 	try {
 		const searchUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(
 			term,
@@ -72,16 +78,21 @@ export async function fetchOfficialArtwork(
 		const artworkUrl100 = data.results?.[0]?.artworkUrl100;
 		if (!artworkUrl100) return null;
 
-		const highResUrl = artworkUrl100.replace(
-			"100x100bb",
-			`${ARTWORK_SIZE}x${ARTWORK_SIZE}bb`,
-		);
-		return await fetchBufferWithTimeout(highResUrl, ITUNES_TIMEOUT);
+		return artworkUrl100.replace("100x100bb", `${size}x${size}bb`);
 	} catch {
 		return null;
 	} finally {
 		clearTimeout(timer);
 	}
+}
+
+export async function fetchOfficialArtwork(
+	artist: string,
+	title: string,
+): Promise<Buffer | null> {
+	const highResUrl = await fetchOfficialArtworkUrl(artist, title);
+	if (!highResUrl) return null;
+	return fetchBufferWithTimeout(highResUrl, ITUNES_TIMEOUT);
 }
 
 export async function fetchThumbnailBuffer(

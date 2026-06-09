@@ -30,6 +30,7 @@ vi.stubGlobal("fetch", mockFetch);
 
 import {
 	fetchOfficialArtwork,
+	fetchOfficialArtworkUrl,
 	fetchThumbnailBuffer,
 	resolveCoverArt,
 	squareCropToBuffer,
@@ -128,6 +129,75 @@ describe("fetchOfficialArtwork", () => {
 	it("returns null when search term is empty", async () => {
 		// #when
 		const result = await fetchOfficialArtwork("", "");
+
+		// #then
+		expect(result).toBeNull();
+	});
+});
+
+describe("fetchOfficialArtworkUrl", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns the upscaled artwork URL on iTunes hit", async () => {
+		// #given
+		mockFetch.mockResolvedValueOnce(
+			jsonResponse({
+				results: [{ artworkUrl100: "https://art/abc/100x100bb.jpg" }],
+			}),
+		);
+
+		// #when
+		const result = await fetchOfficialArtworkUrl("Artist", "Song");
+
+		// #then
+		expect(result).toBe("https://art/abc/600x600bb.jpg");
+	});
+
+	it("honors a custom artwork size", async () => {
+		// #given
+		mockFetch.mockResolvedValueOnce(
+			jsonResponse({
+				results: [{ artworkUrl100: "https://art/abc/100x100bb.jpg" }],
+			}),
+		);
+
+		// #when
+		const result = await fetchOfficialArtworkUrl("Artist", "Song", {
+			size: 300,
+		});
+
+		// #then
+		expect(result).toBe("https://art/abc/300x300bb.jpg");
+	});
+
+	it("returns null when iTunes has no results", async () => {
+		// #given
+		mockFetch.mockResolvedValueOnce(jsonResponse({ results: [] }));
+
+		// #when
+		const result = await fetchOfficialArtworkUrl("Nobody", "Nothing");
+
+		// #then
+		expect(result).toBeNull();
+	});
+
+	it("returns null when the search term is empty", async () => {
+		// #when
+		const result = await fetchOfficialArtworkUrl("", "");
+
+		// #then
+		expect(result).toBeNull();
+		expect(mockFetch).not.toHaveBeenCalled();
+	});
+
+	it("returns null on network error without throwing", async () => {
+		// #given
+		mockFetch.mockRejectedValueOnce(new Error("offline"));
+
+		// #when
+		const result = await fetchOfficialArtworkUrl("Artist", "Song");
 
 		// #then
 		expect(result).toBeNull();

@@ -1,5 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
@@ -22,15 +21,6 @@ describe("AsciiVinyl", () => {
 	});
 
 	describe("rendering", () => {
-		it("renders a button element", () => {
-			// #given / #when
-			render(AsciiVinyl);
-
-			// #then
-			const button = screen.getByRole("button");
-			expect(button).toBeInTheDocument();
-		});
-
 		it("renders pre element with ASCII art", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
@@ -41,13 +31,16 @@ describe("AsciiVinyl", () => {
 			expect(pre?.textContent).toBeTruthy();
 		});
 
-		it("displays aria-label for pause when playing", () => {
+		it("is decorative with no interactive controls", () => {
 			// #given / #when
-			render(AsciiVinyl);
+			const { container } = render(AsciiVinyl);
 
 			// #then
-			const button = screen.getByRole("button");
-			expect(button).toHaveAttribute("aria-label", "Pause animation");
+			expect(container.querySelector("button")).not.toBeInTheDocument();
+			expect(container.querySelector("pre")).toHaveAttribute(
+				"aria-hidden",
+				"true",
+			);
 		});
 	});
 
@@ -104,40 +97,21 @@ describe("AsciiVinyl", () => {
 		});
 	});
 
-	describe("user interactions", () => {
-		it("toggles to paused state on click", async () => {
-			// #given
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await fireEvent.click(button);
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Play animation");
-		});
-
-		it("toggles back to playing state on second click", async () => {
-			// #given
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await fireEvent.click(button);
-			await fireEvent.click(button);
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Pause animation");
-		});
-
-		it("does not trigger the highlight effect on hover", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
+	describe("active state", () => {
+		it("applies the highlight effect when active", () => {
+			// #given / #when
+			const { container } = render(AsciiVinyl, { props: { active: true } });
 			const pre = container.querySelector("pre");
 
-			// #when
-			await fireEvent.mouseEnter(button);
+			// #then
+			expect(pre).toHaveClass("text-primary");
+			expect(pre).toHaveClass("scale-105");
+		});
+
+		it("does not apply the highlight effect when inactive", () => {
+			// #given / #when
+			const { container } = render(AsciiVinyl, { props: { active: false } });
+			const pre = container.querySelector("pre");
 
 			// #then
 			expect(pre).not.toHaveClass("text-primary");
@@ -164,37 +138,13 @@ describe("AsciiVinyl", () => {
 			expect(pre).toHaveClass("transition-all");
 		});
 
-		it("applies the highlight effect when active", () => {
+		it("disables text selection", () => {
 			// #given / #when
-			const { container } = render(AsciiVinyl, { props: { active: true } });
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre).toHaveClass("text-primary");
-			expect(pre).toHaveClass("scale-105");
-		});
-
-		it("does not apply the highlight effect when inactive", () => {
-			// #given / #when
-			const { container } = render(AsciiVinyl, { props: { active: false } });
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre).not.toHaveClass("text-primary");
-			expect(pre).not.toHaveClass("scale-105");
-		});
-
-		it("applies opacity when paused", async () => {
-			// #given
 			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
 			const pre = container.querySelector("pre");
 
-			// #when
-			await fireEvent.click(button);
-
 			// #then
-			expect(pre).toHaveClass("opacity-60");
+			expect(pre).toHaveClass("select-none");
 		});
 	});
 
@@ -216,58 +166,6 @@ describe("AsciiVinyl", () => {
 
 			// #then
 			expect(window.cancelAnimationFrame).toHaveBeenCalled();
-		});
-	});
-
-	describe("accessibility", () => {
-		it("button is keyboard focusable", () => {
-			// #given / #when
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #then
-			expect(button.tabIndex).not.toBe(-1);
-		});
-
-		it("button has cursor-pointer class", () => {
-			// #given / #when
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #then
-			expect(button).toHaveClass("cursor-pointer");
-		});
-
-		it("toggles pause state with Enter key", async () => {
-			// #given
-			const user = userEvent.setup({
-				advanceTimers: vi.advanceTimersByTime,
-			});
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await button.focus();
-			await user.keyboard("{Enter}");
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Play animation");
-		});
-
-		it("toggles pause state with Space key", async () => {
-			// #given
-			const user = userEvent.setup({
-				advanceTimers: vi.advanceTimersByTime,
-			});
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await button.focus();
-			await user.keyboard(" ");
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Play animation");
 		});
 	});
 });

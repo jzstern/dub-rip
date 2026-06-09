@@ -11,7 +11,6 @@ interface Props {
 let { active = false }: Props = $props();
 
 let rotation = $state(0);
-let isPaused = $state(false);
 
 const SIZE = 35;
 const CENTER = Math.floor(SIZE / 2);
@@ -70,27 +69,14 @@ function animate(time: number) {
 }
 
 $effect(() => {
-	if (isPaused) {
-		lastTime = null;
-		return;
-	}
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });
 
 let vinylLines = $derived(generateVinyl());
-
-function handleClick() {
-	isPaused = !isPaused;
-}
 </script>
 
-<button
-	class="cursor-pointer border-none bg-transparent p-0 focus:outline-none"
-	onclick={handleClick}
-	aria-label={isPaused ? "Play animation" : "Pause animation"}
->
-	<pre
-		class="font-mono text-[0.53rem] leading-[0.45rem] text-muted-foreground transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {active ? 'text-primary scale-105' : ''} {isPaused ? 'opacity-60' : ''}"
-	>{vinylLines.join("\n")}</pre>
-</button>
+<pre
+	aria-hidden="true"
+	class="font-mono text-[0.53rem] leading-[0.45rem] text-muted-foreground transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {active ? 'text-primary scale-105' : ''}"
+>{vinylLines.join("\n")}</pre>

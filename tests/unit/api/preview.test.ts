@@ -196,7 +196,7 @@ describe("POST /api/preview", () => {
 			expect(fetchOfficialArtworkUrl).toHaveBeenCalledWith(
 				"Rick Astley",
 				"Never Gonna Give You Up",
-				expect.any(Object),
+				{ size: 300, timeout: 4000 },
 			);
 		});
 

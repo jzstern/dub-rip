@@ -130,7 +130,7 @@ describe("AsciiVinyl", () => {
 			expect(button).toHaveAttribute("aria-label", "Pause animation");
 		});
 
-		it("responds to mouseenter event", async () => {
+		it("does not trigger the highlight effect on hover", async () => {
 			// #given
 			const { container } = render(AsciiVinyl);
 			const button = screen.getByRole("button");
@@ -138,23 +138,10 @@ describe("AsciiVinyl", () => {
 
 			// #when
 			await fireEvent.mouseEnter(button);
-
-			// #then
-			expect(pre).toHaveClass("text-primary");
-		});
-
-		it("responds to mouseleave event", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
-			const pre = container.querySelector("pre");
-
-			// #when
-			await fireEvent.mouseEnter(button);
-			await fireEvent.mouseLeave(button);
 
 			// #then
 			expect(pre).not.toHaveClass("text-primary");
+			expect(pre).not.toHaveClass("scale-105");
 		});
 	});
 
@@ -177,17 +164,24 @@ describe("AsciiVinyl", () => {
 			expect(pre).toHaveClass("transition-all");
 		});
 
-		it("applies scale effect on hover", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
+		it("applies the highlight effect when active", () => {
+			// #given / #when
+			const { container } = render(AsciiVinyl, { props: { active: true } });
 			const pre = container.querySelector("pre");
 
-			// #when
-			await fireEvent.mouseEnter(button);
+			// #then
+			expect(pre).toHaveClass("text-primary");
+			expect(pre).toHaveClass("scale-105");
+		});
+
+		it("does not apply the highlight effect when inactive", () => {
+			// #given / #when
+			const { container } = render(AsciiVinyl, { props: { active: false } });
+			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("scale-105");
+			expect(pre).not.toHaveClass("text-primary");
+			expect(pre).not.toHaveClass("scale-105");
 		});
 
 		it("applies opacity when paused", async () => {

@@ -4,8 +4,13 @@ const GROOVE_CHARS = ["╌", "┄", "╴", "╶"];
 const LABEL_CHAR = "█";
 const SPINDLE_CHAR = "◉";
 
+interface Props {
+	active?: boolean;
+}
+
+let { active = false }: Props = $props();
+
 let rotation = $state(0);
-let isHovering = $state(false);
 let isPaused = $state(false);
 
 const SIZE = 35;
@@ -57,7 +62,7 @@ let lastTime: number | null = null;
 function animate(time: number) {
 	if (lastTime !== null) {
 		const delta = time - lastTime;
-		const speed = isHovering ? 0.003 : 0.001;
+		const speed = active ? 0.003 : 0.001;
 		rotation += delta * speed;
 	}
 	lastTime = time;
@@ -81,13 +86,11 @@ function handleClick() {
 </script>
 
 <button
-	class="group cursor-pointer border-none bg-transparent p-0 focus:outline-none"
-	onmouseenter={() => isHovering = true}
-	onmouseleave={() => isHovering = false}
+	class="cursor-pointer border-none bg-transparent p-0 focus:outline-none"
 	onclick={handleClick}
 	aria-label={isPaused ? "Play animation" : "Pause animation"}
 >
 	<pre
-		class="font-mono text-[0.53rem] leading-[0.45rem] text-muted-foreground transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {isHovering ? 'text-primary scale-105' : ''} {isPaused ? 'opacity-60' : ''}"
+		class="font-mono text-[0.53rem] leading-[0.45rem] text-muted-foreground transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {active ? 'text-primary scale-105' : ''} {isPaused ? 'opacity-60' : ''}"
 	>{vinylLines.join("\n")}</pre>
 </button>

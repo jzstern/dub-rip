@@ -12,11 +12,13 @@ vi.mock("node:child_process", () => ({
 
 vi.mock("$lib/yt-dlp-binary", () => ({
 	ensureYtDlpBinary: vi.fn().mockResolvedValue("/tmp/yt-dlp"),
+	buildBgutilPotArgs: vi.fn().mockResolvedValue([]),
 }));
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
+import { buildBgutilPotArgs } from "$lib/yt-dlp-binary";
 import {
 	buildID3Tags,
 	fetchThumbnailBuffer,
@@ -147,6 +149,22 @@ describe("fetchVideoDetails", () => {
 
 		// #then
 		expect(details?.year).toBeUndefined();
+	});
+
+	it("attaches bgutil-pot args returned by buildBgutilPotArgs", async () => {
+		// #given
+		vi.mocked(buildBgutilPotArgs).mockResolvedValueOnce([
+			"--plugin-dirs",
+			"/tmp/yt-dlp-plugins",
+		]);
+		mockExecFileJson({ upload_date: "20200101" });
+
+		// #when
+		await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		const passedArgs = execFileMock.mock.calls[0][1] as string[];
+		expect(passedArgs).toContain("--plugin-dirs");
 	});
 });
 

@@ -1,5 +1,5 @@
 import { json } from "@sveltejs/kit";
-import { fetchOfficialArtworkUrl } from "$lib/artwork";
+import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
@@ -24,10 +24,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const metadata = await fetchYouTubeMetadata(videoId);
-		const artwork = await fetchOfficialArtworkUrl(
+		const artwork = await resolveArtworkUrl(
 			metadata.artist,
 			metadata.trackTitle,
-			{ size: PREVIEW_ARTWORK_SIZE, timeout: PREVIEW_ARTWORK_TIMEOUT },
+			{ itunesSize: PREVIEW_ARTWORK_SIZE, timeout: PREVIEW_ARTWORK_TIMEOUT },
 		);
 
 		return json({

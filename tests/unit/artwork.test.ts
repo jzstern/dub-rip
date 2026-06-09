@@ -29,9 +29,11 @@ const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
 import {
+	fetchDeezerArtworkUrl,
 	fetchOfficialArtwork,
 	fetchOfficialArtworkUrl,
 	fetchThumbnailBuffer,
+	resolveArtworkUrl,
 	resolveCoverArt,
 	squareCropToBuffer,
 } from "../../src/lib/artwork";
@@ -204,6 +206,141 @@ describe("fetchOfficialArtworkUrl", () => {
 	});
 });
 
+describe("fetchDeezerArtworkUrl", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("returns the highest-resolution album cover on a Deezer hit", async () => {
+		// #given
+		mockFetch.mockResolvedValueOnce(
+			jsonResponse({
+				data: [
+					{
+						album: {
+							cover_xl: "https://deezer/cover/xl.jpg",
+							cover_big: "https://deezer/cover/big.jpg",
+						},
+					},
+				],
+			}),
+		);
+
+		// #when
+		const result = await fetchDeezerArtworkUrl("Artist", "Song");
+
+		// #then
+		expect(result).toBe("https://deezer/cover/xl.jpg");
+	});
+
+	it("falls back to cover_big when cover_xl is absent", async () => {
+		// #given
+		mockFetch.mockResolvedValueOnce(
+			jsonResponse({
+				data: [{ album: { cover_big: "https://deezer/cover/big.jpg" } }],
+			}),
+		);
+
+		// #when
+		const result = await fetchDeezerArtworkUrl("Artist", "Song");
+
+		// #then
+		expect(result).toBe("https://deezer/cover/big.jpg");
+	});
+
+	it("returns null when Deezer has no results", async () => {
+		// #given
+		mockFetch.mockResolvedValueOnce(jsonResponse({ data: [] }));
+
+		// #when
+		const result = await fetchDeezerArtworkUrl("Nobody", "Nothing");
+
+		// #then
+		expect(result).toBeNull();
+	});
+
+	it("returns null when the search term is empty", async () => {
+		// #when
+		const result = await fetchDeezerArtworkUrl("", "");
+
+		// #then
+		expect(result).toBeNull();
+		expect(mockFetch).not.toHaveBeenCalled();
+	});
+
+	it("returns null on network error without throwing", async () => {
+		// #given
+		mockFetch.mockRejectedValueOnce(new Error("offline"));
+
+		// #when
+		const result = await fetchDeezerArtworkUrl("Artist", "Song");
+
+		// #then
+		expect(result).toBeNull();
+	});
+});
+
+describe("resolveArtworkUrl", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("prefers iTunes artwork when available", async () => {
+		// #given
+		mockFetch
+			.mockResolvedValueOnce(
+				jsonResponse({
+					results: [{ artworkUrl100: "https://art/abc/100x100bb.jpg" }],
+				}),
+			)
+			.mockResolvedValueOnce(
+				jsonResponse({
+					data: [{ album: { cover_xl: "https://deezer/xl.jpg" } }],
+				}),
+			);
+
+		// #when
+		const result = await resolveArtworkUrl("Artist", "Song", {
+			itunesSize: 300,
+		});
+
+		// #then
+		expect(result).toBe("https://art/abc/300x300bb.jpg");
+	});
+
+	it("falls back to Deezer when iTunes has no match", async () => {
+		// #given
+		mockFetch
+			.mockResolvedValueOnce(jsonResponse({ results: [] }))
+			.mockResolvedValueOnce(
+				jsonResponse({
+					data: [{ album: { cover_xl: "https://deezer/xl.jpg" } }],
+				}),
+			);
+
+		// #when
+		const result = await resolveArtworkUrl("Artist", "Song", {
+			itunesSize: 300,
+		});
+
+		// #then
+		expect(result).toBe("https://deezer/xl.jpg");
+	});
+
+	it("returns null when neither iTunes nor Deezer has the song", async () => {
+		// #given
+		mockFetch
+			.mockResolvedValueOnce(jsonResponse({ results: [] }))
+			.mockResolvedValueOnce(jsonResponse({ data: [] }));
+
+		// #when
+		const result = await resolveArtworkUrl("Nobody", "Nothing");
+
+		// #then
+		expect(result).toBeNull();
+	});
+});
+
 describe("fetchThumbnailBuffer", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -299,10 +436,33 @@ describe("resolveCoverArt", () => {
 		expect(result?.source).toBe("itunes");
 	});
 
-	it("falls back to a square-cropped thumbnail when iTunes misses", async () => {
+	it("falls back to Deezer artwork when iTunes misses but Deezer hits", async () => {
 		// #given
 		mockFetch
 			.mockResolvedValueOnce(jsonResponse({ results: [] }))
+			.mockResolvedValueOnce(
+				jsonResponse({
+					data: [{ album: { cover_xl: "https://deezer/xl.jpg" } }],
+				}),
+			)
+			.mockResolvedValueOnce(imageResponse(40));
+
+		// #when
+		const result = await resolveCoverArt({
+			artist: "Artist",
+			title: "Song",
+			thumbnailUrl: "https://thumb/x.jpg",
+		});
+
+		// #then
+		expect(result?.source).toBe("deezer");
+	});
+
+	it("falls back to a square-cropped thumbnail when iTunes and Deezer miss", async () => {
+		// #given
+		mockFetch
+			.mockResolvedValueOnce(jsonResponse({ results: [] }))
+			.mockResolvedValueOnce(jsonResponse({ data: [] }))
 			.mockResolvedValueOnce(imageResponse(32));
 
 		// #when
@@ -316,10 +476,11 @@ describe("resolveCoverArt", () => {
 		expect(result?.source).toBe("thumbnail");
 	});
 
-	it("returns null when both iTunes and thumbnail fail", async () => {
+	it("returns null when iTunes, Deezer, and thumbnail all fail", async () => {
 		// #given
 		mockFetch
 			.mockResolvedValueOnce(jsonResponse({ results: [] }))
+			.mockResolvedValueOnce(jsonResponse({ data: [] }))
 			.mockRejectedValueOnce(new Error("thumb down"));
 
 		// #when

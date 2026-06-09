@@ -18,10 +18,10 @@ vi.mock("$lib/youtube-metadata", () => ({
 }));
 
 vi.mock("$lib/artwork", () => ({
-	fetchOfficialArtworkUrl: vi.fn(),
+	resolveArtworkUrl: vi.fn(),
 }));
 
-import { fetchOfficialArtworkUrl } from "$lib/artwork";
+import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
@@ -44,7 +44,7 @@ function createMockEvent(body: Record<string, unknown>) {
 describe("POST /api/preview", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(fetchOfficialArtworkUrl).mockResolvedValue(null);
+		vi.mocked(resolveArtworkUrl).mockResolvedValue(null);
 	});
 
 	afterEach(() => {
@@ -158,7 +158,7 @@ describe("POST /api/preview", () => {
 				uploader: "RickAstleyVEVO",
 				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			});
-			vi.mocked(fetchOfficialArtworkUrl).mockResolvedValue(
+			vi.mocked(resolveArtworkUrl).mockResolvedValue(
 				"https://art/itunes/300x300bb.jpg",
 			);
 
@@ -193,10 +193,10 @@ describe("POST /api/preview", () => {
 			await POST(event);
 
 			// #then
-			expect(fetchOfficialArtworkUrl).toHaveBeenCalledWith(
+			expect(resolveArtworkUrl).toHaveBeenCalledWith(
 				"Rick Astley",
 				"Never Gonna Give You Up",
-				{ size: 300, timeout: 4000 },
+				{ itunesSize: 300, timeout: 4000 },
 			);
 		});
 
@@ -210,7 +210,7 @@ describe("POST /api/preview", () => {
 				uploader: "RickAstleyVEVO",
 				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			});
-			vi.mocked(fetchOfficialArtworkUrl).mockResolvedValue(null);
+			vi.mocked(resolveArtworkUrl).mockResolvedValue(null);
 
 			const event = createMockEvent({
 				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",

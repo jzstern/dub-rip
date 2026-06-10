@@ -17,6 +17,11 @@ vi.mock("$lib/youtube-metadata", () => ({
 	},
 }));
 
+vi.mock("$lib/artwork", () => ({
+	resolveArtworkUrl: vi.fn(),
+}));
+
+import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
@@ -39,6 +44,7 @@ function createMockEvent(body: Record<string, unknown>) {
 describe("POST /api/preview", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(resolveArtworkUrl).mockResolvedValue(null);
 	});
 
 	afterEach(() => {
@@ -140,6 +146,82 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(data.artist).toBe("Channel Name");
+		});
+
+		it("includes the official artwork URL when one is found", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
+				artist: "Rick Astley",
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+			});
+			vi.mocked(resolveArtworkUrl).mockResolvedValue(
+				"https://art/itunes/300x300bb.jpg",
+			);
+
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+			});
+
+			// #when
+			const response = await POST(event);
+			const data = await response.json();
+
+			// #then
+			expect(data.artwork).toBe("https://art/itunes/300x300bb.jpg");
+		});
+
+		it("queries artwork with the parsed artist and track title", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
+				artist: "Rick Astley",
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+			});
+
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+			});
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(resolveArtworkUrl).toHaveBeenCalledWith(
+				"Rick Astley",
+				"Never Gonna Give You Up",
+				{ itunesSize: 300, timeout: 4000 },
+			);
+		});
+
+		it("omits artwork when no official artwork is found", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
+				artist: "Rick Astley",
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+			});
+			vi.mocked(resolveArtworkUrl).mockResolvedValue(null);
+
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+			});
+
+			// #when
+			const response = await POST(event);
+			const data = await response.json();
+
+			// #then
+			expect(data.artwork).toBeUndefined();
 		});
 	});
 

@@ -9,10 +9,11 @@ const require = createRequire(import.meta.url);
 const execFilePromise = promisify(execFile);
 
 const ITUNES_TIMEOUT = 6000;
+const DEEZER_TIMEOUT = 6000;
 const THUMBNAIL_TIMEOUT = 6000;
 const ARTWORK_SIZE = 600;
 
-export type CoverArtSource = "itunes" | "thumbnail";
+export type CoverArtSource = "itunes" | "deezer" | "thumbnail";
 
 export interface CoverArt {
 	imageBuffer: Buffer;
@@ -31,6 +32,16 @@ interface ITunesResult {
 
 interface ITunesResponse {
 	results?: ITunesResult[];
+}
+
+interface DeezerAlbum {
+	cover_xl?: string;
+	cover_big?: string;
+	cover_medium?: string;
+}
+
+interface DeezerResponse {
+	data?: { album?: DeezerAlbum }[];
 }
 
 async function fetchBufferWithTimeout(
@@ -52,15 +63,21 @@ async function fetchBufferWithTimeout(
 	}
 }
 
-export async function fetchOfficialArtwork(
+interface ArtworkUrlOptions {
+	size?: number;
+	timeout?: number;
+}
+
+export async function fetchOfficialArtworkUrl(
 	artist: string,
 	title: string,
-): Promise<Buffer | null> {
+	{ size = ARTWORK_SIZE, timeout = ITUNES_TIMEOUT }: ArtworkUrlOptions = {},
+): Promise<string | null> {
 	const term = `${artist} ${title}`.trim();
 	if (!term) return null;
 
 	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), ITUNES_TIMEOUT);
+	const timer = setTimeout(() => controller.abort(), timeout);
 	try {
 		const searchUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(
 			term,
@@ -72,16 +89,65 @@ export async function fetchOfficialArtwork(
 		const artworkUrl100 = data.results?.[0]?.artworkUrl100;
 		if (!artworkUrl100) return null;
 
-		const highResUrl = artworkUrl100.replace(
-			"100x100bb",
-			`${ARTWORK_SIZE}x${ARTWORK_SIZE}bb`,
-		);
-		return await fetchBufferWithTimeout(highResUrl, ITUNES_TIMEOUT);
+		return artworkUrl100.replace("100x100bb", `${size}x${size}bb`);
 	} catch {
 		return null;
 	} finally {
 		clearTimeout(timer);
 	}
+}
+
+export async function fetchOfficialArtwork(
+	artist: string,
+	title: string,
+): Promise<Buffer | null> {
+	const highResUrl = await fetchOfficialArtworkUrl(artist, title);
+	if (!highResUrl) return null;
+	return fetchBufferWithTimeout(highResUrl, ITUNES_TIMEOUT);
+}
+
+export async function fetchDeezerArtworkUrl(
+	artist: string,
+	title: string,
+	{ timeout = DEEZER_TIMEOUT }: { timeout?: number } = {},
+): Promise<string | null> {
+	const term = `${artist} ${title}`.trim();
+	if (!term) return null;
+
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeout);
+	try {
+		const searchUrl = `https://api.deezer.com/search?q=${encodeURIComponent(
+			term,
+		)}&limit=1`;
+		const response = await fetch(searchUrl, { signal: controller.signal });
+		if (!response.ok) return null;
+
+		const data = (await response.json()) as DeezerResponse;
+		const album = data.data?.[0]?.album;
+		return album?.cover_xl ?? album?.cover_big ?? album?.cover_medium ?? null;
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+interface ResolveArtworkUrlOptions {
+	itunesSize?: number;
+	timeout?: number;
+}
+
+export async function resolveArtworkUrl(
+	artist: string,
+	title: string,
+	{ itunesSize = ARTWORK_SIZE, timeout }: ResolveArtworkUrlOptions = {},
+): Promise<string | null> {
+	const [itunes, deezer] = await Promise.all([
+		fetchOfficialArtworkUrl(artist, title, { size: itunesSize, timeout }),
+		fetchDeezerArtworkUrl(artist, title, { timeout }),
+	]);
+	return itunes ?? deezer;
 }
 
 export async function fetchThumbnailBuffer(
@@ -167,6 +233,17 @@ export async function resolveCoverArt({
 		const official = await fetchOfficialArtwork(artist, title);
 		if (official) {
 			return { imageBuffer: official, source: "itunes" };
+		}
+
+		const deezerUrl = await fetchDeezerArtworkUrl(artist, title);
+		if (deezerUrl) {
+			const deezerBuffer = await fetchBufferWithTimeout(
+				deezerUrl,
+				DEEZER_TIMEOUT,
+			);
+			if (deezerBuffer) {
+				return { imageBuffer: deezerBuffer, source: "deezer" };
+			}
 		}
 
 		const thumbnail = await fetchThumbnailBuffer(thumbnailUrl);

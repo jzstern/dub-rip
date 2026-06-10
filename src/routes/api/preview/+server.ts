@@ -1,10 +1,14 @@
 import { json } from "@sveltejs/kit";
+import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
 import type { RequestHandler } from "./$types";
+
+const PREVIEW_ARTWORK_SIZE = 300;
+const PREVIEW_ARTWORK_TIMEOUT = 4000;
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -20,6 +24,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const metadata = await fetchYouTubeMetadata(videoId);
+		const artwork = await resolveArtworkUrl(
+			metadata.artist,
+			metadata.trackTitle,
+			{ itunesSize: PREVIEW_ARTWORK_SIZE, timeout: PREVIEW_ARTWORK_TIMEOUT },
+		);
 
 		return json({
 			success: true,
@@ -27,6 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			artist: metadata.artist,
 			title: metadata.trackTitle,
 			thumbnail: metadata.thumbnailUrl,
+			artwork: artwork ?? undefined,
 			duration: null,
 		});
 	} catch (error) {

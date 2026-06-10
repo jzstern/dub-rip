@@ -269,7 +269,7 @@ $effect(() => {
 	<div class="w-full max-w-md space-y-6">
 		<!-- Header -->
 		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl />
+			<AsciiVinyl active={loading} />
 			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
 			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>

@@ -84,20 +84,19 @@ See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup ins
 
 ### PR Preview Environments
 
-Pull requests from the same repository automatically get isolated Railway environments for testing (secrets aren't exposed to forks). Each PR environment:
+Pull requests automatically get isolated Railway environments via Railway's **native GitHub PR environments** (enabled in the Railway project under Settings → Environments). Each PR environment:
+- Is named `dub-rip-pr-<number>` and branches from production
 - Inherits production environment variables
-- Gets a unique preview URL
-- Is automatically cleaned up when the PR closes
+- Gets a unique preview URL (Railway comments it on the PR)
+- Is automatically deleted by Railway when the PR is closed or merged
 
-**Setup Requirements:**
-1. Add `RAILWAY_API_TOKEN` secret (Railway Account Token from Account Settings → Tokens, NOT a project token) to GitHub repository settings
-2. Add `RAILWAY_PROJECT_ID` variable (Railway project ID) to GitHub repository settings
+No GitHub Actions secrets are required for previews — Railway manages create/deploy/teardown through its GitHub integration. (A previous hand-rolled `railway-pr.yml` workflow was removed: running it alongside Railway-native PR envs created two environments per PR and broke teardown, leaving orphaned environments that accrued idle compute cost.)
 
-> **Note on adding new env vars:** PR preview environments clone variables from the production env at creation time. If you add a new env var to the `dub-rip` service after a PR preview env was created, the preview env won't pick it up automatically. For env vars that the PR's code path depends on:
+> **Note on adding new env vars:** PR preview environments clone variables from production at creation time. If you add a new env var to the `dub-rip` service after a PR preview env was created, the preview env won't pick it up automatically. For env vars that the PR's code path depends on:
 >
 > - Add the var to production *before* opening the PR (preview clones from current production state), OR
 > - Set the var manually on the PR preview env via the Railway dashboard / `railway variables --set` after the env is provisioned, OR
-> - Re-trigger the env-creation step in the GitHub Actions workflow (close + reopen the PR).
+> - Push a new commit (or close + reopen the PR) to re-provision the preview env.
 >
 > This caught us during the bgutil-pot rollout: `BGUTIL_POT_URL` was set on production after the bgutil-cutover PR's preview env was created, so the preview env failed fast on the yt-dlp fallback path even though production worked.
 

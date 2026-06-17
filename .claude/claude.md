@@ -50,13 +50,11 @@ Required environment variables for production:
 **Cobalt version pin:** the `cobalt` Railway service must use a specific image tag (`ghcr.io/imputnet/cobalt:<version>`), never `:latest`. Upstream updates `youtubei.js` frequently to keep up with YouTube's player; a stale Cobalt silently returns 0-byte tunnel bodies for some videos. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#cobalt-version-pinning) for the pinning rationale and the 0-byte-body diagnostic runbook.
 
 ### PR Preview Environments
-Same-repo PRs automatically get isolated Railway environments for testing (forked PRs are skipped since secrets aren't available). Setup requires:
+PRs get isolated Railway environments via Railway's **native GitHub PR environments** (project Settings → Environments → PR environments). Railway creates `dub-rip-pr-<number>` from production, deploys it, and **auto-deletes it when the PR closes/merges** — no GitHub Actions workflow or `RAILWAY_API_TOKEN`/`RAILWAY_PROJECT_ID` secrets involved.
 
-**GitHub Repository Settings → Secrets and variables → Actions:**
-- **Secret** `RAILWAY_API_TOKEN` - Railway Account Token (get from Railway dashboard → Account Settings → Tokens, NOT a project token)
-- **Variable** `RAILWAY_PROJECT_ID` - Railway project ID (found in project URL or `railway status`)
+PR environments inherit production variables and get unique domains.
 
-PR environments inherit production variables and get unique domains. They're automatically cleaned up when PRs close.
+**Do not re-add a custom PR-env GitHub workflow.** A hand-rolled `railway-pr.yml` previously ran alongside native PR envs, creating two environments per PR (`pr-N` *and* `dub-rip-pr-N`) and breaking teardown — orphaned envs piled up and billed idle compute 24/7. Use exactly one mechanism (native).
 
 ## yt-dlp Integration
 - yt-dlp is used as a **fallback** when Cobalt fails (primary download method is Cobalt)

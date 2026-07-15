@@ -1,35 +1,13 @@
-import { createRequire } from "node:module";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { json } from "@sveltejs/kit";
 import { extractVideoId } from "$lib/video-utils";
-import { ensureYtDlpBinary, getYtDlpBinaryPath } from "$lib/yt-dlp-binary";
+import { buildBgutilPotArgs, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
-const require = createRequire(import.meta.url);
+const execFilePromise = promisify(execFile);
 
-let ytDlpWrap: unknown = null;
-let isInitializing = false;
-
-async function getYTDlp(): Promise<unknown> {
-	if (ytDlpWrap) return ytDlpWrap;
-
-	while (isInitializing) {
-		await new Promise((resolve) => setTimeout(resolve, 100));
-	}
-
-	if (ytDlpWrap) return ytDlpWrap;
-
-	isInitializing = true;
-	try {
-		const YTDlpWrapModule = require("yt-dlp-wrap");
-		const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-
-		const binaryPath = await ensureYtDlpBinary();
-		ytDlpWrap = new YTDlpWrap(binaryPath);
-		return ytDlpWrap;
-	} finally {
-		isInitializing = false;
-	}
-}
+const DURATION_EXTRACTION_TIMEOUT_MS = 12_000;
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -44,29 +22,35 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "Invalid YouTube URL" }, { status: 400 });
 		}
 
-		const _ytDlp = await getYTDlp();
-
-		const { execFile } = require("node:child_process");
-		const { promisify } = require("node:util");
-		const execFilePromise = promisify(execFile);
-
-		const binaryPath = getYtDlpBinaryPath();
+		const binaryPath = await ensureYtDlpBinary();
 		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-		const result = await execFilePromise(binaryPath, [
-			"--dump-json",
-			"--no-warnings",
-			"--no-playlist",
-			normalizedUrl,
-		]);
-		const videoInfo = JSON.parse(result.stdout);
+		const result = await execFilePromise(
+			binaryPath,
+			[
+				"--skip-download",
+				"--no-warnings",
+				"--no-playlist",
+				"--print",
+				"%(duration)s",
+				...(await buildBgutilPotArgs()),
+				normalizedUrl,
+			],
+			{ timeout: DURATION_EXTRACTION_TIMEOUT_MS },
+		);
+
+		const duration = Number.parseInt(result.stdout.trim(), 10);
+		if (Number.isNaN(duration)) {
+			throw new Error("Could not parse duration from yt-dlp output");
+		}
 
 		return json({
 			success: true,
-			duration: videoInfo.duration,
+			duration,
 		});
-	} catch (error: any) {
-		console.error("Preview details error:", error.message);
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.error("Preview details error:", message);
 
 		return json(
 			{

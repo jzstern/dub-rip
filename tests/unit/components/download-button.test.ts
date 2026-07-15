@@ -161,7 +161,7 @@ describe("DownloadButton", () => {
 
 			// #then
 			const button = screen.getByRole("button");
-			expect(button).toHaveClass("h-11");
+			expect(button).toHaveClass("h-12");
 		});
 	});
 });

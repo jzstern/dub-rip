@@ -6,6 +6,8 @@ import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
 import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
+import { formatDuration } from "$lib/format-duration";
+import { createProgressSmoother } from "$lib/progress-smoothing";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
 
 let url = $state("");
@@ -27,6 +29,8 @@ let error = $state("");
 let errorUrl = $state("");
 let status = $state("");
 let progress = $state(0);
+let displayProgress = $state(0);
+let roundedProgress = $derived(Math.round(displayProgress));
 let speed = $state("");
 let eta = $state("");
 let videoTitle = $state("");
@@ -36,11 +40,28 @@ let downloadComplete = $state(false);
 let completedFilename = $state("");
 let currentDownloadId = 0;
 
-function formatDuration(seconds: number): string {
-	if (!seconds) return "";
-	const mins = Math.floor(seconds / 60);
-	const secs = Math.floor(seconds % 60);
-	return `${mins}:${secs.toString().padStart(2, "0")}`;
+const smoother = createProgressSmoother();
+let rafId: number | null = null;
+let lastFrameTime = 0;
+
+function stopSmoothing(): void {
+	if (rafId !== null) {
+		cancelAnimationFrame(rafId);
+		rafId = null;
+	}
+}
+
+function frame(now: number): void {
+	const delta = now - lastFrameTime;
+	lastFrameTime = now;
+	displayProgress = smoother.tick(delta);
+	rafId = requestAnimationFrame(frame);
+}
+
+function startSmoothing(): void {
+	stopSmoothing();
+	lastFrameTime = performance.now();
+	rafId = requestAnimationFrame(frame);
 }
 
 async function loadPreview(targetUrl: string) {
@@ -101,6 +122,8 @@ $effect(() => {
 			completedFilename = "";
 			status = "";
 			progress = 0;
+			smoother.reset();
+			displayProgress = 0;
 			videoTitle = "";
 		}
 	}
@@ -129,6 +152,9 @@ function handleDownload() {
 	error = "";
 	status = "Connecting...";
 	progress = 0;
+	smoother.reset();
+	displayProgress = 0;
+	startSmoothing();
 	speed = "";
 	eta = "";
 	videoTitle = "";
@@ -156,6 +182,7 @@ function handleDownload() {
 
 				case "progress":
 					progress = Math.round(data.percent) || 0;
+					smoother.setTarget(progress);
 					speed = data.speed || "";
 					eta = data.eta || "";
 					break;
@@ -164,6 +191,7 @@ function handleDownload() {
 					eventSource.close();
 					status = "Saving...";
 					progress = 95;
+					smoother.setTarget(95);
 					speed = "";
 					eta = "";
 
@@ -186,6 +214,9 @@ function handleDownload() {
 							document.body.removeChild(a);
 
 							progress = 100;
+							smoother.complete();
+							displayProgress = 100;
+							stopSmoothing();
 							status = "Downloaded!";
 							loading = false;
 							downloadComplete = true;
@@ -197,6 +228,7 @@ function handleDownload() {
 							error = "Failed to save file";
 							loading = false;
 							status = "";
+							stopSmoothing();
 						}
 					}, 0);
 					break;
@@ -208,6 +240,7 @@ function handleDownload() {
 					eventSource.close();
 					loading = false;
 					status = "";
+					stopSmoothing();
 					break;
 			}
 		} catch (err) {
@@ -223,15 +256,20 @@ function handleDownload() {
 		eventSource.close();
 		loading = false;
 		status = "";
+		stopSmoothing();
 	};
 }
+
+$effect(() => {
+	return () => stopSmoothing();
+});
 </script>
 
 <div class="relative z-10 flex min-h-screen items-center justify-center p-4">
 	<div class="w-full max-w-md space-y-6">
 		<!-- Header -->
 		<div class="flex flex-col items-center space-y-3 text-center">
-			<AsciiVinyl />
+			<AsciiVinyl active={loading} />
 			<h1 class="chrome-text font-display text-4xl font-black uppercase tracking-[0.35em] pl-[0.35em] drop-shadow-[0_0_18px_hsl(var(--chrome-cyan)/0.35)]">dub-rip</h1>
 			<p class="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
@@ -283,9 +321,9 @@ function handleDownload() {
 						<p class="font-mono text-xs uppercase tracking-[0.15em] text-chrome-cyan">{status}</p>
 
 						<div class="space-y-2">
-							<Progress value={progress} class="h-2 bg-chrome-cyan/15 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-chrome-cyan [&_[data-slot=progress-indicator]]:to-chrome-magenta [&_[data-slot=progress-indicator]]:shadow-[0_0_12px_hsl(var(--chrome-cyan)/0.7)]" />
+							<Progress value={roundedProgress} class="h-2 bg-chrome-cyan/15 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-chrome-cyan [&_[data-slot=progress-indicator]]:to-chrome-magenta [&_[data-slot=progress-indicator]]:shadow-[0_0_12px_hsl(var(--chrome-cyan)/0.7)]" />
 							<div class="flex justify-between font-mono text-xs text-muted-foreground">
-								<span>{progress}%</span>
+								<span>{roundedProgress}%</span>
 								<div class="flex gap-2">
 									{#if speed}<span>{speed}</span>{/if}
 									{#if eta}<span>ETA: {eta}</span>{/if}

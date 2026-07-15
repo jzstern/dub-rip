@@ -4,9 +4,13 @@ const GROOVE_CHARS = ["╌", "┄", "╴", "╶"];
 const LABEL_CHAR = "█";
 const SPINDLE_CHAR = "◉";
 
+interface Props {
+	active?: boolean;
+}
+
+let { active = false }: Props = $props();
+
 let rotation = $state(0);
-let isHovering = $state(false);
-let isPaused = $state(false);
 
 const SIZE = 35;
 const CENTER = Math.floor(SIZE / 2);
@@ -57,7 +61,7 @@ let lastTime: number | null = null;
 function animate(time: number) {
 	if (lastTime !== null) {
 		const delta = time - lastTime;
-		const speed = isHovering ? 0.003 : 0.001;
+		const speed = active ? 0.003 : 0.001;
 		rotation += delta * speed;
 	}
 	lastTime = time;
@@ -65,29 +69,14 @@ function animate(time: number) {
 }
 
 $effect(() => {
-	if (isPaused) {
-		lastTime = null;
-		return;
-	}
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });
 
 let vinylLines = $derived(generateVinyl());
-
-function handleClick() {
-	isPaused = !isPaused;
-}
 </script>
 
-<button
-	class="group cursor-pointer border-none bg-transparent p-0 focus:outline-none"
-	onmouseenter={() => isHovering = true}
-	onmouseleave={() => isHovering = false}
-	onclick={handleClick}
-	aria-label={isPaused ? "Play animation" : "Pause animation"}
->
-	<pre
-		class="font-mono text-[0.53rem] leading-[0.45rem] text-chrome-cyan/70 drop-shadow-[0_0_6px_hsl(var(--chrome-cyan)/0.45)] transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem] {isHovering ? 'text-chrome-magenta scale-105 drop-shadow-[0_0_10px_hsl(var(--chrome-magenta)/0.6)]' : ''} {isPaused ? 'opacity-60' : ''}"
-	>{vinylLines.join("\n")}</pre>
-</button>
+<pre
+	aria-hidden="true"
+	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'scale-105 text-chrome-magenta drop-shadow-[0_0_10px_hsl(var(--chrome-magenta)/0.6)]' : 'text-chrome-cyan/70 drop-shadow-[0_0_6px_hsl(var(--chrome-cyan)/0.45)]'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
+>{vinylLines.join("\n")}</pre>

@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import * as Sentry from "@sentry/sveltekit";
+import { resolveAlbumArtImage } from "$lib/artwork";
 import type { DownloadMethod } from "$lib/types";
 import {
 	buildID3Tags,
@@ -42,10 +43,17 @@ export async function encodeAndStreamMp3({
 	const NodeID3 = require("node-id3");
 
 	try {
-		const [details, image] = await Promise.all([
+		const [details, thumbnail] = await Promise.all([
 			detailsPromise,
 			thumbnailPromise,
 		]);
+
+		const image = await resolveAlbumArtImage({
+			artist,
+			title: trackTitle || videoTitle,
+			videoId,
+			fallback: thumbnail,
+		});
 
 		const tags = buildID3Tags({
 			trackTitle,

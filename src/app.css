@@ -30,6 +30,9 @@
 		--reel: 24 10% 18%;
 		--reel-spoke: 36 25% 80%;
 		--vignette: 24 30% 8%;
+
+		--ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+		--ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
 	}
 
 	.dark {
@@ -120,5 +123,53 @@
 			hsl(var(--muted-foreground) / 0.35) 0 1px,
 			transparent 1px 7px
 		);
+	}
+
+	.enter-rise {
+		animation: enter-rise 220ms var(--ease-out-strong) both;
+	}
+
+	@keyframes enter-rise {
+		from {
+			opacity: 0;
+			transform: translateY(6px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.led-breathe {
+		animation: led-breathe 3.2s var(--ease-in-out-strong) infinite;
+	}
+
+	@keyframes led-breathe {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.55;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.enter-rise {
+			animation: enter-fade 200ms ease-out both;
+		}
+
+		.led-breathe {
+			animation: none;
+		}
+	}
+
+	@keyframes enter-fade {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 }

@@ -8,31 +8,55 @@ let { active = false }: Props = $props();
 let rotation = $state(0);
 let isHovering = $state(false);
 let isPaused = $state(false);
+let reduceMotion = $state(false);
 
 let animationFrame: number;
 let lastTime: number | null = null;
+let currentSpeed = 0;
+
+let targetSpeed = $derived(
+	isPaused && !active ? 0 : active ? 0.18 : isHovering ? 0.12 : 0.045,
+);
 
 function animate(time: number) {
 	if (lastTime !== null) {
 		const delta = time - lastTime;
-		const speed = active ? 0.18 : isHovering ? 0.12 : 0.045;
-		rotation = (rotation + delta * speed) % 360;
+		currentSpeed += (targetSpeed - currentSpeed) * Math.min(1, delta / 300);
+		rotation = (rotation + delta * currentSpeed) % 360;
 	}
 	lastTime = time;
 	animationFrame = requestAnimationFrame(animate);
 }
 
 $effect(() => {
-	if (isPaused && !active) {
+	const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+	reduceMotion = query.matches;
+	const onChange = (event: MediaQueryListEvent) => {
+		reduceMotion = event.matches;
+	};
+	query.addEventListener("change", onChange);
+	return () => query.removeEventListener("change", onChange);
+});
+
+$effect(() => {
+	if (reduceMotion) {
 		lastTime = null;
 		return;
 	}
 	animationFrame = requestAnimationFrame(animate);
-	return () => cancelAnimationFrame(animationFrame);
+	return () => {
+		cancelAnimationFrame(animationFrame);
+		lastTime = null;
+	};
 });
 
 function togglePause() {
 	isPaused = !isPaused;
+}
+
+function handleHover(hovering: boolean) {
+	isHovering =
+		hovering && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 }
 
 const spokes = [0, 60, 120, 180, 240, 300];
@@ -41,8 +65,8 @@ const spokes = [0, 60, 120, 180, 240, 300];
 <button
 	type="button"
 	class="group cursor-pointer border-none bg-transparent p-0 focus-visible:outline-none"
-	onmouseenter={() => (isHovering = true)}
-	onmouseleave={() => (isHovering = false)}
+	onmouseenter={() => handleHover(true)}
+	onmouseleave={() => handleHover(false)}
 	onclick={togglePause}
 	aria-label={isPaused ? "Play reels" : "Pause reels"}
 >
@@ -53,9 +77,9 @@ const spokes = [0, 60, 120, 180, 240, 300];
 		fill="none"
 		role="img"
 		aria-hidden="true"
-		class="select-none drop-shadow-[0_6px_14px_hsl(var(--vignette)/0.35)] transition-transform duration-300 motion-reduce:transition-none {isHovering
+		class="select-none drop-shadow-[0_6px_14px_hsl(var(--vignette)/0.35)] transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none {isHovering
 			? 'scale-[1.03]'
-			: ''} {isPaused ? 'opacity-70' : ''}"
+			: ''} {isPaused && !active ? 'opacity-70' : ''}"
 	>
 		<defs>
 			<linearGradient id="reelBody" x1="0" y1="0" x2="0" y2="1">

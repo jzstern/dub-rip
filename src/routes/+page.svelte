@@ -280,7 +280,7 @@ $effect(() => {
 		<Card.Root class="tape-faceplate rounded-lg border-border/60 bg-card/70 p-6 backdrop-blur-sm">
 			<div class="mb-4 flex items-center justify-between">
 				<span class="font-mono text-[0.65rem] uppercase tracking-[0.28em] text-muted-foreground">Tape Deck</span>
-				<span class="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]" aria-hidden="true"></span>
+				<span class="led-breathe h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.8)]" aria-hidden="true"></span>
 			</div>
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
@@ -312,14 +312,14 @@ $effect(() => {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
+					<div class="enter-rise rounded-md border border-destructive/20 bg-destructive/10 p-3">
 						<p class="text-sm text-destructive">{error}</p>
 					</div>
 				{/if}
 
 				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="enter-rise space-y-3">
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}

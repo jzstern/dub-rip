@@ -5,7 +5,7 @@ import DownloadButton from "$lib/components/DownloadButton.svelte";
 
 describe("DownloadButton", () => {
 	describe("rendering", () => {
-		it("displays 'Download' text when not loading", () => {
+		it("displays download label when not loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -15,10 +15,10 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("Download")).toBeInTheDocument();
+			expect(screen.getByRole("button")).toHaveTextContent("./download");
 		});
 
-		it("displays 'Downloading' text when loading", () => {
+		it("displays downloading label when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -28,7 +28,7 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("Downloading")).toBeInTheDocument();
+			expect(screen.getByRole("button")).toHaveTextContent("./downloading");
 		});
 
 		it("shows loading spinner when loading", () => {

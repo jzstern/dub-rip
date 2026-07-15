@@ -180,7 +180,7 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getByText("•")).toBeInTheDocument();
+			expect(screen.getByText("::")).toBeInTheDocument();
 		});
 	});
 
@@ -202,7 +202,7 @@ describe("VideoPreview", () => {
 			// #then
 			expect(screen.getByText("Just a Title")).toBeInTheDocument();
 			expect(screen.getByText("1:00")).toBeInTheDocument();
-			expect(screen.queryByText("•")).not.toBeInTheDocument();
+			expect(screen.queryByText("::")).not.toBeInTheDocument();
 		});
 
 		it("handles zero duration", () => {

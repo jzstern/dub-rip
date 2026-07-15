@@ -5,7 +5,7 @@ test.describe("dub-rip App", () => {
 		await page.goto("/");
 
 		// Check page loads with correct heading
-		await expect(page.locator("h1")).toHaveText("dub-rip");
+		await expect(page.locator("h1")).toHaveText("dub·rip");
 
 		// Check main input is visible
 		await expect(page.locator('input[data-slot="input"]')).toBeVisible();

@@ -1,8 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as Sentry from "@sentry/sveltekit";
-import { env } from "$env/dynamic/private";
-import { ensureBgutilPlugin, ensureYtDlpBinary } from "./yt-dlp-binary";
+import { buildBgutilPotArgs, ensureYtDlpBinary } from "./yt-dlp-binary";
 
 const execFilePromise = promisify(execFile);
 
@@ -82,32 +81,9 @@ export async function fetchVideoDetails(
 			"--no-warnings",
 			"--no-playlist",
 			"--skip-download",
+			...(await buildBgutilPotArgs()),
+			videoUrl,
 		];
-		// Attach bgutil-pot PO-token args when configured, so this metadata call
-		// doesn't burn IP reputation on YouTube's bot-check (which would also
-		// degrade the subsequent main download). When BGUTIL_POT_URL is unset,
-		// fall through to the plain call — same graceful degradation as before.
-		if (env.BGUTIL_POT_URL) {
-			try {
-				const pluginDir = await ensureBgutilPlugin();
-				args.push(
-					"--plugin-dirs",
-					pluginDir,
-					"--extractor-args",
-					"youtube:player_client=default,mweb",
-					"--extractor-args",
-					`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
-				);
-			} catch (pluginErr) {
-				Sentry.captureException(pluginErr, {
-					tags: {
-						service: "video-metadata",
-						operation: "ensure-bgutil-plugin",
-					},
-				});
-			}
-		}
-		args.push(videoUrl);
 		const result = await execFilePromise(binaryPath, args, {
 			timeout: remaining(),
 			maxBuffer: 10 * 1024 * 1024,

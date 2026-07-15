@@ -1,0 +1,16 @@
+name: HIG Audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  hig-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: raintree-technology/hig-doctor@main
+        with:
+          directory: .
+          fail-on: critical

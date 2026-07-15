@@ -1,279 +1,71 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/svelte";
-import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render } from "@testing-library/svelte";
+import { afterEach, describe, expect, it } from "vitest";
 
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 
 describe("AsciiVinyl", () => {
-	beforeEach(() => {
-		vi.useFakeTimers();
-		vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-			return setTimeout(() => cb(performance.now()), 16) as unknown as number;
-		});
-		vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
-			clearTimeout(id);
-		});
-	});
-
 	afterEach(() => {
 		cleanup();
-		vi.useRealTimers();
-		vi.restoreAllMocks();
 	});
 
 	describe("rendering", () => {
-		it("renders a button element", () => {
-			// #given / #when
-			render(AsciiVinyl);
-
-			// #then
-			const button = screen.getByRole("button");
-			expect(button).toBeInTheDocument();
-		});
-
-		it("renders pre element with ASCII art", () => {
+		it("renders the geometric record mark", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 
 			// #then
-			const pre = container.querySelector("pre");
-			expect(pre).toBeInTheDocument();
-			expect(pre?.textContent).toBeTruthy();
+			const svg = container.querySelector("svg");
+			expect(svg).toBeInTheDocument();
+			expect(svg?.querySelectorAll("circle").length).toBeGreaterThanOrEqual(4);
 		});
 
-		it("displays aria-label for pause when playing", () => {
+		it("is decorative with no interactive controls", () => {
 			// #given / #when
-			render(AsciiVinyl);
+			const { container } = render(AsciiVinyl);
 
 			// #then
-			const button = screen.getByRole("button");
-			expect(button).toHaveAttribute("aria-label", "Pause animation");
+			expect(container.querySelector("button")).not.toBeInTheDocument();
+			expect(container.querySelector("svg")).toHaveAttribute(
+				"aria-hidden",
+				"true",
+			);
 		});
 	});
 
-	describe("vinyl output structure", () => {
-		it("generates vinyl with correct number of rows", () => {
+	describe("active state", () => {
+		it("applies the fast-spin state when active", () => {
 			// #given / #when
-			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
-			const lines = pre?.textContent?.split("\n") || [];
+			const { container } = render(AsciiVinyl, { props: { active: true } });
 
 			// #then
-			expect(lines.length).toBe(35);
+			expect(container.querySelector("g.spin")).toHaveClass("active");
 		});
 
-		it("each row has consistent character count", () => {
+		it("does not apply the fast-spin state when inactive", () => {
 			// #given / #when
-			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
-			const lines = pre?.textContent?.split("\n") || [];
+			const { container } = render(AsciiVinyl, { props: { active: false } });
 
 			// #then
-			const expectedLength = 35;
-			for (const line of lines) {
-				expect(line.length).toBe(expectedLength);
-			}
-		});
-
-		it("contains spindle character at center", () => {
-			// #given / #when
-			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre?.textContent).toContain("◉");
-		});
-
-		it("contains edge circle characters", () => {
-			// #given / #when
-			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre?.textContent).toContain("○");
-		});
-
-		it("contains label characters", () => {
-			// #given / #when
-			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre?.textContent).toContain("█");
-			expect(pre?.textContent).toContain("▓");
-		});
-	});
-
-	describe("user interactions", () => {
-		it("toggles to paused state on click", async () => {
-			// #given
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await fireEvent.click(button);
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Play animation");
-		});
-
-		it("toggles back to playing state on second click", async () => {
-			// #given
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await fireEvent.click(button);
-			await fireEvent.click(button);
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Pause animation");
-		});
-
-		it("responds to mouseenter event", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
-			const pre = container.querySelector("pre");
-
-			// #when
-			await fireEvent.mouseEnter(button);
-
-			// #then
-			expect(pre).toHaveClass("text-primary");
-		});
-
-		it("responds to mouseleave event", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
-			const pre = container.querySelector("pre");
-
-			// #when
-			await fireEvent.mouseEnter(button);
-			await fireEvent.mouseLeave(button);
-
-			// #then
-			expect(pre).not.toHaveClass("text-primary");
+			expect(container.querySelector("g.spin")).not.toHaveClass("active");
 		});
 	});
 
 	describe("styling", () => {
-		it("has font-mono class on pre element", () => {
+		it("disables text selection", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("font-mono");
+			expect(container.querySelector("svg")).toHaveClass("select-none");
 		});
 
-		it("has transition classes for smooth effects", () => {
+		it("rotates around the mark center", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("transition-all");
-		});
-
-		it("applies scale effect on hover", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
-			const pre = container.querySelector("pre");
-
-			// #when
-			await fireEvent.mouseEnter(button);
-
-			// #then
-			expect(pre).toHaveClass("scale-105");
-		});
-
-		it("applies opacity when paused", async () => {
-			// #given
-			const { container } = render(AsciiVinyl);
-			const button = screen.getByRole("button");
-			const pre = container.querySelector("pre");
-
-			// #when
-			await fireEvent.click(button);
-
-			// #then
-			expect(pre).toHaveClass("opacity-60");
-		});
-	});
-
-	describe("animation lifecycle", () => {
-		it("starts animation on mount", () => {
-			// #given / #when
-			render(AsciiVinyl);
-
-			// #then
-			expect(window.requestAnimationFrame).toHaveBeenCalled();
-		});
-
-		it("cleans up animation on unmount", () => {
-			// #given
-			const { unmount } = render(AsciiVinyl);
-
-			// #when
-			unmount();
-
-			// #then
-			expect(window.cancelAnimationFrame).toHaveBeenCalled();
-		});
-	});
-
-	describe("accessibility", () => {
-		it("button is keyboard focusable", () => {
-			// #given / #when
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #then
-			expect(button.tabIndex).not.toBe(-1);
-		});
-
-		it("button has cursor-pointer class", () => {
-			// #given / #when
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #then
-			expect(button).toHaveClass("cursor-pointer");
-		});
-
-		it("toggles pause state with Enter key", async () => {
-			// #given
-			const user = userEvent.setup({
-				advanceTimers: vi.advanceTimersByTime,
-			});
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await button.focus();
-			await user.keyboard("{Enter}");
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Play animation");
-		});
-
-		it("toggles pause state with Space key", async () => {
-			// #given
-			const user = userEvent.setup({
-				advanceTimers: vi.advanceTimersByTime,
-			});
-			render(AsciiVinyl);
-			const button = screen.getByRole("button");
-
-			// #when
-			await button.focus();
-			await user.keyboard(" ");
-
-			// #then
-			expect(button).toHaveAttribute("aria-label", "Play animation");
+			const group = container.querySelector("g.spin") as SVGGElement;
+			expect(group.style.transformOrigin).toBe("60px 60px");
 		});
 	});
 });

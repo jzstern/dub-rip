@@ -207,3 +207,32 @@ export async function ensureBgutilPlugin(): Promise<string> {
 	})();
 	return bgutilPluginPromise;
 }
+
+/**
+ * Builds the bgutil-pot PO-token yt-dlp args when BGUTIL_POT_URL is configured.
+ *
+ * YouTube's bot-check blocks many videos requested from datacenter IPs unless a
+ * PO token accompanies the request. The main download path attaches these args;
+ * read-only metadata calls (details, duration) must do the same or they 500 on
+ * the same videos that download fine. Returns [] when the URL is unset or the
+ * plugin can't be ensured, so callers degrade gracefully to a plain call.
+ */
+export async function buildBgutilPotArgs(): Promise<string[]> {
+	if (!env.BGUTIL_POT_URL) return [];
+	try {
+		const pluginDir = await ensureBgutilPlugin();
+		return [
+			"--plugin-dirs",
+			pluginDir,
+			"--extractor-args",
+			"youtube:player_client=default,mweb",
+			"--extractor-args",
+			`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
+		];
+	} catch (err) {
+		Sentry.captureException(err, {
+			tags: { service: "yt-dlp-binary", operation: "build-bgutil-pot-args" },
+		});
+		return [];
+	}
+}

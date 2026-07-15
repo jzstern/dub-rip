@@ -371,6 +371,8 @@ Background: [PR #52 research notes](https://github.com/jzstern/dub-rip/pull/52) 
 
 If you need PO tokens for Cobalt again, restoring the service is `git revert <this commit>` plus redeploying. The custom Node implementation had forked-child OOM isolation; if you don't need that resilience, the upstream image `ghcr.io/imputnet/yt-session-generator:webserver` is a drop-in alternative.
 
+**Update (2026-06-09):** the lingering Railway `yt-token-service` *service object* was deleted from the production environment. It still built from this repo via a Dockerfile that no longer exists, so it auto-deployed and failed on every PR (preview environments are cloned from production via `railway environment new --copy production`, then Railway auto-builds repo-connected services on push). With it removed from production, new PR environments no longer inherit it. Restoring now means recreating the Railway service, not just `git revert` + redeploy.
+
 PO tokens for the yt-dlp fallback path are still served by `bgutil-pot` (see [§ 4. bgutil-pot](#4-bgutil-pot)). That's a separate concern from Cobalt's session server and is unaffected.
 
 ## Maintenance

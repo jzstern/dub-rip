@@ -42,9 +42,9 @@ function handleArtworkError() {
 			{/if}
 			{#if preview.duration}
 				{#if preview.artist}
-					<span>•</span>
+					<span class="duration-in">•</span>
 				{/if}
-				<span>{formatDuration(preview.duration)}</span>
+				<span class="duration-in">{formatDuration(preview.duration)}</span>
 			{/if}
 		</div>
 	</div>
@@ -63,6 +63,19 @@ function handleArtworkError() {
 		to {
 			opacity: 1;
 			transform: scale(1) translateY(0);
+		}
+	}
+
+	.duration-in {
+		animation: duration-in 200ms ease-out;
+	}
+
+	@keyframes duration-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
 		}
 	}
 

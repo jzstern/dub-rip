@@ -281,7 +281,7 @@ $effect(() => {
 		</div>
 
 		<!-- Main Card -->
-		<Card.Root class="glass-card p-6">
+		<Card.Root class="glass-card panel-in p-6">
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
 				<div class="space-y-3">
@@ -312,14 +312,14 @@ $effect(() => {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-xl border border-destructive/30 bg-destructive/10 p-3 backdrop-blur-sm">
+					<div class="panel-in rounded-xl border border-destructive/30 bg-destructive/10 p-3 backdrop-blur-sm">
 						<p class="text-sm font-medium text-destructive">{error}</p>
 					</div>
 				{/if}
 
 				<!-- Progress -->
 				{#if loading || status}
-					<div class="glass-panel space-y-3 rounded-xl p-4">
+					<div class="glass-panel panel-in space-y-3 rounded-xl p-4">
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}

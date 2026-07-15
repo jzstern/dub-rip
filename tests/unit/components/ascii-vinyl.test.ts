@@ -135,7 +135,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("transition-all");
+			expect(pre).toHaveClass("transition-[color,transform]");
 		});
 
 		it("disables text selection", () => {

@@ -69,6 +69,9 @@ function animate(time: number) {
 }
 
 $effect(() => {
+	const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+	if (reducedMotion.matches) return;
+
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });
@@ -78,5 +81,5 @@ let vinylLines = $derived(generateVinyl());
 
 <pre
 	aria-hidden="true"
-	class="crt-glow font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-primary/60'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
+	class="crt-glow font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-primary/60'} transition-[color,transform] duration-300 ease-[var(--ease-out)] select-none motion-reduce:scale-100 sm:text-[0.64rem] sm:leading-[0.54rem]"
 >{vinylLines.join("\n")}</pre>

@@ -29,6 +29,9 @@
 		--phosphor-dim: 142 60% 33%;
 		--amber: 32 95% 44%;
 		--titlebar: 60 14% 84%;
+
+		--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+		--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 	}
 
 	.dark {
@@ -105,6 +108,26 @@
 		box-shadow: 0 0 8px hsl(var(--phosphor) / 0.6);
 		animation: terminal-blink 1.1s steps(1) infinite;
 	}
+
+	.terminal-window {
+		animation: terminal-window-in 200ms var(--ease-out) both;
+	}
+
+	.cli-line {
+		animation: cli-line-in 160ms var(--ease-out) both;
+	}
+
+	.cli-line:nth-child(2) {
+		animation-delay: 45ms;
+	}
+
+	.cli-line:nth-child(3) {
+		animation-delay: 90ms;
+	}
+
+	.cli-line:nth-child(4) {
+		animation-delay: 135ms;
+	}
 }
 
 @keyframes terminal-blink {
@@ -115,5 +138,52 @@
 	50.01%,
 	100% {
 		opacity: 0;
+	}
+}
+
+@keyframes terminal-window-in {
+	from {
+		opacity: 0;
+		transform: scale(0.985);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes cli-line-in {
+	from {
+		opacity: 0;
+		transform: translateY(3px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.terminal-cursor::after,
+	.cursor-blink {
+		animation: none;
+		opacity: 1;
+	}
+
+	.terminal-window {
+		animation: fade-in 200ms ease both;
+	}
+
+	.cli-line {
+		animation: fade-in 160ms ease both;
 	}
 }

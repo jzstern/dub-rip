@@ -52,10 +52,21 @@ function handleArtworkError() {
 
 <style>
 	.preview-card {
-		animation: preview-in 200ms ease-out;
+		animation: preview-in 200ms var(--ease-out) both;
 	}
 
 	@keyframes preview-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	@keyframes preview-in-fade {
 		from {
 			opacity: 0;
 		}
@@ -66,11 +77,7 @@ function handleArtworkError() {
 
 	@media (prefers-reduced-motion: reduce) {
 		.preview-card {
-			animation: none;
-		}
-
-		.preview-card img {
-			transition: none;
+			animation: preview-in-fade 200ms ease both;
 		}
 	}
 </style>

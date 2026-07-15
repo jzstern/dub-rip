@@ -4,7 +4,6 @@ import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
-import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
 import { createProgressSmoother } from "$lib/progress-smoothing";
@@ -31,6 +30,13 @@ let status = $state("");
 let progress = $state(0);
 let displayProgress = $state(0);
 let roundedProgress = $derived(Math.round(displayProgress));
+
+const PROGRESS_CELLS = 32;
+let filledCells = $derived(
+	Math.round(
+		(Math.min(Math.max(roundedProgress, 0), 100) / 100) * PROGRESS_CELLS,
+	),
+);
 let speed = $state("");
 let eta = $state("");
 let videoTitle = $state("");
@@ -277,7 +283,7 @@ $effect(() => {
 		</div>
 
 		<!-- Terminal Window -->
-		<Card.Root class="overflow-hidden rounded-sm border-2 border-border bg-card p-0 shadow-[0_0_24px_hsl(var(--phosphor)/0.12)]">
+		<Card.Root class="terminal-window overflow-hidden rounded-sm border-2 border-border bg-card p-0 shadow-[0_0_24px_hsl(var(--phosphor)/0.12)]">
 			<!-- Title Bar -->
 			<div class="flex items-center gap-2 border-b border-border bg-secondary/60 px-3 py-2">
 				<span class="flex gap-1.5" aria-hidden="true">
@@ -325,7 +331,7 @@ $effect(() => {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-sm border border-destructive/40 bg-destructive/10 p-3">
+					<div class="cli-line rounded-sm border border-destructive/40 bg-destructive/10 p-3">
 						<p class="text-xs text-destructive">
 							<span class="font-bold">[err]</span> {error}
 						</p>
@@ -336,18 +342,25 @@ $effect(() => {
 				{#if loading || status}
 					<div class="space-y-3 border-t border-border/60 pt-3">
 						{#if videoTitle}
-							<p class="truncate text-xs text-foreground">
+							<p class="cli-line truncate text-xs text-foreground">
 								<span class="text-muted-foreground">▸</span> {videoTitle}
 							</p>
 						{/if}
 
-						<p class="text-xs text-primary">
+						<p class="cli-line text-xs text-primary">
 							<span class="text-muted-foreground">{downloadComplete ? "[ok]" : "▸"}</span>
 							{status}{#if loading && !downloadComplete}<span class="terminal-cursor"></span>{/if}
 						</p>
 
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
+						<div class="cli-line space-y-2">
+							<div
+								role="progressbar"
+								aria-label="Download progress"
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={roundedProgress}
+								class="crt-glow overflow-hidden font-mono text-xs leading-none tracking-tight whitespace-nowrap text-primary"
+							>{"█".repeat(filledCells)}<span class="text-primary/25">{"░".repeat(PROGRESS_CELLS - filledCells)}</span></div>
 							<div class="flex justify-between text-xs text-muted-foreground">
 								<span class="text-primary">{roundedProgress}%</span>
 								<div class="flex gap-2">
@@ -358,7 +371,7 @@ $effect(() => {
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">
+							<p class="cli-line truncate text-xs text-muted-foreground">
 								<span class="text-primary">$</span> saved {completedFilename}
 							</p>
 						{/if}

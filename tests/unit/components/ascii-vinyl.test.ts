@@ -104,7 +104,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("text-primary");
+			expect(pre).toHaveClass("text-chrome-magenta");
 			expect(pre).toHaveClass("scale-105");
 		});
 
@@ -114,7 +114,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).not.toHaveClass("text-primary");
+			expect(pre).not.toHaveClass("text-chrome-magenta");
 			expect(pre).not.toHaveClass("scale-105");
 		});
 	});
@@ -135,7 +135,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("transition-all");
+			expect(pre).toHaveClass("transition-[color,transform]");
 		});
 
 		it("disables text selection", () => {

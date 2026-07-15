@@ -268,14 +268,14 @@ $effect(() => {
 <div class="relative z-10 flex min-h-screen items-center justify-center p-4">
 	<div class="w-full max-w-md space-y-6">
 		<!-- Header -->
-		<div class="flex flex-col items-center space-y-3 text-center">
+		<div class="enter-hero flex flex-col items-center space-y-3 text-center">
 			<AsciiVinyl active={loading} />
 			<h1 class="chrome-text font-display text-4xl font-black uppercase tracking-[0.35em] pl-[0.35em] drop-shadow-[0_0_18px_hsl(var(--chrome-cyan)/0.35)]">dub-rip</h1>
 			<p class="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
 
 		<!-- Main Card -->
-		<Card.Root class="glass-panel neon-glow p-6">
+		<Card.Root class="enter-card glass-panel neon-glow p-6">
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
 				<div class="space-y-2">
@@ -306,7 +306,7 @@ $effect(() => {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/40 bg-destructive/10 p-3 shadow-[0_0_16px_-6px_hsl(var(--destructive)/0.7)]">
+					<div class="error-panel rounded-md border border-destructive/40 bg-destructive/10 p-3 shadow-[0_0_16px_-6px_hsl(var(--destructive)/0.7)]">
 						<p class="font-mono text-sm text-destructive">{error}</p>
 					</div>
 				{/if}

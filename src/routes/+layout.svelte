@@ -38,4 +38,6 @@ onMount(() => {
 	<meta name="twitter:image:alt" content="dub-rip - Download YouTube audio with rich metadata" />
 </svelte:head>
 
+<div class="grid-horizon" aria-hidden="true"></div>
+
 {@render children()}

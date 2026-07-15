@@ -69,6 +69,10 @@ function animate(time: number) {
 }
 
 $effect(() => {
+	const prefersReducedMotion =
+		window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+	if (prefersReducedMotion) return;
+
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });
@@ -78,5 +82,5 @@ let vinylLines = $derived(generateVinyl());
 
 <pre
 	aria-hidden="true"
-	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'scale-105 text-chrome-magenta drop-shadow-[0_0_10px_hsl(var(--chrome-magenta)/0.6)]' : 'text-chrome-cyan/70 drop-shadow-[0_0_6px_hsl(var(--chrome-cyan)/0.45)]'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
+	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'scale-105 text-chrome-magenta drop-shadow-[0_0_10px_hsl(var(--chrome-magenta)/0.6)]' : 'text-chrome-cyan/70 drop-shadow-[0_0_6px_hsl(var(--chrome-cyan)/0.45)]'} transition-[color,transform] duration-300 ease-[var(--ease-out-strong)] select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
 >{vinylLines.join("\n")}</pre>

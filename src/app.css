@@ -29,6 +29,8 @@
 		--chrome-magenta: 292 88% 74%;
 		--grid-line: 200 30% 70%;
 		--space-deep: 200 30% 92%;
+
+		--ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 	}
 
 	.dark {
@@ -81,12 +83,20 @@
 		background-attachment: fixed;
 	}
 
-	body::before {
-		content: "";
+	.grid-horizon {
 		position: fixed;
 		inset: 0;
 		z-index: 0;
 		pointer-events: none;
+		mask-image: linear-gradient(to bottom, transparent 55%, black 100%);
+		-webkit-mask-image: linear-gradient(to bottom, transparent 55%, black 100%);
+		opacity: 0.7;
+	}
+
+	.grid-horizon::before {
+		content: "";
+		position: absolute;
+		inset: -112px -112px 0;
 		background-image:
 			repeating-linear-gradient(
 				to right,
@@ -102,11 +112,23 @@
 				transparent 1px,
 				transparent 56px
 			);
-		mask-image: linear-gradient(to bottom, transparent 55%, black 100%);
-		-webkit-mask-image: linear-gradient(to bottom, transparent 55%, black 100%);
 		transform: perspective(420px) rotateX(62deg);
 		transform-origin: bottom center;
-		opacity: 0.7;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.grid-horizon::before {
+			animation: grid-scroll 7s linear infinite;
+		}
+	}
+
+	@keyframes grid-scroll {
+		from {
+			transform: perspective(420px) rotateX(62deg) translateY(0);
+		}
+		to {
+			transform: perspective(420px) rotateX(62deg) translateY(56px);
+		}
 	}
 
 	body::after {
@@ -175,5 +197,45 @@
 		backdrop-filter: blur(12px) saturate(140%);
 		-webkit-backdrop-filter: blur(12px) saturate(140%);
 		border-color: hsl(var(--chrome-cyan) / 0.3);
+	}
+
+	.enter-hero {
+		animation: rise-in 300ms var(--ease-out-strong) backwards;
+	}
+
+	.enter-card {
+		animation: rise-in 300ms var(--ease-out-strong) 80ms backwards;
+	}
+
+	.error-panel {
+		animation: rise-in 200ms var(--ease-out-strong);
+	}
+
+	@keyframes rise-in {
+		from {
+			opacity: 0;
+			transform: translateY(8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.enter-hero,
+		.enter-card,
+		.error-panel {
+			animation-name: fade-in;
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 }

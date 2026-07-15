@@ -21,7 +21,7 @@ describe("PreviewSkeleton", () => {
 			const { container } = render(PreviewSkeleton);
 
 			// #then
-			const placeholders = container.querySelectorAll(".bg-muted");
+			const placeholders = container.querySelectorAll('[class*="bg-chrome-"]');
 			expect(placeholders.length).toBeGreaterThanOrEqual(3);
 		});
 

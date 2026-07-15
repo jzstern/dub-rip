@@ -1,4 +1,10 @@
 <script lang="ts">
+interface Props {
+	active?: boolean;
+}
+
+let { active = false }: Props = $props();
+
 let rotation = $state(0);
 let isHovering = $state(false);
 let isPaused = $state(false);
@@ -9,7 +15,7 @@ let lastTime: number | null = null;
 function animate(time: number) {
 	if (lastTime !== null) {
 		const delta = time - lastTime;
-		const speed = isHovering ? 0.12 : 0.045;
+		const speed = active ? 0.18 : isHovering ? 0.12 : 0.045;
 		rotation = (rotation + delta * speed) % 360;
 	}
 	lastTime = time;
@@ -17,7 +23,7 @@ function animate(time: number) {
 }
 
 $effect(() => {
-	if (isPaused) {
+	if (isPaused && !active) {
 		lastTime = null;
 		return;
 	}

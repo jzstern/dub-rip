@@ -13,7 +13,7 @@ describe("PreviewSkeleton", () => {
 				'[data-testid="preview-skeleton"]',
 			);
 			expect(skeleton).toBeInTheDocument();
-			expect(skeleton).toHaveClass("animate-pulse");
+			expect(skeleton).toHaveClass("mono-skeleton");
 		});
 
 		it("displays placeholder elements for thumbnail and text", () => {

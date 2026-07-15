@@ -180,7 +180,7 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getByText("•")).toBeInTheDocument();
+			expect(screen.getByText("·")).toBeInTheDocument();
 		});
 	});
 

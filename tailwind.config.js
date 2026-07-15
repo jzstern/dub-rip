@@ -55,7 +55,12 @@ export default {
 				sm: "calc(var(--radius) - 4px)",
 			},
 			fontFamily: {
-				sans: [...fontFamily.sans],
+				sans: [
+					"-apple-system",
+					"BlinkMacSystemFont",
+					'"Segoe UI"',
+					...fontFamily.sans,
+				],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},

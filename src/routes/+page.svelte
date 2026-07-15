@@ -266,18 +266,17 @@ $effect(() => {
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
+	<div class="w-full max-w-sm space-y-5">
+		<div class="flex flex-col items-center space-y-3 text-center">
 			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+			<div class="space-y-1">
+				<h1 class="text-sm font-medium tracking-tight">dub-rip</h1>
+				<p class="text-[13px] leading-4 text-muted-foreground">Download YouTube audio with rich metadata</p>
+			</div>
 		</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
+		<Card.Root class="mono-panel gap-0 rounded-lg p-4 shadow-none">
+			<Card.Content class="space-y-3 p-0">
 				<div class="space-y-2">
 					<Input
 						bind:value={url}
@@ -285,7 +284,7 @@ $effect(() => {
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-10"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -294,45 +293,42 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
+				{#if preview && !loading && !loadingPreview}
+					<VideoPreview preview={preview} formatDuration={formatDuration} />
+				{/if}
 
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
+				{#if loadingPreview}
+					<PreviewSkeleton />
+				{/if}
 
-				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="mono-enter rounded-md border bg-muted/60 px-3 py-2.5">
+						<p class="text-[13px] leading-5 text-foreground">{error}</p>
 					</div>
 				{/if}
 
-				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="mono-enter space-y-3 pt-1">
 						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
+							<p class="truncate text-[13px] font-medium leading-4">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
-
 						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
+							<Progress value={roundedProgress} class="h-0.5" />
+							<div class="flex items-baseline justify-between text-[11px] text-muted-foreground">
+								<div class="flex items-baseline gap-2">
+									<span class="font-mono tabular-nums text-foreground">{roundedProgress}%</span>
+									<span>{status}</span>
+								</div>
+								<div class="flex gap-2 font-mono tabular-nums">
 									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
+									{#if eta}<span>ETA {eta}</span>{/if}
 								</div>
 							</div>
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate font-mono text-[11px] text-muted-foreground">{completedFilename}</p>
 						{/if}
 					</div>
 				{/if}

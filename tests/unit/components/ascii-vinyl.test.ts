@@ -104,8 +104,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("text-primary");
-			expect(pre).toHaveClass("scale-105");
+			expect(pre).toHaveClass("text-foreground/70");
 		});
 
 		it("does not apply the highlight effect when inactive", () => {
@@ -114,8 +113,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).not.toHaveClass("text-primary");
-			expect(pre).not.toHaveClass("scale-105");
+			expect(pre).not.toHaveClass("text-foreground/70");
 		});
 	});
 
@@ -135,7 +133,7 @@ describe("AsciiVinyl", () => {
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("transition-all");
+			expect(pre).toHaveClass("transition-colors");
 		});
 
 		it("disables text selection", () => {

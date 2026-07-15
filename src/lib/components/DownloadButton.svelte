@@ -11,7 +11,7 @@ interface Props {
 let { loading, disabled, onClick }: Props = $props();
 </script>
 
-<Button onclick={onClick} disabled={disabled} class="w-full h-11">
+<Button onclick={onClick} disabled={disabled} class="h-10 w-full">
 	{#if loading}
 		<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 		Downloading

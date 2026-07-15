@@ -78,5 +78,5 @@ let vinylLines = $derived(generateVinyl());
 
 <pre
 	aria-hidden="true"
-	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-muted-foreground'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
+	class="font-mono text-[0.38rem] leading-[0.32rem] {active ? 'text-foreground/70' : 'text-muted-foreground/60'} transition-colors duration-300 ease-out select-none sm:text-[0.44rem] sm:leading-[0.37rem]"
 >{vinylLines.join("\n")}</pre>

@@ -48,6 +48,8 @@ export default {
 					DEFAULT: "hsl(var(--card) / <alpha-value>)",
 					foreground: "hsl(var(--card-foreground) / <alpha-value>)",
 				},
+				gold: "hsl(var(--gold) / <alpha-value>)",
+				stamp: "hsl(var(--stamp-red) / <alpha-value>)",
 			},
 			borderRadius: {
 				lg: "var(--radius)",
@@ -57,6 +59,7 @@ export default {
 			fontFamily: {
 				sans: [...fontFamily.sans],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
+				display: ['"Archivo Black"', ...fontFamily.sans],
 			},
 		},
 	},

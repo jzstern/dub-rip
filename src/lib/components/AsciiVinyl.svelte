@@ -14,26 +14,34 @@ let rotation = $state(0);
 
 const SIZE = 35;
 const CENTER = Math.floor(SIZE / 2);
-const LABEL_RADIUS = 6.5;
-const SPINDLE_RADIUS = 1.7;
+const LABEL_RADIUS = 7.5;
+const SPINDLE_RADIUS = 2.4;
 const ASPECT_RATIO = 1.6;
 
-function generateVinyl(): string[] {
-	const lines: string[] = [];
+interface Segment {
+	text: string;
+	gold: boolean;
+}
+
+function generateVinyl(): Segment[][] {
+	const lines: Segment[][] = [];
 
 	for (let y = 0; y < SIZE; y++) {
-		let line = "";
+		const segments: Segment[] = [];
 		for (let x = 0; x < SIZE; x++) {
 			const dx = x - CENTER;
 			const dy = (y - CENTER) * ASPECT_RATIO;
 			const distance = Math.sqrt(dx * dx + dy * dy);
 			const angle = Math.atan2(dy, dx) + rotation;
 
+			let char: string;
+			let gold = false;
 			if (distance < SPINDLE_RADIUS) {
-				line += SPINDLE_CHAR;
+				char = SPINDLE_CHAR;
 			} else if (distance < LABEL_RADIUS) {
 				const labelPattern = Math.floor((angle * 2 + distance) % 2);
-				line += labelPattern === 0 ? LABEL_CHAR : "▓";
+				char = labelPattern === 0 ? LABEL_CHAR : "▓";
+				gold = true;
 			} else if (distance <= CENTER - 1) {
 				const grooveIndex = Math.floor(distance) % 2;
 				const charSet = grooveIndex === 0 ? VINYL_CHARS : GROOVE_CHARS;
@@ -42,14 +50,21 @@ function generateVinyl(): string[] {
 				);
 				const angleIndex =
 					((rawIndex % charSet.length) + charSet.length) % charSet.length;
-				line += charSet[angleIndex];
+				char = charSet[angleIndex];
 			} else if (distance <= CENTER) {
-				line += "○";
+				char = "○";
 			} else {
-				line += " ";
+				char = " ";
+			}
+
+			const last = segments[segments.length - 1];
+			if (last && last.gold === gold) {
+				last.text += char;
+			} else {
+				segments.push({ text: char, gold });
 			}
 		}
-		lines.push(line);
+		lines.push(segments);
 	}
 
 	return lines;
@@ -69,6 +84,7 @@ function animate(time: number) {
 }
 
 $effect(() => {
+	if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });
@@ -78,5 +94,11 @@ let vinylLines = $derived(generateVinyl());
 
 <pre
 	aria-hidden="true"
-	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-muted-foreground'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
->{vinylLines.join("\n")}</pre>
+	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-foreground/80'} transition-[transform,color] duration-300 ease-out select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
+>{#each vinylLines as line, i}{#if i > 0}{"\n"}{/if}{#each line as segment}{#if segment.gold}<span class="label-gold">{segment.text}</span>{:else}{segment.text}{/if}{/each}{/each}</pre>
+
+<style>
+	.label-gold {
+		color: hsl(var(--gold));
+	}
+</style>

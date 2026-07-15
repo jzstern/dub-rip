@@ -270,23 +270,39 @@ $effect(() => {
 		<!-- Header -->
 		<div class="flex flex-col items-center space-y-2 text-center">
 			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
+			<p class="font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground">
+				DR-45-001 · SIDE A · 45 RPM
+			</p>
+			<div class="flex items-start justify-center gap-1">
+				<h1 class="font-display text-4xl uppercase leading-none tracking-tight">dub-rip</h1>
+				<span aria-hidden="true" class="mt-0.5 font-mono text-[10px]">®</span>
+			</div>
+			<p class="font-mono text-[11px] font-bold uppercase tracking-[0.3em] text-gold">
+				A dub plate special
+			</p>
 			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
 		</div>
 
 		<!-- Main Card -->
-		<Card.Root class="p-6">
+		<Card.Root class="relative rounded-sm border border-border bg-card p-6 pb-8 shadow-none">
+			<span aria-hidden="true" class="absolute left-2 top-1.5 font-mono text-[10px] text-muted-foreground select-none">45</span>
+			<span aria-hidden="true" class="absolute right-2 top-1.5 font-mono text-[10px] text-muted-foreground select-none">℗ 2026</span>
+			<span aria-hidden="true" class="absolute bottom-1.5 left-2 font-mono text-[10px] text-muted-foreground select-none">DR-45-001</span>
+			<span aria-hidden="true" class="absolute bottom-1.5 right-2 font-mono text-[10px] text-muted-foreground select-none">STEREO</span>
 			<Card.Content class="space-y-4 p-0">
 				<!-- Input -->
-				<div class="space-y-2">
-					<Input
-						bind:value={url}
-						placeholder="Paste YouTube URL"
-						disabled={loading}
-						autofocus
-						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
-					/>
+				<div class="space-y-3">
+					<label class="flex items-baseline gap-2 border-b border-foreground/50 transition-colors duration-150 focus-within:border-gold">
+						<span class="font-mono text-[11px] font-bold tracking-[0.2em] text-muted-foreground select-none">CUT:</span>
+						<Input
+							bind:value={url}
+							placeholder="Paste YouTube URL"
+							disabled={loading}
+							autofocus
+							onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
+							class="h-11 rounded-none border-0 bg-transparent px-0 font-mono text-sm shadow-none placeholder:text-muted-foreground/60 dark:bg-transparent"
+						/>
+					</label>
 					<DownloadButton
 						loading={loading}
 						disabled={loading || !isValidUrl}
@@ -306,7 +322,7 @@ $effect(() => {
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
+					<div class="rounded-sm border border-destructive/30 bg-destructive/10 p-3">
 						<p class="text-sm text-destructive">{error}</p>
 					</div>
 				{/if}
@@ -318,11 +334,19 @@ $effect(() => {
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+							{status === "Downloading..."
+								? "Cutting…"
+								: status === "Saving..."
+									? "Stamping…"
+									: status === "Downloaded!"
+										? "Cut complete"
+										: status}
+						</p>
 
 						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
+							<Progress value={roundedProgress} class="h-2 rounded-none bg-foreground/15" />
+							<div class="flex justify-between font-mono text-[11px] text-muted-foreground">
 								<span>{roundedProgress}%</span>
 								<div class="flex gap-2">
 									{#if speed}<span>{speed}</span>{/if}
@@ -332,7 +356,7 @@ $effect(() => {
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate font-mono text-[11px] text-muted-foreground">{completedFilename}</p>
 						{/if}
 					</div>
 				{/if}

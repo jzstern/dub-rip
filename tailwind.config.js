@@ -59,6 +59,9 @@ export default {
 				display: ['"Space Grotesk"', ...fontFamily.sans],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
+			transitionTimingFunction: {
+				"out-strong": "var(--ease-out-strong)",
+			},
 		},
 	},
 	plugins: [require("@tailwindcss/typography")],

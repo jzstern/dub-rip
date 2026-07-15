@@ -29,7 +29,7 @@ function handleArtworkError() {
 			alt={preview.title}
 			onload={() => (imageLoaded = true)}
 			onerror={handleArtworkError}
-			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ease-out {imageLoaded
+			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-150 ease-out-strong {imageLoaded
 				? 'opacity-100'
 				: 'opacity-0'}"
 		/>
@@ -52,7 +52,7 @@ function handleArtworkError() {
 
 <style>
 	.preview-card {
-		animation: preview-in 160ms ease-out;
+		animation: preview-in 160ms var(--ease-out-strong);
 	}
 
 	@keyframes preview-in {

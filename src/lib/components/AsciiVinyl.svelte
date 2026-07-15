@@ -22,11 +22,8 @@ let { active = false }: Props = $props();
 </svg>
 
 <style>
-	.spin {
-		animation: spin 12s linear infinite;
-	}
 	.spin.active {
-		animation-duration: 1.8s;
+		animation: spin 1.4s linear infinite;
 	}
 	@keyframes spin {
 		to {
@@ -34,7 +31,7 @@ let { active = false }: Props = $props();
 		}
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.spin {
+		.spin.active {
 			animation: none;
 		}
 	}

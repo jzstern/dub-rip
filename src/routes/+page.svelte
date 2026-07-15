@@ -273,7 +273,7 @@ $effect(() => {
 	<main class="flex flex-1 items-center justify-center p-5">
 		<div class="w-full max-w-xl">
 			<!-- Hero -->
-			<div class="mb-8 flex items-end gap-4">
+			<div class="mb-4 flex items-end gap-4">
 				<AsciiVinyl active={loading} />
 				<div class="-mb-1 flex-1">
 					<h1 class="font-display text-6xl font-bold leading-[0.85] tracking-tighter sm:text-7xl">
@@ -284,6 +284,8 @@ $effect(() => {
 					</p>
 				</div>
 			</div>
+
+			<div class="rule-draw mb-6 h-[3px] bg-accent" aria-hidden="true"></div>
 
 			<!-- Main panel -->
 			<div class="border-2 border-foreground">
@@ -301,7 +303,7 @@ $effect(() => {
 							disabled={loading}
 							autofocus
 							onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-							class="h-14 rounded-none border-2 border-foreground px-4 font-mono text-base shadow-none focus-visible:ring-0"
+							class="h-14 rounded-none border-2 border-foreground px-4 font-mono text-base shadow-none focus-visible:border-accent focus-visible:ring-0"
 						/>
 						<DownloadButton
 							loading={loading}
@@ -322,7 +324,7 @@ $effect(() => {
 
 					<!-- Error -->
 					{#if error}
-						<div class="border-2 border-accent bg-accent/10 p-3">
+						<div class="reveal border-2 border-accent bg-accent/10 p-3">
 							<p class="font-mono text-sm font-bold uppercase tracking-wide text-accent">{error}</p>
 						</div>
 					{/if}
@@ -364,3 +366,43 @@ $effect(() => {
 		dub-rip / no ads / no tracking
 	</footer>
 </div>
+
+<style>
+	.rule-draw {
+		transform-origin: left;
+		animation: draw-in 360ms var(--ease-out-strong) both;
+	}
+
+	@keyframes draw-in {
+		from {
+			transform: scaleX(0);
+		}
+	}
+
+	.reveal {
+		animation: reveal-in 140ms var(--ease-out-strong);
+	}
+
+	@keyframes reveal-in {
+		from {
+			opacity: 0;
+			transform: translateY(2px);
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.rule-draw {
+			animation: none;
+		}
+
+		.reveal {
+			animation-name: fade-in;
+		}
+	}
+</style>

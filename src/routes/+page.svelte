@@ -266,26 +266,24 @@ $effect(() => {
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
+	<div class="w-full max-w-md space-y-8">
+		<div class="flex flex-col items-center space-y-3 text-center">
 			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+			<h1 class="text-xl font-semibold uppercase tracking-[0.22em]">dub-rip</h1>
+			<p class="silkscreen">YouTube audio · rich metadata</p>
 		</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
+		<Card.Root class="channel-strip gap-0 rounded-md border-border p-0 shadow-none">
+			<Card.Content class="p-0">
+				<div class="space-y-3 p-5">
+					<div class="silkscreen">Input</div>
 					<Input
 						bind:value={url}
 						placeholder="Paste YouTube URL"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="input-well h-11 rounded-sm"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -294,49 +292,71 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
-
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
-
-				<!-- Error -->
-				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+				{#if (preview && !loading && !loadingPreview) || loadingPreview}
+					<div class="strip-section space-y-3 p-5">
+						<div class="silkscreen">Source</div>
+						{#if preview && !loading && !loadingPreview}
+							<VideoPreview preview={preview} formatDuration={formatDuration} />
+						{/if}
+						{#if loadingPreview}
+							<PreviewSkeleton />
+						{/if}
 					</div>
 				{/if}
 
-				<!-- Progress -->
+				{#if error}
+					<div class="strip-section space-y-3 p-5">
+						<div class="silkscreen text-destructive">Clip</div>
+						<div class="flex items-start gap-2.5">
+							<span class="clip-light mt-1" aria-hidden="true"></span>
+							<p class="readout text-xs leading-5 text-destructive">{error}</p>
+						</div>
+					</div>
+				{/if}
+
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="strip-section space-y-3 p-5">
+						<div class="silkscreen">Level</div>
+
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
-
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
-									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
-								</div>
+						<div class="space-y-1.5">
+							<Progress value={roundedProgress} />
+							<div class="vu-scale" aria-hidden="true">
+								{#each Array.from({ length: 21 }, (_, i) => i) as tick (tick)}
+									<div class={tick % 5 === 0 ? "vu-tick vu-tick-major" : "vu-tick"}></div>
+								{/each}
+							</div>
+							<div class="readout flex justify-between text-[10px] text-muted-foreground" aria-hidden="true">
+								<span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
 							</div>
 						</div>
 
+						<div class="readout flex items-baseline justify-between gap-3 text-xs">
+							<span class="truncate text-muted-foreground">{status}</span>
+							<span class="shrink-0 text-primary">{roundedProgress}%</span>
+						</div>
+
+						{#if speed || eta}
+							<div class="readout flex gap-4 text-[11px] text-muted-foreground">
+								{#if speed}<span>{speed}</span>{/if}
+								{#if eta}<span>ETA {eta}</span>{/if}
+							</div>
+						{/if}
+
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="readout truncate text-[11px] text-muted-foreground">{completedFilename}</p>
 						{/if}
 					</div>
 				{/if}
 
+				<div class="strip-section readout flex items-center justify-between px-5 py-3 text-[10px] text-muted-foreground">
+					<span>SRC YOUTUBE</span>
+					<span aria-hidden="true">→</span>
+					<span>MP3 320 · ID3v2</span>
+				</div>
 			</Card.Content>
 		</Card.Root>
 	</div>

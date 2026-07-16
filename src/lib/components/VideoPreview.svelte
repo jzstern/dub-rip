@@ -22,8 +22,8 @@ function handleArtworkError() {
 }
 </script>
 
-<div class="preview-card flex items-center gap-3 rounded-md border bg-muted/50 p-3">
-	<div class="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
+<div class="preview-card input-well flex items-center gap-3 p-3">
+	<div class="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-sm border border-border bg-background">
 		<img
 			src={imageSrc}
 			alt={preview.title}
@@ -34,15 +34,15 @@ function handleArtworkError() {
 				: 'opacity-0'}"
 		/>
 	</div>
-	<div class="min-w-0 flex-1 space-y-0.5">
+	<div class="min-w-0 flex-1 space-y-1">
 		<p class="truncate text-sm font-medium">{preview.title || preview.videoTitle}</p>
-		<div class="flex items-center gap-2 text-xs text-muted-foreground">
+		<div class="readout flex items-center gap-2 text-[11px] text-muted-foreground">
 			{#if preview.artist}
-				<span class="truncate">{preview.artist}</span>
+				<span class="truncate uppercase tracking-wide">{preview.artist}</span>
 			{/if}
 			{#if preview.duration}
 				{#if preview.artist}
-					<span>•</span>
+					<span aria-hidden="true">·</span>
 				{/if}
 				<span>{formatDuration(preview.duration)}</span>
 			{/if}
@@ -52,7 +52,7 @@ function handleArtworkError() {
 
 <style>
 	.preview-card {
-		animation: preview-in 200ms ease-out;
+		animation: preview-in 200ms var(--ease-out);
 	}
 
 	@keyframes preview-in {

@@ -1,10 +1,8 @@
 <script lang="ts">
-import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
-import * as Card from "$lib/components/ui/card";
+import TapeReel from "$lib/components/TapeReel.svelte";
 import { Input } from "$lib/components/ui/input";
-import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
 import { createProgressSmoother } from "$lib/progress-smoothing";
@@ -266,48 +264,54 @@ $effect(() => {
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
-		</div>
+	<main class="w-full max-w-md">
+		<div class="device relative rounded-2xl border border-foreground/15 p-6 pb-7 shadow-sm">
+			<span class="screw left-2.5 top-2.5"></span>
+			<span class="screw right-2.5 top-2.5"></span>
+			<span class="screw bottom-2.5 left-2.5"></span>
+			<span class="screw bottom-2.5 right-2.5"></span>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
+			<!-- Silkscreen header -->
+			<header class="flex items-center justify-between gap-4">
+				<div class="space-y-1">
+					<h1 class="font-mono text-lg font-bold tracking-[0.25em]">DUB–RIP</h1>
+					<p class="silkscreen">Audio extractor · YouTube → MP3</p>
+				</div>
+				<TapeReel active={loading} />
+			</header>
+
+			<div class="grille mx-auto my-5 w-32"></div>
+
+			<div class="space-y-5">
+				<!-- Line in -->
+				<div class="space-y-1.5">
+					<label class="silkscreen block" for="line-in">Line in</label>
 					<Input
+						id="line-in"
 						bind:value={url}
-						placeholder="Paste YouTube URL"
+						placeholder="PASTE YOUTUBE URL"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
-					/>
-					<DownloadButton
-						loading={loading}
-						disabled={loading || !isValidUrl}
-						onClick={handleDownload}
+						class="h-11 rounded border-foreground/15 bg-[hsl(var(--input))] font-mono text-sm shadow-inner placeholder:text-[11px] placeholder:tracking-[0.15em]"
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
+				<!-- Preview -->
+				{#if preview && !loading && !loadingPreview}
+					<VideoPreview preview={preview} formatDuration={formatDuration} />
+				{/if}
 
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
+				<!-- Loading Preview -->
+				{#if loadingPreview}
+					<PreviewSkeleton />
+				{/if}
 
 				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="rounded border border-destructive/30 bg-destructive/10 p-3">
+						<p class="font-mono text-[10px] uppercase tracking-[0.2em] text-destructive">Err</p>
+						<p class="mt-1 text-sm text-destructive">{error}</p>
 					</div>
 				{/if}
 
@@ -318,26 +322,46 @@ $effect(() => {
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="silkscreen">{status}</p>
 
 						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
+							<div
+								class="flex gap-[3px]"
+								role="progressbar"
+								aria-valuemin={0}
+								aria-valuemax={100}
+								aria-valuenow={roundedProgress}
+							>
+								{#each Array.from({ length: 20 }, (_, i) => i) as segment (segment)}
+									<span
+										class="led-segment {segment < roundedProgress / 5 ? 'led-segment-on' : ''}"
+									></span>
+								{/each}
+							</div>
+							<div class="flex justify-between font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
 								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
+								<div class="flex gap-3">
 									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
+									{#if eta}<span>ETA {eta}</span>{/if}
 								</div>
 							</div>
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate font-mono text-[10px] text-muted-foreground">{completedFilename}</p>
 						{/if}
 					</div>
 				{/if}
 
-			</Card.Content>
-		</Card.Root>
-	</div>
+				<!-- Rec button -->
+				<div class="flex justify-center pt-1">
+					<DownloadButton
+						loading={loading}
+						disabled={loading || !isValidUrl}
+						onClick={handleDownload}
+					/>
+				</div>
+			</div>
+		</div>
+	</main>
 </div>

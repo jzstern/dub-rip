@@ -5,7 +5,7 @@ import DownloadButton from "$lib/components/DownloadButton.svelte";
 
 describe("DownloadButton", () => {
 	describe("rendering", () => {
-		it("displays 'Download' text when not loading", () => {
+		it("displays 'GET' text when not loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -15,10 +15,10 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("Download")).toBeInTheDocument();
+			expect(screen.getByText("GET")).toBeInTheDocument();
 		});
 
-		it("displays 'Downloading' text when loading", () => {
+		it("displays 'REC' text when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -28,10 +28,10 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("Downloading")).toBeInTheDocument();
+			expect(screen.getByText("REC")).toBeInTheDocument();
 		});
 
-		it("shows loading spinner when loading", () => {
+		it("shows blinking rec dot when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -41,11 +41,11 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			const spinner = container.querySelector(".animate-spin");
-			expect(spinner).toBeInTheDocument();
+			const dot = container.querySelector(".rec-dot");
+			expect(dot).toBeInTheDocument();
 		});
 
-		it("does not show spinner when not loading", () => {
+		it("does not show rec dot when not loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -55,8 +55,8 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			const spinner = container.querySelector(".animate-spin");
-			expect(spinner).not.toBeInTheDocument();
+			const dot = container.querySelector(".rec-dot");
+			expect(dot).not.toBeInTheDocument();
 		});
 	});
 
@@ -136,7 +136,7 @@ describe("DownloadButton", () => {
 	});
 
 	describe("styling", () => {
-		it("has full width class", () => {
+		it("renders as a round hardware button", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -147,10 +147,10 @@ describe("DownloadButton", () => {
 
 			// #then
 			const button = screen.getByRole("button");
-			expect(button).toHaveClass("w-full");
+			expect(button).toHaveClass("rec-button");
 		});
 
-		it("has proper height class", () => {
+		it("shows the silkscreen caption", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -160,8 +160,7 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			const button = screen.getByRole("button");
-			expect(button).toHaveClass("h-11");
+			expect(screen.getByText("PUSH")).toBeInTheDocument();
 		});
 	});
 });

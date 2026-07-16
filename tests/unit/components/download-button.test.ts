@@ -31,7 +31,7 @@ describe("DownloadButton", () => {
 			expect(screen.getByText("Downloading")).toBeInTheDocument();
 		});
 
-		it("shows loading spinner when loading", () => {
+		it("shows loading label without spinner when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -41,8 +41,8 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			const spinner = container.querySelector(".animate-spin");
-			expect(spinner).toBeInTheDocument();
+			expect(screen.getByText("Downloading")).toBeInTheDocument();
+			expect(container.querySelector(".animate-spin")).not.toBeInTheDocument();
 		});
 
 		it("does not show spinner when not loading", () => {

@@ -1,5 +1,4 @@
 <script lang="ts">
-import { Loader2 } from "lucide-svelte";
 import { Button } from "$lib/components/ui/button";
 
 interface Props {
@@ -11,9 +10,12 @@ interface Props {
 let { loading, disabled, onClick }: Props = $props();
 </script>
 
-<Button onclick={onClick} disabled={disabled} class="w-full h-11">
+<Button
+	onclick={onClick}
+	disabled={disabled}
+	class="press-block h-11 w-full rounded-none text-[0.6875rem] font-bold uppercase tracking-[0.16em] shadow-none hover:bg-accent hover:text-accent-foreground"
+>
 	{#if loading}
-		<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 		Downloading
 	{:else}
 		Download

@@ -1,5 +1,4 @@
 <script lang="ts">
-import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import * as Card from "$lib/components/ui/card";
@@ -265,27 +264,49 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+<div class="min-h-screen px-5 py-10 sm:py-16">
+	<div class="mx-auto w-full max-w-xl">
+		<header class="masthead text-center">
+			<div class="rule rule-heavy" aria-hidden="true"></div>
+			<div class="rule rule-hairline mt-[3px]" aria-hidden="true"></div>
+
+			<div class="masthead-rise delay-1 mt-6 flex justify-center text-foreground" aria-hidden="true">
+				<svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+					<circle cx="15" cy="15" r="13.5" stroke="currentColor" stroke-width="1" />
+					<circle cx="15" cy="15" r="10.5" stroke="currentColor" stroke-width="0.5" />
+					<circle cx="15" cy="15" r="8.5" stroke="currentColor" stroke-width="0.5" />
+					<circle cx="15" cy="15" r="6.5" stroke="currentColor" stroke-width="0.5" />
+					<circle cx="15" cy="15" r="2.5" fill="hsl(var(--accent))" stroke="none" />
+					<circle cx="15" cy="15" r="0.9" fill="hsl(var(--background))" stroke="none" />
+				</svg>
+			</div>
+
+			<h1 class="masthead-title masthead-rise delay-2 mt-2 font-display text-6xl font-black leading-none tracking-tight sm:text-7xl">Dub—Rip</h1>
+			<p class="small-caps masthead-rise delay-3 mt-3 text-muted-foreground">YouTube Audio, Properly Tagged</p>
+
+			<div class="rule rule-hairline mt-5" aria-hidden="true"></div>
+			<p class="small-caps masthead-rise delay-3 py-1.5 tracking-[0.2em]">Vol. I · No. 1 — Audio Edition — Free</p>
+			<div class="rule rule-hairline" aria-hidden="true"></div>
+		</header>
+
+		<div class="mt-10 flex items-center gap-3">
+			<div class="h-px flex-1 bg-border" aria-hidden="true"></div>
+			<h2 class="small-caps">The Download Desk</h2>
+			<div class="h-px flex-1 bg-border" aria-hidden="true"></div>
 		</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
+		<Card.Root class="mt-4 rounded-none border-4 border-double border-foreground bg-transparent p-6 shadow-none sm:p-8">
+			<Card.Content class="space-y-5 p-0">
+				<div class="space-y-4">
+					<label for="recording-url" class="small-caps block text-center">Submit a Recording</label>
 					<Input
+						id="recording-url"
 						bind:value={url}
-						placeholder="Paste YouTube URL"
+						placeholder="Paste a YouTube address"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-11 rounded-none border-x-0 border-t-0 bg-transparent px-1 text-center font-serif shadow-none placeholder:italic dark:bg-transparent"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -294,50 +315,116 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
+				{#if preview && !loading && !loadingPreview}
+					<VideoPreview preview={preview} formatDuration={formatDuration} />
+				{/if}
 
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
+				{#if loadingPreview}
+					<PreviewSkeleton />
+				{/if}
 
-				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="border-l-2 border-accent pl-3">
+						<p class="small-caps text-accent">Correction</p>
+						<p class="mt-1 text-sm text-destructive">{error}</p>
 					</div>
 				{/if}
 
-				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="space-y-2 border-t pt-4">
 						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
+							<p class="truncate font-display text-sm font-bold">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="small-caps text-muted-foreground">
+							{status}{#if loading}&nbsp;— <span class="font-mono">{roundedProgress}</span> per cent{/if}
+						</p>
 
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
+						<div class="space-y-1.5">
+							<Progress value={roundedProgress} class="h-0.5 rounded-none bg-border" />
+							<div class="flex justify-between font-mono text-[0.6875rem] text-muted-foreground">
 								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
+								<div class="flex gap-3">
 									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
+									{#if eta}<span>ETA {eta}</span>{/if}
 								</div>
 							</div>
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<div class="border-t pt-3">
+								<p class="small-caps text-accent">Final Edition</p>
+								<p class="mt-1 truncate font-mono text-[0.6875rem] text-muted-foreground">{completedFilename}</p>
+							</div>
 						{/if}
 					</div>
 				{/if}
-
 			</Card.Content>
 		</Card.Root>
+
+		<footer class="mt-8 text-center">
+			<p class="small-caps text-muted-foreground">Set in Playfair Display — Printed on Demand</p>
+		</footer>
 	</div>
 </div>
+
+<style>
+	.rule {
+		background: hsl(var(--foreground));
+	}
+
+	.rule-heavy {
+		height: 3px;
+	}
+
+	.rule-hairline {
+		height: 1px;
+	}
+
+	.masthead-title {
+		font-feature-settings: "onum" 1;
+	}
+
+	@media (prefers-reduced-motion: no-preference) {
+		.masthead .rule {
+			transform-origin: center;
+			animation: rule-draw 400ms var(--ease-out-strong) both;
+		}
+
+		.masthead-rise {
+			animation: rise-in 350ms var(--ease-out-strong) both;
+		}
+
+		.delay-1 {
+			animation-delay: 60ms;
+		}
+
+		.delay-2 {
+			animation-delay: 120ms;
+		}
+
+		.delay-3 {
+			animation-delay: 180ms;
+		}
+	}
+
+	@keyframes rule-draw {
+		from {
+			transform: scaleX(0);
+		}
+		to {
+			transform: scaleX(1);
+		}
+	}
+
+	@keyframes rise-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+</style>

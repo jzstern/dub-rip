@@ -22,55 +22,69 @@ function handleArtworkError() {
 }
 </script>
 
-<div class="preview-card flex items-center gap-3 rounded-md border bg-muted/50 p-3">
-	<div class="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
-		<img
-			src={imageSrc}
-			alt={preview.title}
-			onload={() => (imageLoaded = true)}
-			onerror={handleArtworkError}
-			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 {imageLoaded
-				? 'opacity-100'
-				: 'opacity-0'}"
-		/>
-	</div>
-	<div class="min-w-0 flex-1 space-y-0.5">
-		<p class="truncate text-sm font-medium">{preview.title || preview.videoTitle}</p>
-		<div class="flex items-center gap-2 text-xs text-muted-foreground">
-			{#if preview.artist}
-				<span class="truncate">{preview.artist}</span>
-			{/if}
-			{#if preview.duration}
-				{#if preview.artist}
-					<span>•</span>
-				{/if}
-				<span>{formatDuration(preview.duration)}</span>
-			{/if}
+<article class="preview-card flex items-start gap-4 border-t pt-4">
+	<figure class="m-0 flex-shrink-0">
+		<div class="relative h-16 w-16 overflow-hidden border border-foreground bg-muted p-0.5">
+			<img
+				src={imageSrc}
+				alt={preview.title}
+				onload={() => (imageLoaded = true)}
+				onerror={handleArtworkError}
+				class="h-full w-full object-cover transition-opacity duration-300 {imageLoaded
+					? 'opacity-100'
+					: 'opacity-0'}"
+			/>
 		</div>
+		{#if preview.duration}
+			<figcaption class="mt-1 text-center font-mono text-[0.625rem] text-muted-foreground">
+				{formatDuration(preview.duration)}
+			</figcaption>
+		{/if}
+	</figure>
+	<div class="min-w-0 flex-1">
+		<h3 class="line-clamp-2 font-display text-base font-bold leading-snug">
+			{preview.title || preview.videoTitle}
+		</h3>
+		{#if preview.artist}
+			<p class="small-caps mt-1.5 truncate text-muted-foreground">By {preview.artist}</p>
+		{/if}
 	</div>
-</div>
+</article>
 
 <style>
-	.preview-card {
-		animation: preview-in 200ms ease-out;
-	}
-
-	@keyframes preview-in {
-		from {
-			opacity: 0;
-		}
-		to {
-			opacity: 1;
+	@media (prefers-reduced-motion: no-preference) {
+		.preview-card {
+			animation: news-item-in 250ms var(--ease-out-strong) both;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.preview-card {
-			animation: none;
+			animation: fade-in 200ms ease-out both;
 		}
 
 		.preview-card img {
 			transition: none;
+		}
+	}
+
+	@keyframes news-item-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
 		}
 	}
 </style>

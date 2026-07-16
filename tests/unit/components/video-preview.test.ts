@@ -59,7 +59,7 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getByText("Test Artist")).toBeInTheDocument();
+			expect(screen.getByText("By Test Artist")).toBeInTheDocument();
 		});
 
 		it("displays thumbnail with correct src and alt", () => {
@@ -165,7 +165,7 @@ describe("VideoPreview", () => {
 			expect(screen.queryByText(/^\d+:\d+$/)).not.toBeInTheDocument();
 		});
 
-		it("displays separator between artist and duration", () => {
+		it("displays byline alongside duration", () => {
 			// #given
 			const preview: VideoPreviewType = {
 				success: true,
@@ -180,7 +180,8 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getByText("•")).toBeInTheDocument();
+			expect(screen.getByText("By Test Artist")).toBeInTheDocument();
+			expect(screen.getByText("3:00")).toBeInTheDocument();
 		});
 	});
 
@@ -240,7 +241,7 @@ describe("VideoPreview", () => {
 
 			// #then
 			const titleElement = screen.getByText(longTitle);
-			expect(titleElement).toHaveClass("truncate");
+			expect(titleElement).toHaveClass("line-clamp-2");
 		});
 	});
 });

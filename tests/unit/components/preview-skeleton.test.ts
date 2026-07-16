@@ -30,7 +30,7 @@ describe("PreviewSkeleton", () => {
 			const { container } = render(PreviewSkeleton);
 
 			// #then
-			const flexContainer = container.querySelector(".flex.items-center.gap-3");
+			const flexContainer = container.querySelector(".flex.items-start.gap-4");
 			expect(flexContainer).toBeInTheDocument();
 		});
 	});

@@ -56,6 +56,8 @@ export default {
 			},
 			fontFamily: {
 				sans: [...fontFamily.sans],
+				serif: ["Georgia", "Times New Roman", ...fontFamily.serif],
+				display: ['"Playfair Display"', "Georgia", "serif"],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},

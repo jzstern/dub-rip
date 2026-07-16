@@ -58,8 +58,11 @@ function generateVinyl(): string[] {
 let animationFrame: number;
 let lastTime: number | null = null;
 
+const prefersReducedMotion = () =>
+	globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
 function animate(time: number) {
-	if (lastTime !== null) {
+	if (lastTime !== null && !prefersReducedMotion()) {
 		const delta = time - lastTime;
 		const speed = active ? 0.003 : 0.001;
 		rotation += delta * speed;
@@ -76,7 +79,12 @@ $effect(() => {
 let vinylLines = $derived(generateVinyl());
 </script>
 
-<pre
-	aria-hidden="true"
-	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-muted-foreground'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
->{vinylLines.join("\n")}</pre>
+<div class="relative" aria-hidden="true">
+	<pre
+		aria-hidden="true"
+		class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-muted-foreground'} transition-[transform,color] duration-300 ease-out select-none motion-reduce:transform-none motion-reduce:transition-none sm:text-[0.64rem] sm:leading-[0.54rem]"
+	>{vinylLines.join("\n")}</pre>
+	<span
+		class="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-seal"
+	></span>
+</div>

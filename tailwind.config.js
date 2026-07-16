@@ -48,6 +48,7 @@ export default {
 					DEFAULT: "hsl(var(--card) / <alpha-value>)",
 					foreground: "hsl(var(--card-foreground) / <alpha-value>)",
 				},
+				seal: "hsl(var(--seal) / <alpha-value>)",
 			},
 			borderRadius: {
 				lg: "var(--radius)",
@@ -56,6 +57,7 @@ export default {
 			},
 			fontFamily: {
 				sans: [...fontFamily.sans],
+				serif: ['"Newsreader"', ...fontFamily.serif],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},

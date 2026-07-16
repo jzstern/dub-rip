@@ -265,27 +265,30 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
+<div class="flex min-h-screen items-center justify-center p-4 sm:p-8">
+	<main class="settle-in w-full max-w-md">
+		<header class="flex flex-col items-center text-center">
 			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+			<h1 class="mt-4 font-serif text-4xl font-medium tracking-tight">dub<span class="text-seal">-</span>rip</h1>
+			<span class="wordmark-rule mt-3 h-px w-10 bg-seal" aria-hidden="true"></span>
+			<p class="mt-3 text-sm italic text-muted-foreground">YouTube audio, pressed to MP3 with proper metadata</p>
+		</header>
+
+		<div class="print-label mt-10 flex items-baseline justify-between px-1">
+			<span>Side A</span>
+			<span>33⅓ rpm · stereo</span>
 		</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
+		<Card.Root class="mt-2 gap-0 rounded-sm border-border bg-card p-6 py-6 shadow-[0_1px_0_0_hsl(var(--border))]">
+			<Card.Content class="space-y-6 p-0">
+				<div class="space-y-4">
 					<Input
 						bind:value={url}
-						placeholder="Paste YouTube URL"
+						placeholder="Paste a YouTube URL"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-11 rounded-none border-0 border-b border-input bg-transparent px-1 font-serif text-base shadow-none placeholder:italic focus-visible:border-ring dark:bg-transparent"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -294,50 +297,51 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
 			{#if preview && !loading && !loadingPreview}
 				<VideoPreview preview={preview} formatDuration={formatDuration} />
 			{/if}
 
-			<!-- Loading Preview -->
 			{#if loadingPreview}
 				<PreviewSkeleton />
 			{/if}
 
-				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="border-l-2 border-seal py-0.5 pl-3">
+						<p class="text-sm italic text-seal">{error}</p>
 					</div>
 				{/if}
 
-				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="space-y-3 border-t border-border pt-5">
 						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
+							<p class="truncate font-serif text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="print-label">{status}</p>
 
 						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
+							<Progress value={roundedProgress} class="h-1 rounded-none bg-secondary" />
+							<div class="print-label flex justify-between normal-case">
 								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
+								<div class="flex gap-3">
 									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
+									{#if eta}<span>ETA {eta}</span>{/if}
 								</div>
 							</div>
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate font-mono text-[0.625rem] text-muted-foreground">{completedFilename}</p>
 						{/if}
 					</div>
 				{/if}
 
 			</Card.Content>
 		</Card.Root>
-	</div>
+
+		<footer class="print-label mt-3 flex items-baseline justify-between px-1">
+			<span>№ 001</span>
+			<span>Est. 2025</span>
+		</footer>
+	</main>
 </div>

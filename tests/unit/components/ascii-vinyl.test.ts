@@ -129,13 +129,13 @@ describe("AsciiVinyl", () => {
 			expect(pre).toHaveClass("font-mono");
 		});
 
-		it("has transition classes for smooth effects", () => {
+		it("has the vinyl styling hook for transitions", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("transition-all");
+			expect(pre).toHaveClass("ascii-vinyl");
 		});
 
 		it("disables text selection", () => {

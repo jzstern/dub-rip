@@ -265,28 +265,46 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
-		</div>
+<div class="relative flex min-h-screen items-center justify-center p-6 sm:p-10">
+	<div
+		aria-hidden="true"
+		class="pointer-events-none fixed inset-0 select-none font-mono text-[10px] tracking-[0.2em] text-muted-foreground"
+	>
+		<span class="absolute left-4 top-4 sm:left-8 sm:top-7">A1</span>
+		<span class="absolute right-4 top-4 sm:right-8 sm:top-7">DUB-RIP / 01</span>
+		<span class="absolute bottom-4 left-4 sm:bottom-7 sm:left-8">⌀ 300MM</span>
+		<span class="absolute bottom-4 right-4 sm:bottom-7 sm:right-8">33⅓ RPM</span>
+	</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
-					<Input
-						bind:value={url}
-						placeholder="Paste YouTube URL"
-						disabled={loading}
-						autofocus
-						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
-					/>
+	<main class="w-full max-w-md space-y-8 py-8">
+		<header class="flex flex-col items-center space-y-7 text-center">
+			<h1 class="text-sm font-bold uppercase tracking-[0.2em]">dub-rip</h1>
+			<AsciiVinyl active={loading} />
+			<div class="space-y-1.5">
+				<p class="text-xs tracking-[0.15em] text-muted-foreground">[ 33⅓ / MP3 / ID3v2 ]</p>
+				<p class="text-xs text-muted-foreground">Download YouTube audio with rich metadata</p>
+			</div>
+		</header>
+
+		<Card.Root class="rounded-none border bg-transparent p-6 shadow-none sm:p-7">
+			<Card.Content class="space-y-5 p-0">
+				<div class="space-y-3">
+					<div
+						class="flex items-stretch border border-input transition-colors duration-150 focus-within:border-ring"
+					>
+						<span
+							aria-hidden="true"
+							class="flex select-none items-center whitespace-nowrap border-r border-input px-3 text-xs tracking-[0.1em] text-muted-foreground"
+						>URL ::</span>
+						<Input
+							bind:value={url}
+							placeholder="youtube.com/watch?v=…"
+							disabled={loading}
+							autofocus
+							onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
+							class="h-11 border-0 bg-transparent font-mono shadow-none focus-visible:border-transparent focus-visible:ring-0"
+						/>
+					</div>
 					<DownloadButton
 						loading={loading}
 						disabled={loading || !isValidUrl}
@@ -294,50 +312,48 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
+				{#if preview && !loading && !loadingPreview}
+					<VideoPreview preview={preview} formatDuration={formatDuration} />
+				{/if}
 
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
+				{#if loadingPreview}
+					<PreviewSkeleton />
+				{/if}
 
-				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div class="border border-destructive/40 p-3">
+						<p class="text-left text-xs text-destructive">ERR :: {error}</p>
 					</div>
 				{/if}
 
-				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
+					<div class="space-y-3 text-left">
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<p class="text-xs uppercase tracking-[0.15em] text-muted-foreground">{status}</p>
 
 						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
+							<Progress
+								value={roundedProgress}
+								class="h-1 rounded-none bg-border [&>div]:bg-accent"
+							/>
 							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
+								<span class="tabular-nums">[ {roundedProgress}% ]</span>
+								<div class="flex gap-3 tabular-nums">
 									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
+									{#if eta}<span>ETA {eta}</span>{/if}
 								</div>
 							</div>
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate text-xs text-muted-foreground">→ {completedFilename}</p>
 						{/if}
 					</div>
 				{/if}
-
 			</Card.Content>
 		</Card.Root>
-	</div>
+	</main>
 </div>

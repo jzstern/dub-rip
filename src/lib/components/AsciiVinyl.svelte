@@ -8,6 +8,11 @@ interface Props {
 	active?: boolean;
 }
 
+interface Run {
+	text: string;
+	label: boolean;
+}
+
 let { active = false }: Props = $props();
 
 let rotation = $state(0);
@@ -18,41 +23,61 @@ const LABEL_RADIUS = 6.5;
 const SPINDLE_RADIUS = 1.7;
 const ASPECT_RATIO = 1.6;
 
-function generateVinyl(): string[] {
-	const lines: string[] = [];
+function charAt(x: number, y: number): { char: string; label: boolean } {
+	const dx = x - CENTER;
+	const dy = (y - CENTER) * ASPECT_RATIO;
+	const distance = Math.sqrt(dx * dx + dy * dy);
+	const angle = Math.atan2(dy, dx) + rotation;
+
+	if (distance < SPINDLE_RADIUS) {
+		return { char: SPINDLE_CHAR, label: true };
+	}
+	if (distance < LABEL_RADIUS) {
+		const labelPattern = Math.floor((angle * 2 + distance) % 2);
+		return { char: labelPattern === 0 ? LABEL_CHAR : "▓", label: true };
+	}
+	if (distance <= CENTER - 1) {
+		const grooveIndex = Math.floor(distance) % 2;
+		const charSet = grooveIndex === 0 ? VINYL_CHARS : GROOVE_CHARS;
+		const rawIndex = Math.floor(
+			((angle + Math.PI) / (Math.PI * 2)) * charSet.length + distance * 0.5,
+		);
+		const angleIndex =
+			((rawIndex % charSet.length) + charSet.length) % charSet.length;
+		return { char: charSet[angleIndex], label: false };
+	}
+	if (distance <= CENTER) {
+		return { char: "○", label: false };
+	}
+	return { char: " ", label: false };
+}
+
+function generateVinyl(): Run[][] {
+	const lines: Run[][] = [];
 
 	for (let y = 0; y < SIZE; y++) {
-		let line = "";
+		const runs: Run[] = [];
 		for (let x = 0; x < SIZE; x++) {
-			const dx = x - CENTER;
-			const dy = (y - CENTER) * ASPECT_RATIO;
-			const distance = Math.sqrt(dx * dx + dy * dy);
-			const angle = Math.atan2(dy, dx) + rotation;
-
-			if (distance < SPINDLE_RADIUS) {
-				line += SPINDLE_CHAR;
-			} else if (distance < LABEL_RADIUS) {
-				const labelPattern = Math.floor((angle * 2 + distance) % 2);
-				line += labelPattern === 0 ? LABEL_CHAR : "▓";
-			} else if (distance <= CENTER - 1) {
-				const grooveIndex = Math.floor(distance) % 2;
-				const charSet = grooveIndex === 0 ? VINYL_CHARS : GROOVE_CHARS;
-				const rawIndex = Math.floor(
-					((angle + Math.PI) / (Math.PI * 2)) * charSet.length + distance * 0.5,
-				);
-				const angleIndex =
-					((rawIndex % charSet.length) + charSet.length) % charSet.length;
-				line += charSet[angleIndex];
-			} else if (distance <= CENTER) {
-				line += "○";
+			const { char, label } = charAt(x, y);
+			const last = runs[runs.length - 1];
+			if (last && last.label === label) {
+				last.text += char;
 			} else {
-				line += " ";
+				runs.push({ text: char, label });
 			}
 		}
-		lines.push(line);
+		lines.push(runs);
 	}
 
 	return lines;
+}
+
+function prefersReducedMotion(): boolean {
+	return (
+		typeof window !== "undefined" &&
+		typeof window.matchMedia === "function" &&
+		window.matchMedia("(prefers-reduced-motion: reduce)").matches
+	);
 }
 
 let animationFrame: number;
@@ -69,6 +94,7 @@ function animate(time: number) {
 }
 
 $effect(() => {
+	if (prefersReducedMotion()) return;
 	animationFrame = requestAnimationFrame(animate);
 	return () => cancelAnimationFrame(animationFrame);
 });
@@ -78,5 +104,36 @@ let vinylLines = $derived(generateVinyl());
 
 <pre
 	aria-hidden="true"
-	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-muted-foreground'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
->{vinylLines.join("\n")}</pre>
+	class="ascii-vinyl font-mono text-[0.68rem] leading-[0.58rem] {active ? 'text-primary scale-105 is-active' : 'text-foreground/80'} select-none sm:text-[0.9rem] sm:leading-[0.76rem]"
+>{#each vinylLines as runs, i}{#if i > 0}{"\n"}{/if}{#each runs as run}{#if run.label}<span class="label">{run.text}</span>{:else}{run.text}{/if}{/each}{/each}</pre>
+
+<style>
+	.ascii-vinyl {
+		transition:
+			transform 300ms var(--ease-out-strong),
+			color 300ms ease;
+		animation: vinyl-in 300ms var(--ease-out-strong) both;
+	}
+
+	.label {
+		color: hsl(var(--accent));
+		transition: color 300ms ease;
+	}
+
+	.is-active .label {
+		color: color-mix(in oklab, hsl(var(--accent)), white 20%);
+	}
+
+	@keyframes vinyl-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.ascii-vinyl {
+			animation: none;
+			transition: color 300ms ease;
+		}
+	}
+</style>

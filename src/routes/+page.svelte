@@ -1,10 +1,7 @@
 <script lang="ts">
-import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
-import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
-import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
 import { createProgressSmoother } from "$lib/progress-smoothing";
@@ -266,78 +263,105 @@ $effect(() => {
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
-		</div>
+	<div class="receipt-wrap">
+		<div class="receipt-edge receipt-edge--top" aria-hidden="true"></div>
+		<main class="receipt space-y-4">
+			<!-- Printed header -->
+			<header class="space-y-1 text-center">
+				<p class="text-lg leading-none" aria-hidden="true">◉</p>
+				<h1 class="receipt-h1 text-base font-bold tracking-[0.15em]">DUB-RIP RECORDS</h1>
+				<p class="text-[11px] uppercase text-muted-foreground">YouTube audio · rich metadata</p>
+				<p class="text-[11px] uppercase text-muted-foreground">Terminal 01 · Web Edition</p>
+			</header>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
-					<Input
-						bind:value={url}
-						placeholder="Paste YouTube URL"
-						disabled={loading}
-						autofocus
-						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
-					/>
-					<DownloadButton
-						loading={loading}
-						disabled={loading || !isValidUrl}
-						onClick={handleDownload}
-					/>
-				</div>
+			<hr class="receipt-sep" />
 
-			<!-- Preview -->
+			<!-- Input as receipt line -->
+			<div class="space-y-2">
+				<label for="url-input" class="block text-xs font-bold uppercase tracking-widest">Paste URL &gt;</label>
+				<Input
+					id="url-input"
+					bind:value={url}
+					placeholder="youtube.com/watch?v=..."
+					disabled={loading}
+					autofocus
+					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
+					class="receipt-input h-10 text-sm"
+				/>
+				<DownloadButton
+					loading={loading}
+					disabled={loading || !isValidUrl}
+					onClick={handleDownload}
+				/>
+			</div>
+
+			<!-- Preview as receipt items -->
 			{#if preview && !loading && !loadingPreview}
 				<VideoPreview preview={preview} formatDuration={formatDuration} />
 			{/if}
 
-			<!-- Loading Preview -->
 			{#if loadingPreview}
 				<PreviewSkeleton />
 			{/if}
 
-				<!-- Error -->
-				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+			<!-- Error -->
+			{#if error}
+				<div class="border border-dashed border-destructive p-2">
+					<p class="text-xs uppercase text-destructive">!! {error}</p>
+				</div>
+			{/if}
+
+			<!-- Progress prints line by line -->
+			{#if loading || status}
+				{@const filled = Math.min(10, Math.floor(roundedProgress / 10))}
+				<hr class="receipt-sep" />
+				<div class="receipt-lines space-y-1.5" aria-live="polite">
+					{#if videoTitle}
+						<p class="receipt-print-line truncate text-xs font-bold uppercase">{videoTitle}</p>
+					{/if}
+
+					{#key status}
+						<p class="receipt-print-line text-xs uppercase text-muted-foreground">&gt; {status}</p>
+					{/key}
+
+					<p
+						class="receipt-print-line text-xs tabular-nums"
+						role="progressbar"
+						aria-valuenow={roundedProgress}
+						aria-valuemin="0"
+						aria-valuemax="100"
+					>
+						{"■".repeat(filled)}{"□".repeat(10 - filled)} {roundedProgress}%
+					</p>
+
+					{#if speed || eta}
+						<p class="receipt-print-line flex justify-between text-[11px] uppercase text-muted-foreground">
+							<span>{speed}</span>
+							{#if eta}<span>ETA {eta}</span>{/if}
+						</p>
+					{/if}
+
+					{#if downloadComplete && completedFilename}
+						<p class="receipt-print-line truncate text-[11px] uppercase text-muted-foreground">File: {completedFilename}</p>
+					{/if}
+				</div>
+
+				{#if downloadComplete}
+					<div class="text-center">
+						<span class="receipt-stamp">✂ Saved</span>
 					</div>
 				{/if}
+			{/if}
 
-				<!-- Progress -->
-				{#if loading || status}
-					<div class="space-y-3">
-						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
-						{/if}
+			<hr class="receipt-sep" />
 
-						<p class="text-xs text-muted-foreground">{status}</p>
-
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
-									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
-								</div>
-							</div>
-						</div>
-
-						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
-						{/if}
-					</div>
-				{/if}
-
-			</Card.Content>
-		</Card.Root>
+			<!-- Barcode footer -->
+			<footer class="space-y-1.5 text-center">
+				<div class="receipt-barcode" aria-hidden="true"></div>
+				<p class="text-[11px] tracking-[0.3em]">*DR-2025*</p>
+				<p class="text-[10px] uppercase text-muted-foreground">Thank you · Play it loud</p>
+			</footer>
+		</main>
+		<div class="receipt-edge receipt-edge--bottom" aria-hidden="true"></div>
 	</div>
 </div>

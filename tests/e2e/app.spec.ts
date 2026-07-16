@@ -5,7 +5,7 @@ test.describe("dub-rip App", () => {
 		await page.goto("/");
 
 		// Check page loads with correct heading
-		await expect(page.locator("h1")).toHaveText("dub-rip");
+		await expect(page.locator("h1")).toHaveText("DUB-RIP RECORDS");
 
 		// Check main input is visible
 		await expect(page.locator('input[data-slot="input"]')).toBeVisible();
@@ -155,7 +155,7 @@ test.describe("Accessibility", () => {
 		);
 
 		// Wait for button to become enabled
-		const button = page.getByRole("button", { name: "Download" });
+		const button = page.getByRole("button", { name: /print mp3/i });
 		await expect(button).toBeEnabled({ timeout: 5000 });
 
 		// Tab to download button
@@ -177,10 +177,10 @@ test.describe("Accessibility", () => {
 		// Press Enter
 		await page.keyboard.press("Enter");
 
-		// Should show loading state (button text changes to "Downloading")
-		await expect(page.getByRole("button", { name: "Downloading" })).toBeVisible(
-			{ timeout: 5000 },
-		);
+		// Should show loading state (button text changes to "Printing")
+		await expect(page.getByRole("button", { name: /printing/i })).toBeVisible({
+			timeout: 5000,
+		});
 	});
 
 	test("should NOT trigger download on Enter key with invalid URL", async ({
@@ -194,13 +194,13 @@ test.describe("Accessibility", () => {
 		// Press Enter
 		await page.keyboard.press("Enter");
 
-		// Download button should still show "Download" (not loading)
-		const button = page.getByRole("button", { name: "Download" });
+		// Print button should still show "[ Print MP3 ]" (not loading)
+		const button = page.getByRole("button", { name: /print mp3/i });
 		await expect(button).toBeVisible();
 
 		// No loading indicator should appear
 		await expect(
-			page.getByRole("button", { name: "Downloading" }),
+			page.getByRole("button", { name: /printing/i }),
 		).not.toBeVisible();
 	});
 

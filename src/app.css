@@ -4,48 +4,48 @@
 
 @layer base {
 	:root {
-		--background: 0 0% 100%;
-		--foreground: 222.2 84% 4.9%;
-		--card: 0 0% 100%;
-		--card-foreground: 222.2 84% 4.9%;
-		--popover: 0 0% 100%;
-		--popover-foreground: 222.2 84% 4.9%;
-		--primary: 222.2 47.4% 11.2%;
-		--primary-foreground: 210 40% 98%;
-		--secondary: 210 40% 96.1%;
-		--secondary-foreground: 222.2 47.4% 11.2%;
-		--muted: 210 40% 96.1%;
-		--muted-foreground: 215.4 16.3% 46.9%;
-		--accent: 210 40% 96.1%;
-		--accent-foreground: 222.2 47.4% 11.2%;
-		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 214.3 31.8% 91.4%;
-		--input: 214.3 31.8% 91.4%;
-		--ring: 222.2 84% 4.9%;
-		--radius: 0.5rem;
+		--background: 60 6% 91%;
+		--foreground: 0 0% 4%;
+		--card: 60 33% 99%;
+		--card-foreground: 0 0% 4%;
+		--popover: 60 33% 99%;
+		--popover-foreground: 0 0% 4%;
+		--primary: 4 74% 45%;
+		--primary-foreground: 60 33% 99%;
+		--secondary: 60 4% 86%;
+		--secondary-foreground: 0 0% 4%;
+		--muted: 60 4% 86%;
+		--muted-foreground: 0 0% 32%;
+		--accent: 60 4% 86%;
+		--accent-foreground: 0 0% 4%;
+		--destructive: 4 74% 45%;
+		--destructive-foreground: 60 33% 99%;
+		--border: 0 0% 55%;
+		--input: 0 0% 55%;
+		--ring: 0 0% 4%;
+		--radius: 0rem;
 	}
 
 	.dark {
-		--background: 222.2 84% 4.9%;
-		--foreground: 210 40% 98%;
-		--card: 222.2 84% 4.9%;
-		--card-foreground: 210 40% 98%;
-		--popover: 222.2 84% 4.9%;
-		--popover-foreground: 210 40% 98%;
-		--primary: 210 40% 98%;
-		--primary-foreground: 222.2 47.4% 11.2%;
-		--secondary: 217.2 32.6% 17.5%;
-		--secondary-foreground: 210 40% 98%;
-		--muted: 217.2 32.6% 17.5%;
-		--muted-foreground: 215 20.2% 65.1%;
-		--accent: 217.2 32.6% 17.5%;
-		--accent-foreground: 210 40% 98%;
-		--destructive: 0 62.8% 30.6%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 217.2 32.6% 17.5%;
-		--input: 217.2 32.6% 17.5%;
-		--ring: 212.7 26.8% 83.9%;
+		--background: 240 2% 9%;
+		--foreground: 60 33% 99%;
+		--card: 60 33% 99%;
+		--card-foreground: 0 0% 4%;
+		--popover: 240 2% 9%;
+		--popover-foreground: 60 33% 99%;
+		--primary: 4 74% 45%;
+		--primary-foreground: 60 33% 99%;
+		--secondary: 240 2% 16%;
+		--secondary-foreground: 60 33% 99%;
+		--muted: 240 2% 16%;
+		--muted-foreground: 60 3% 65%;
+		--accent: 240 2% 16%;
+		--accent-foreground: 60 33% 99%;
+		--destructive: 4 74% 45%;
+		--destructive-foreground: 60 33% 99%;
+		--border: 240 2% 22%;
+		--input: 240 2% 22%;
+		--ring: 60 33% 99%;
 	}
 }
 
@@ -55,5 +55,208 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+	}
+	button:not(:disabled),
+	[role="button"]:not([aria-disabled="true"]),
+	label[for],
+	summary {
+		cursor: pointer;
+	}
+}
+
+@layer components {
+	:root {
+		--receipt-paper: #fdfdfb;
+		--receipt-ink: #000000;
+		--receipt-stamp: #c92a1e;
+		--ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	.receipt-wrap {
+		width: 100%;
+		max-width: 360px;
+		filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.18))
+			drop-shadow(0 12px 28px rgb(0 0 0 / 0.16));
+		animation: receipt-tear 300ms var(--ease-out-strong) both;
+	}
+
+	.dark .receipt-wrap {
+		filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.6))
+			drop-shadow(0 16px 36px rgb(0 0 0 / 0.5));
+	}
+
+	@keyframes receipt-tear {
+		from {
+			opacity: 0;
+			transform: translateY(-8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.receipt {
+		--background: 60 33% 99%;
+		--foreground: 0 0% 0%;
+		--primary: 4 74% 45%;
+		--primary-foreground: 60 33% 99%;
+		--muted: 0 0% 93%;
+		--muted-foreground: 0 0% 28%;
+		--destructive: 4 74% 45%;
+		--border: 0 0% 0%;
+		--input: 0 0% 42%;
+		--ring: 0 0% 0%;
+		background: var(--receipt-paper);
+		color: var(--receipt-ink);
+		font-family: "JetBrains Mono", ui-monospace, monospace;
+		padding: 1.5rem 1.375rem;
+	}
+
+	.receipt-edge {
+		height: 8px;
+		background-repeat: repeat-x;
+		background-size: 12px 8px;
+	}
+
+	.receipt-edge--top {
+		background-image:
+			linear-gradient(-45deg, var(--receipt-paper) 4px, transparent 0),
+			linear-gradient(45deg, var(--receipt-paper) 4px, transparent 0);
+		background-position: bottom left;
+	}
+
+	.receipt-edge--bottom {
+		background-image:
+			linear-gradient(-135deg, var(--receipt-paper) 4px, transparent 0),
+			linear-gradient(135deg, var(--receipt-paper) 4px, transparent 0);
+		background-position: top left;
+	}
+
+	.receipt-sep {
+		border: 0;
+		border-top: 1px dashed rgb(0 0 0 / 0.55);
+	}
+
+	.receipt-h1::before {
+		content: "** ";
+	}
+
+	.receipt-h1::after {
+		content: " **";
+	}
+
+	.receipt-item-line {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5ch;
+		font-size: 0.75rem;
+		line-height: 1.6;
+		text-transform: uppercase;
+	}
+
+	.receipt-item-line .dots {
+		flex: 1;
+		min-width: 2ch;
+		overflow: hidden;
+		white-space: nowrap;
+		color: rgb(0 0 0 / 0.45);
+	}
+
+	.receipt-item-line .dots::after {
+		content: "..................................................";
+	}
+
+	.receipt-thumb {
+		filter: grayscale(1) contrast(1.1);
+	}
+
+	.receipt-input {
+		border-radius: 0;
+		border-width: 0 0 1px 0;
+		border-style: dashed;
+		box-shadow: none;
+		background: transparent;
+		padding-left: 0;
+		padding-right: 0;
+		font-family: inherit;
+	}
+
+	.receipt-input:focus-visible {
+		border-style: solid;
+	}
+
+	.receipt-print-line {
+		animation: print-line 200ms var(--ease-out-strong) both;
+	}
+
+	.receipt-lines > .receipt-print-line:nth-child(2) {
+		animation-delay: 40ms;
+	}
+
+	.receipt-lines > .receipt-print-line:nth-child(3) {
+		animation-delay: 80ms;
+	}
+
+	.receipt-lines > .receipt-print-line:nth-child(4) {
+		animation-delay: 120ms;
+	}
+
+	@keyframes print-line {
+		from {
+			opacity: 0;
+			transform: translateY(-4px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.receipt-stamp {
+		display: inline-block;
+		border: 2px solid var(--receipt-stamp);
+		color: var(--receipt-stamp);
+		padding: 0.25rem 0.75rem;
+		font-size: 0.875rem;
+		font-weight: 700;
+		letter-spacing: 0.25em;
+		text-transform: uppercase;
+		transform: rotate(-8deg);
+		animation: stamp-in 200ms var(--ease-out-strong) both;
+	}
+
+	@keyframes stamp-in {
+		from {
+			opacity: 0;
+			transform: rotate(-8deg) scale(1.15);
+		}
+		to {
+			opacity: 1;
+			transform: rotate(-8deg) scale(1);
+		}
+	}
+
+	.receipt-barcode {
+		height: 32px;
+		background: repeating-linear-gradient(
+			90deg,
+			var(--receipt-ink) 0 2px,
+			transparent 2px 4px,
+			var(--receipt-ink) 4px 5px,
+			transparent 5px 8px,
+			var(--receipt-ink) 8px 11px,
+			transparent 11px 13px,
+			var(--receipt-ink) 13px 14px,
+			transparent 14px 18px
+		);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.receipt-wrap,
+		.receipt-print-line,
+		.receipt-stamp {
+			animation: none;
+		}
 	}
 }

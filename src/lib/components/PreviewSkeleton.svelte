@@ -1,7 +1,10 @@
-<div class="flex items-center gap-3 p-3 rounded-md border bg-muted/50 animate-pulse" data-testid="preview-skeleton">
-	<div class="w-12 h-12 rounded bg-muted flex-shrink-0"></div>
-	<div class="flex-1 min-w-0 space-y-2">
-		<div class="h-4 bg-muted rounded w-3/4"></div>
-		<div class="h-3 bg-muted rounded w-1/2"></div>
+<div class="animate-pulse space-y-2" data-testid="preview-skeleton">
+	<div class="h-3 w-2/5 bg-muted"></div>
+	<div class="flex items-center gap-3">
+		<div class="h-12 w-12 flex-shrink-0 border border-dashed border-black/40 bg-muted"></div>
+		<div class="min-w-0 flex-1 space-y-2">
+			<div class="h-3 w-3/4 bg-muted"></div>
+			<div class="h-2.5 w-1/2 bg-muted"></div>
+		</div>
 	</div>
 </div>

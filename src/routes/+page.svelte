@@ -1,6 +1,6 @@
 <script lang="ts">
-import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
+import PlatterMark from "$lib/components/PlatterMark.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
@@ -266,26 +266,30 @@ $effect(() => {
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
+	<div class="w-full max-w-md space-y-8">
+		<div class="flex flex-col items-center space-y-3 text-center">
+			<PlatterMark active={loading} />
+			<h1 class="text-3xl font-semibold tracking-tight">dub-rip</h1>
+			<p class="silkscreen text-muted-foreground">Youtube audio · rich metadata</p>
 		</div>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
+		<Card.Root class="overflow-hidden rounded-xl border p-0 shadow-none">
+			<Card.Content class="p-0">
+				<div class="flex items-center justify-between border-b px-5 py-3">
+					<span class="silkscreen text-muted-foreground">Dub-rip · Typ 1</span>
+					<span class="silkscreen text-muted-foreground">Audio unit</span>
+				</div>
+
+				<div class="space-y-3 px-5 py-5">
+					<label for="url-input" class="silkscreen block text-muted-foreground">Input</label>
 					<Input
+						id="url-input"
 						bind:value={url}
 						placeholder="Paste YouTube URL"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-11 rounded-lg border-transparent bg-well shadow-[inset_0_1px_2px_rgba(0,0,0,0.10)] focus-visible:border-ring"
 					/>
 					<DownloadButton
 						loading={loading}
@@ -294,49 +298,56 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
+				<div class="space-y-4 border-t px-5 py-5">
+					<span class="silkscreen block text-muted-foreground">Output</span>
 
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
+					{#if preview && !loading && !loadingPreview}
+						<VideoPreview preview={preview} formatDuration={formatDuration} />
+					{/if}
 
-				<!-- Error -->
-				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
-					</div>
-				{/if}
+					{#if loadingPreview}
+						<PreviewSkeleton />
+					{/if}
 
-				<!-- Progress -->
-				{#if loading || status}
-					<div class="space-y-3">
+					{#if error}
+						<div class="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+							<p class="text-sm text-destructive">{error}</p>
+						</div>
+					{/if}
+
+					<div class="space-y-2">
 						{#if videoTitle}
 							<p class="truncate text-sm font-medium">{videoTitle}</p>
 						{/if}
 
-						<p class="text-xs text-muted-foreground">{status}</p>
+						<div class="flex items-baseline justify-between">
+							<span class="silkscreen text-muted-foreground">Output level</span>
+							<span class="font-mono text-xs tabular-nums">{roundedProgress}%</span>
+						</div>
 
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
-									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
-								</div>
+						<Progress value={roundedProgress} class="h-1.5 rounded-sm bg-foreground/10" />
+
+						<div class="flex justify-between" aria-hidden="true">
+							{#each Array.from({ length: 11 }) as _, i (i)}
+								<span class="h-1 w-px bg-foreground/30"></span>
+							{/each}
+						</div>
+
+						<div class="flex justify-between gap-2 pt-1 text-xs">
+							<span
+								class="truncate {downloadComplete ? 'text-success' : 'text-muted-foreground'}"
+							>{status || "Standby"}</span>
+							<div class="flex shrink-0 gap-3 font-mono tabular-nums text-muted-foreground">
+								{#if speed}<span>{speed}</span>{/if}
+								{#if eta}<span>ETA {eta}</span>{/if}
 							</div>
 						</div>
 
 						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
+							<p class="truncate font-mono text-xs text-muted-foreground">{completedFilename}</p>
 						{/if}
 					</div>
-				{/if}
-
+				</div>
 			</Card.Content>
 		</Card.Root>
 	</div>

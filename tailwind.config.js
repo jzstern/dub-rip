@@ -48,6 +48,8 @@ export default {
 					DEFAULT: "hsl(var(--card) / <alpha-value>)",
 					foreground: "hsl(var(--card-foreground) / <alpha-value>)",
 				},
+				success: "hsl(var(--success) / <alpha-value>)",
+				well: "hsl(var(--well) / <alpha-value>)",
 			},
 			borderRadius: {
 				lg: "var(--radius)",
@@ -55,7 +57,7 @@ export default {
 				sm: "calc(var(--radius) - 4px)",
 			},
 			fontFamily: {
-				sans: [...fontFamily.sans],
+				sans: ["Archivo", ...fontFamily.sans],
 				mono: ['"JetBrains Mono"', ...fontFamily.mono],
 			},
 		},

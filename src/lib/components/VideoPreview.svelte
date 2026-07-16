@@ -22,8 +22,8 @@ function handleArtworkError() {
 }
 </script>
 
-<div class="preview-card flex items-center gap-3 rounded-md border bg-muted/50 p-3">
-	<div class="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
+<div class="preview-card flex items-center gap-3 rounded-lg border bg-well/60 p-3">
+	<div class="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded border bg-well">
 		<img
 			src={imageSrc}
 			alt={preview.title}
@@ -42,9 +42,9 @@ function handleArtworkError() {
 			{/if}
 			{#if preview.duration}
 				{#if preview.artist}
-					<span>•</span>
+					<span>·</span>
 				{/if}
-				<span>{formatDuration(preview.duration)}</span>
+				<span class="font-mono tabular-nums">{formatDuration(preview.duration)}</span>
 			{/if}
 		</div>
 	</div>

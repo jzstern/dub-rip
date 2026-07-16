@@ -265,28 +265,33 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
-		</div>
+<div class="flex min-h-dvh flex-col justify-between gap-16 px-6 py-8 sm:px-12 sm:py-12">
+	{#if false}
+		<AsciiVinyl active={loading} />
+	{/if}
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
+	<header>
+		<h1 class="sleeve-rise font-sans text-[clamp(4rem,10vw,6.5rem)] font-semibold lowercase leading-[0.92] tracking-[-0.04em]">dub-rip</h1>
+		<p class="sleeve-rise sleeve-rise-2 mt-5 font-mono text-xs lowercase tracking-[0.14em] text-muted-foreground">youtube → mp3 · rich metadata</p>
+	</header>
+
+	<main class="sleeve-rise sleeve-rise-3 w-full">
+		<Card.Root class="block gap-0 rounded-none border-0 border-t border-foreground/30 bg-transparent p-0 shadow-none">
+			<Card.Content class="p-0">
+				<div class="grid grid-cols-[3rem_1fr] items-center border-b border-foreground/15 transition-colors duration-150 focus-within:border-foreground">
+					<span class="font-mono text-xs tabular-nums text-muted-foreground" aria-hidden="true">01</span>
 					<Input
 						bind:value={url}
-						placeholder="Paste YouTube URL"
+						placeholder="paste url"
 						disabled={loading}
 						autofocus
 						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
+						class="h-14 rounded-none border-0 bg-transparent px-0 text-base shadow-none placeholder:lowercase focus-visible:border-0 focus-visible:ring-0 md:text-base dark:bg-transparent"
 					/>
+				</div>
+
+				<div class="grid grid-cols-[3rem_1fr] items-center border-b border-foreground/15">
+					<span class="font-mono text-xs tabular-nums text-muted-foreground" aria-hidden="true">02</span>
 					<DownloadButton
 						loading={loading}
 						disabled={loading || !isValidUrl}
@@ -294,50 +299,58 @@ $effect(() => {
 					/>
 				</div>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
-
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
-
-				<!-- Error -->
-				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+				{#if loadingPreview}
+					<div class="grid grid-cols-[3rem_1fr] items-center border-b border-foreground/15">
+						<span class="font-mono text-xs tabular-nums text-muted-foreground" aria-hidden="true">03</span>
+						<PreviewSkeleton />
 					</div>
 				{/if}
 
-				<!-- Progress -->
+				{#if preview && !loading && !loadingPreview}
+					<div class="grid grid-cols-[3rem_1fr] items-center border-b border-foreground/15">
+						<span class="font-mono text-xs tabular-nums text-muted-foreground" aria-hidden="true">03</span>
+						<VideoPreview preview={preview} formatDuration={formatDuration} />
+					</div>
+				{/if}
+
+				{#if error}
+					<div class="grid grid-cols-[3rem_1fr] items-center border-b border-foreground/15">
+						<span class="font-mono text-xs text-destructive" aria-hidden="true">×</span>
+						<p class="py-4 font-mono text-xs lowercase text-destructive">{error}</p>
+					</div>
+				{/if}
+
 				{#if loading || status}
-					<div class="space-y-3">
-						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
-						{/if}
-
-						<p class="text-xs text-muted-foreground">{status}</p>
-
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
-									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
-								</div>
+					<div class="pt-8">
+						<div class="flex items-end justify-between gap-8">
+							<div class="min-w-0 space-y-1.5">
+								{#if videoTitle}
+									<p class="truncate text-sm font-medium">{videoTitle}</p>
+								{/if}
+								<p class="font-mono text-xs lowercase tracking-[0.08em] text-muted-foreground">{status}</p>
+								{#if downloadComplete && completedFilename}
+									<p class="truncate font-mono text-xs text-muted-foreground">{completedFilename}</p>
+								{/if}
+							</div>
+							<p class="shrink-0 text-6xl leading-none tabular-nums tracking-[-0.03em] sm:text-8xl {downloadComplete ? 'font-semibold' : 'font-normal'}">
+								{roundedProgress}<span class="align-top text-2xl sm:text-3xl">%</span>
+							</p>
+						</div>
+						<div class="mt-5">
+							<Progress value={roundedProgress} class="h-px rounded-none bg-foreground/15" />
+							<div class="mt-2 flex justify-end gap-4 font-mono text-[11px] lowercase text-muted-foreground">
+								{#if speed}<span>{speed}</span>{/if}
+								{#if eta}<span>eta {eta}</span>{/if}
 							</div>
 						</div>
-
-						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
-						{/if}
 					</div>
 				{/if}
-
 			</Card.Content>
 		</Card.Root>
-	</div>
+	</main>
+
+	<footer class="sleeve-rise sleeve-rise-4 flex items-end justify-between gap-6">
+		<span class="block h-3 w-3 bg-accent" aria-hidden="true"></span>
+		<p class="text-right font-mono text-[11px] tracking-[0.14em] text-muted-foreground">DR-001 / STEREO / 44.1kHz</p>
+	</footer>
 </div>

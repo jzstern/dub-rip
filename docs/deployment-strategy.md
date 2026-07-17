@@ -221,7 +221,7 @@ Fallback path (if Cobalt fails):
 3b. dub-rip falls back to yt-dlp
 4b. yt-dlp asks bgutil-pot for a PO token via http://bgutil-pot.railway.internal:4416
 5b. yt-dlp downloads audio with the PO token and `mweb` player client
-6b. Continue from step 9
+6b. Continue from step 6 (ID3 metadata, stream to user)
 ```
 
 ## Cost Analysis

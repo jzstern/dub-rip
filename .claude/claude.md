@@ -56,6 +56,14 @@ PR environments inherit production variables and get unique domains.
 
 **Do not re-add a custom PR-env GitHub workflow.** A hand-rolled `railway-pr.yml` previously ran alongside native PR envs, creating two environments per PR (`pr-N` *and* `dub-rip-pr-N`) and breaking teardown — orphaned envs piled up and billed idle compute 24/7. Use exactly one mechanism (native).
 
+### Railway Cost Practices
+PR environments — not production — are the dominant cost in this project (production steady-state is ~$2.50/mo across all three services; a July 2026 audit measured ~80% of usage coming from PR envs).
+
+- **Keep PRs short-lived.** Every open PR holds a full 3-service environment (app + cobalt + bgutil-pot). Close design-option/preview PRs once a direction is picked — branches survive, and reopening a PR redeploys its preview.
+- **Never leave a PR env alive across releases.** Envs deployed from builds older than #57 generate PO tokens in-process, which produces constant outbound traffic that defeats Railway app-sleep — one such env ran awake continuously for 6 months (`dub-rip-pr-44`, Jan 30 → Jul 17, 2026).
+- **Do not point an uptime monitor at `/api/health`.** It actively probes cobalt and bgutil-pot, so any periodic pinger keeps all three services awake 24/7 (~+$10–12/mo). If external monitoring is ever needed, monitor a static asset or accept the sleep trade-off explicitly.
+- **Workspace usage caps** (set 2026-07-17): soft $20 (email alert), hard $40 (Railway stops services). If a legitimate traffic spike hits the hard cap, raise it in workspace billing settings rather than removing it.
+
 ## yt-dlp Integration
 - yt-dlp is used as a **fallback** when Cobalt fails (primary download method is Cobalt)
 - Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)

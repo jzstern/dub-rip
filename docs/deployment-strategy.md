@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the deployment architecture for dub-rip on Railway, using a self-hosted Cobalt instance with yt-session-generator for YouTube BotGuard bypass.
+This document outlines the deployment architecture for dub-rip on Railway, using a self-hosted Cobalt instance with a bgutil-pot sidecar that provides PO tokens for the yt-dlp fallback.
 
 ### Architecture
 
@@ -36,9 +36,9 @@ This document outlines the deployment architecture for dub-rip on Railway, using
 
 | Requirement | Solution |
 |-------------|----------|
-| YouTube bot detection | yt-session-generator provides poToken & visitor_data |
+| YouTube bot detection | bgutil-pot provides PO tokens for the yt-dlp fallback |
 | Self-hosted Cobalt | No rate limits or auth requirements from public APIs |
-| No user cookies needed | Cobalt + session generator handles authentication |
+| No user cookies needed | Cobalt + bgutil-pot handle authentication |
 | Resilience | yt-dlp fallback when Cobalt fails |
 | Simple deployment | Git-push for app, Docker templates for services |
 | Internal networking | Services communicate via Railway's private network |
@@ -106,7 +106,7 @@ Generate a UUID for your API key:
 uuidgen
 ```
 
-### 4. bgutil-pot
+### 3. bgutil-pot
 
 Sidecar HTTP server that generates YouTube PO tokens for the yt-dlp fallback path. Uses [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) (the same upstream Cobalt's `youtubei.js` depends on) to solve YouTube's BotGuard challenge headlessly without a Google account.
 
@@ -183,7 +183,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
    - dub-rip communicates with bgutil-pot via Railway's private network at `http://bgutil-pot.railway.internal:4416`
 6. Healthcheck: `GET /ping` returns 200 when the service is ready — set via `healthcheckPath` in `railway.toml`
 
-### Step 3.5: Deploy dub-rip
+### Step 4: Deploy dub-rip
 
 1. Add a new service → GitHub Repo
 2. Select your dub-rip repository
@@ -196,14 +196,13 @@ Production and PR-preview environments get the var via Railway service vars; no 
    ```
 4. Enable public networking
 
-### Step 4: Verify Deployment
+### Step 5: Verify Deployment
 
-1. Check yt-token-service logs in Railway dashboard for successful startup
-2. Check Cobalt logs for successful connection to yt-token-service
-3. Test dub-rip by downloading a YouTube video through the web interface
-4. (Optional) To test internal services, use Railway's shell feature:
+1. Check Cobalt and bgutil-pot deploy logs in the Railway dashboard for successful startup
+2. Test dub-rip by downloading a YouTube video through the web interface
+3. (Optional) To test internal services, use Railway's shell feature:
    - Open Railway dashboard → Select service → Click "Shell"
-   - Run: `curl http://yt-token-service.railway.internal:8080/token`
+   - Run: `curl http://bgutil-pot.railway.internal:4416/ping`
 
 > **Note:** Internal `.railway.internal` URLs are only accessible from within Railway's private network. You cannot `curl` these URLs from your local machine.
 
@@ -222,7 +221,7 @@ Fallback path (if Cobalt fails):
 3b. dub-rip falls back to yt-dlp
 4b. yt-dlp asks bgutil-pot for a PO token via http://bgutil-pot.railway.internal:4416
 5b. yt-dlp downloads audio with the PO token and `mweb` player client
-6b. Continue from step 9
+6b. Continue from step 6 (ID3 metadata, stream to user)
 ```
 
 ## Cost Analysis
@@ -294,7 +293,7 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
 
 1. **Confirm Cobalt itself is the layer that's failing.** POST to Cobalt's root endpoint directly (Cobalt 11.x takes the download request on `POST /` — the `/api/json` path was only used in pre-10.x releases), then curl the tunnel URL it returns:
    ```bash
-   # From a Railway shell — Cobalt is internal-only by default (see Step 3
+   # From a Railway shell — Cobalt is internal-only by default (see Step 2
    # above), so target the .railway.internal hostname:
    COBALT_URL=http://cobalt.railway.internal:9000/
    # Or, when debugging with public networking temporarily enabled:
@@ -361,7 +360,7 @@ Cobalt's `YOUTUBE_SESSION_SERVER` env var was previously set to `http://yt-token
 
 Unsetting `YOUTUBE_SESSION_SERVER` on the Cobalt service stopped the polling. With the service confirmed to have no active callers, `yt-token-service` was subsequently decommissioned (see [§ Decommissioned: yt-token-service](#decommissioned-yt-token-service-2026-06)).
 
-This is **separate** from the yt-dlp fallback's PO-token needs. yt-dlp gets its PO token from the [`bgutil-pot`](#4-bgutil-pot) sidecar, not from `yt-token-service`.
+This is **separate** from the yt-dlp fallback's PO-token needs. yt-dlp gets its PO token from the [`bgutil-pot`](#3-bgutil-pot) sidecar, not from `yt-token-service`.
 
 Background: [PR #52 research notes](https://github.com/jzstern/dub-rip/pull/52) (closed; investigation only).
 
@@ -373,7 +372,7 @@ If you need PO tokens for Cobalt again, restoring the service is `git revert <th
 
 **Update (2026-06-09):** the lingering Railway `yt-token-service` *service object* was deleted from the production environment. It still built from this repo via a Dockerfile that no longer exists, so it auto-deployed and failed on every PR (preview environments are cloned from production via `railway environment new --copy production`, then Railway auto-builds repo-connected services on push). With it removed from production, new PR environments no longer inherit it. Restoring now means recreating the Railway service, not just `git revert` + redeploy.
 
-PO tokens for the yt-dlp fallback path are still served by `bgutil-pot` (see [§ 4. bgutil-pot](#4-bgutil-pot)). That's a separate concern from Cobalt's session server and is unaffected.
+PO tokens for the yt-dlp fallback path are still served by `bgutil-pot` (see [§ 3. bgutil-pot](#3-bgutil-pot)). That's a separate concern from Cobalt's session server and is unaffected.
 
 ## Maintenance
 
@@ -383,7 +382,7 @@ PO tokens for the yt-dlp fallback path are still served by `bgutil-pot` (see [§
 - Update Docker images when new versions release — especially Cobalt (see [Cobalt version pinning](#cobalt-version-pinning))
 
 **When YouTube Changes:**
-- Monitor [imputnet/yt-session-generator](https://github.com/imputnet/yt-session-generator) and Cobalt release notes for BotGuard-related updates.
+- Monitor Cobalt and [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) release notes for BotGuard-related updates.
 - If Cobalt's `useSession` gate is ever re-enabled (e.g. via `CUSTOM_INNERTUBE_CLIENT=TV_EMBEDDED`), see [§ Decommissioned: yt-token-service](#decommissioned-yt-token-service-2026-06) for restore options.
 
 **Troubleshooting Commands (via Railway Shell):**
@@ -414,6 +413,5 @@ You can check service logs directly in the Railway dashboard.
 
 - [Cobalt Documentation](https://github.com/imputnet/cobalt)
 - [Cobalt API Environment Variables](https://github.com/imputnet/cobalt/blob/main/docs/api-env-variables.md)
-- [yt-session-generator](https://github.com/imputnet/yt-session-generator)
 - [Railway Documentation](https://docs.railway.app)
 - [yt-dlp PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide)

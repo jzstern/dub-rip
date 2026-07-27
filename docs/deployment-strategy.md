@@ -322,6 +322,45 @@ The root cause is Cobalt's `youtubei.js` version no longer matches YouTube's cur
 
 **Fix:** Upgrade Cobalt. It is almost never an app-side bug in dub-rip.
 
+## Symptom: yt-dlp fails on every video — check the JS runtime first
+
+**Check this before assuming upstream BotGuard lag (next section).** The two produce overlapping symptoms, but this one is a config bug on our side and is instant to rule out.
+
+yt-dlp needs a JavaScript runtime to solve YouTube's `n` challenge, and **it enables only Deno by default** — a Node binary sitting on `PATH` is *not* picked up automatically. Our image ships Node and no Deno, so for a long time production ran with no runtime at all:
+
+```
+[debug] JS runtimes: none
+[debug] [youtube] [jsc] JS Challenge Providers: bun (unavailable), deno (unavailable),
+        node (unavailable), quickjs (unavailable)
+```
+
+Downstream that looks like `n challenge solving failed`, then `Only images are available for download`, then `Requested format is not available` — and because extraction never completes, bgutil is never even asked for a PO token.
+
+`buildJsRuntimeArgs()` in `src/lib/yt-dlp-binary.ts` fixes this by passing `--js-runtimes node:<process.execPath>`, pointing yt-dlp at the interpreter already running the server.
+
+**Verify:** hit `/api/download-stream?debug=1&url=…` and grep the deploy logs for `JS runtimes:`. It must name a runtime (`node-24.x`), never `none`.
+
+**Reproduce locally** (a dev box usually has Deno, which masks the bug):
+
+```bash
+env PATH=/usr/bin:/bin /tmp/yt-dlp -v --simulate -f bestaudio \
+  --extractor-args "youtube:player_client=web_safari" "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+```
+
+## Symptom: `unable to download video data: HTTP Error 403: Forbidden`
+
+Extraction succeeds and bgutil mints a token, but the media fetch 403s.
+
+This means yt-dlp selected a format from a client bgutil **cannot** authorize. bgutil-pot issues *WebPO* tokens, usable only by the web-family clients. yt-dlp's `default` chain is `('visionos', 'android_vr', 'web')`; the first two need a different token type, yet their audio formats routinely win `-f bestaudio`, so the chosen URL goes out unauthorized.
+
+Confirm by grepping deploy logs for which client bgutil was asked about:
+
+```
+[pot:bgutil:http] Generating a gvs PO Token for web_safari client via bgutil HTTP server
+```
+
+If the only client named there is not the one whose format got picked, that's the bug. **Fix:** keep `player_client` restricted to WebPO-capable clients (currently `web_safari,mweb,tv`) — never add `default`, `visionos`, or `android_vr` back.
+
 ## Symptom: yt-dlp fallback fails on all videos with "Unmatched yt-dlp error" / "Requested format is not available"
 
 **User-visible symptom:** Videos that previously worked via the yt-dlp fallback (when Cobalt failed) now also fail. Users see _"Download service couldn't verify with YouTube"_ or _"Download failed. Please try a different video."_ even for videos Cobalt itself can't handle.

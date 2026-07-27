@@ -62,14 +62,20 @@ vi.mock("node:child_process", () => ({
 	execFile: (...args: unknown[]) => execFileMock(...args),
 }));
 
-const { ensureYtDlpBinaryMock, buildBgutilPotArgsMock } = vi.hoisted(() => ({
+const {
+	ensureYtDlpBinaryMock,
+	buildBgutilPotArgsMock,
+	buildJsRuntimeArgsMock,
+} = vi.hoisted(() => ({
 	ensureYtDlpBinaryMock: vi.fn(),
 	buildBgutilPotArgsMock: vi.fn(),
+	buildJsRuntimeArgsMock: vi.fn(),
 }));
 
 vi.mock("$lib/yt-dlp-binary", () => ({
 	ensureYtDlpBinary: (...args: unknown[]) => ensureYtDlpBinaryMock(...args),
 	buildBgutilPotArgs: (...args: unknown[]) => buildBgutilPotArgsMock(...args),
+	buildJsRuntimeArgs: (...args: unknown[]) => buildJsRuntimeArgsMock(...args),
 }));
 
 function mockYtDlpStdout(stdout: string) {
@@ -114,6 +120,7 @@ describe("POST /api/preview/details - duration extraction", () => {
 		vi.clearAllMocks();
 		ensureYtDlpBinaryMock.mockResolvedValue("/tmp/yt-dlp");
 		buildBgutilPotArgsMock.mockResolvedValue([]);
+		buildJsRuntimeArgsMock.mockReturnValue([]);
 	});
 
 	it("returns parsed duration on success", async () => {

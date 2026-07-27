@@ -68,6 +68,18 @@ export function extractVideoId(url: string): string | null {
 }
 
 /**
+ * Build the canonical watch URL for a video ID.
+ *
+ * Radio/playlist links (`&list=RD…&start_radio=1`) make yt-dlp run an extra
+ * `youtube:tab` extraction before it reaches the video, which is a wasted
+ * request against an endpoint that already rate-limits our datacenter IP.
+ * Downloading by canonical URL skips that round-trip entirely.
+ */
+export function buildWatchUrl(videoId: string): string {
+	return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+/**
  * Validate a YouTube URL
  */
 export function isValidYouTubeUrl(url: string): boolean {

@@ -13,6 +13,7 @@ vi.mock("node:child_process", () => ({
 vi.mock("$lib/yt-dlp-binary", () => ({
 	ensureYtDlpBinary: vi.fn().mockResolvedValue("/tmp/yt-dlp"),
 	buildBgutilPotArgs: vi.fn().mockResolvedValue([]),
+	buildJsRuntimeArgs: vi.fn().mockReturnValue([]),
 }));
 
 const mockFetch = vi.fn();

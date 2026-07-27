@@ -1,8 +1,12 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { json } from "@sveltejs/kit";
-import { extractVideoId } from "$lib/video-utils";
-import { buildBgutilPotArgs, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
+import {
+	buildBgutilPotArgs,
+	buildJsRuntimeArgs,
+	ensureYtDlpBinary,
+} from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
 
 const execFilePromise = promisify(execFile);
@@ -23,7 +27,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const binaryPath = await ensureYtDlpBinary();
-		const normalizedUrl = `https://www.youtube.com/watch?v=${videoId}`;
+		const normalizedUrl = buildWatchUrl(videoId);
 
 		const result = await execFilePromise(
 			binaryPath,
@@ -33,6 +37,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				"--no-playlist",
 				"--print",
 				"%(duration)s",
+				...buildJsRuntimeArgs(),
 				...(await buildBgutilPotArgs()),
 				normalizedUrl,
 			],

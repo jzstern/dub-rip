@@ -1,7 +1,11 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as Sentry from "@sentry/sveltekit";
-import { buildBgutilPotArgs, ensureYtDlpBinary } from "./yt-dlp-binary";
+import {
+	buildBgutilPotArgs,
+	buildJsRuntimeArgs,
+	ensureYtDlpBinary,
+} from "./yt-dlp-binary";
 
 const execFilePromise = promisify(execFile);
 
@@ -81,6 +85,7 @@ export async function fetchVideoDetails(
 			"--no-warnings",
 			"--no-playlist",
 			"--skip-download",
+			...buildJsRuntimeArgs(),
 			...(await buildBgutilPotArgs()),
 			videoUrl,
 		];

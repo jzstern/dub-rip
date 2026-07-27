@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
+	buildWatchUrl: vi.fn((id: string) => `https://www.youtube.com/watch?v=${id}`),
 	parseArtistAndTitle: vi
 		.fn()
 		.mockReturnValue({ artist: "Test Artist", title: "Test Title" }),

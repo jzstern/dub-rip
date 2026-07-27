@@ -18,7 +18,7 @@ import {
 	type ThumbnailImage,
 	type VideoDetails,
 } from "$lib/video-metadata";
-import { extractVideoId } from "$lib/video-utils";
+import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -64,6 +64,8 @@ export const GET: RequestHandler = async ({ url }) => {
 		return new Response("Invalid YouTube URL", { status: 400 });
 	}
 
+	const normalizedUrl = buildWatchUrl(videoId);
+
 	const stream = new ReadableStream({
 		async start(controller) {
 			const encoder = new TextEncoder();
@@ -107,7 +109,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				};
 
 				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
-					videoUrl,
+					normalizedUrl,
 				).catch(() => null);
 				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
 					? fetchThumbnailBuffer(videoId).catch(() => null)
@@ -157,7 +159,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "status", message: "Trying fast download..." });
 
 				const cobaltResult = await tryCobaltDownload({
-					videoUrl,
+					videoUrl: normalizedUrl,
 					outputPath: actualFilePath,
 					send,
 				});
@@ -190,7 +192,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					const pluginDir = await ensureBgutilPlugin();
 
 					await tryYtDlpDownload({
-						videoUrl,
+						videoUrl: normalizedUrl,
 						outputPath,
 						bgutilPotUrl: env.BGUTIL_POT_URL,
 						ffmpegPath: ffmpegInstaller.path,

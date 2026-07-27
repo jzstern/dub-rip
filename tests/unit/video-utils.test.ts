@@ -1,11 +1,40 @@
 import { describe, expect, it } from "vitest";
 import {
+	buildWatchUrl,
 	extractVideoId,
 	formatBytes,
 	isValidYouTubeUrl,
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
+
+describe("buildWatchUrl", () => {
+	it("builds the canonical watch URL for a video ID", () => {
+		expect(buildWatchUrl("dQw4w9WgXcQ")).toBe(
+			"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+		);
+	});
+
+	it("drops radio/playlist params that trigger an extra youtube:tab extraction", () => {
+		// #given
+		const radioUrl =
+			"https://www.youtube.com/watch?v=q9lZ4p5YRkY&list=RDq9lZ4p5YRkY&start_radio=1";
+
+		// #when
+		const normalized = buildWatchUrl(extractVideoId(radioUrl) as string);
+
+		// #then
+		expect(normalized).toBe("https://www.youtube.com/watch?v=q9lZ4p5YRkY");
+	});
+
+	it("normalizes a youtu.be short link to the canonical form", () => {
+		expect(
+			buildWatchUrl(
+				extractVideoId("https://youtu.be/dQw4w9WgXcQ?t=42") as string,
+			),
+		).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+	});
+});
 
 describe("extractVideoId", () => {
 	describe("standard watch URLs", () => {

@@ -2,7 +2,7 @@ import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
-import { parseYtDlpError } from "$lib/yt-dlp-errors";
+import { buildJsRuntimeArgs } from "$lib/yt-dlp-binary";
 
 interface YtDlpProcess {
 	on(
@@ -72,6 +72,7 @@ export async function tryYtDlpDownload({
 		"--parse-metadata",
 		"%(artist)s:%(meta_artist)s",
 		"--no-playlist",
+		...buildJsRuntimeArgs(),
 		"--plugin-dirs",
 		pluginDir,
 		// player_client=default,mweb: try yt-dlp's default chain first (web → ios → android
@@ -151,12 +152,10 @@ export async function tryYtDlpDownload({
 		}
 	});
 
+	// Only log here: the rejection below carries the failure to download-stream's
+	// catch, which is the single place that emits the user-facing error event.
 	downloadProcess.on("error", (error: Error) => {
 		console.error("Download process error:", error);
-		send({
-			type: "error",
-			message: parseYtDlpError(error.message),
-		});
 	});
 
 	await new Promise<void>((resolve, reject) => {

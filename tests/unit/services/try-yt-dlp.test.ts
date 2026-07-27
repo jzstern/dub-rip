@@ -88,6 +88,36 @@ describe("tryYtDlpDownload()", () => {
 		);
 	});
 
+	it("selects formats only from clients bgutil can mint a WebPO token for", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		const clientArg = execArgs.find((arg) =>
+			arg.startsWith("youtube:player_client="),
+		);
+		expect(clientArg).toBe("youtube:player_client=web_safari,mweb,tv");
+	});
+
+	it("never falls back to yt-dlp's default chain, whose visionos/android_vr formats 403", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		const clientArg = execArgs.find((arg) =>
+			arg.startsWith("youtube:player_client="),
+		);
+		expect(clientArg).not.toMatch(/default|visionos|android_vr/);
+	});
+
 	it("resolves when yt-dlp exits cleanly", async () => {
 		// #given
 		const promise = run();

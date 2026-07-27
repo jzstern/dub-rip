@@ -246,7 +246,7 @@ export async function buildBgutilPotArgs(): Promise<string[]> {
 			"--plugin-dirs",
 			pluginDir,
 			"--extractor-args",
-			"youtube:player_client=default,mweb",
+			"youtube:player_client=web_safari,mweb,tv",
 			"--extractor-args",
 			`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
 		];

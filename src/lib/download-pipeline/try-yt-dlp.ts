@@ -75,12 +75,15 @@ export async function tryYtDlpDownload({
 		...buildJsRuntimeArgs(),
 		"--plugin-dirs",
 		pluginDir,
-		// player_client=default,mweb: try yt-dlp's default chain first (web → ios → android
-		// → ...) then fall back to mweb. mweb requires a PO token (provided by bgutil-pot)
-		// but returns a narrower format set than web; some videos have no `bestaudio`-matching
-		// format in mweb's response. Multi-client mode handles both cases.
+		// Restricted to WebPO-capable clients on purpose. bgutil-pot mints *WebPO*
+		// tokens, which only the web-family clients can use. yt-dlp's `default`
+		// chain is ('visionos', 'android_vr', 'web') — the first two take a
+		// different token type bgutil cannot produce, yet their audio formats often
+		// win `bestaudio`, and their media URLs then 403 from a datacenter IP
+		// ("unable to download video data: HTTP Error 403"). Naming the web clients
+		// explicitly keeps every candidate format one bgutil can authorize.
 		"--extractor-args",
-		"youtube:player_client=default,mweb",
+		"youtube:player_client=web_safari,mweb,tv",
 		"--extractor-args",
 		`youtubepot-bgutilhttp:base_url=${bgutilPotUrl}`,
 		"-o",

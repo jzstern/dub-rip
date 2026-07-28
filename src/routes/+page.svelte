@@ -267,7 +267,7 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen justify-center px-5 pt-12 pb-16">
+<div class="flex min-h-screen items-center justify-center px-5 py-12">
 	<main class="flex w-full max-w-[460px] flex-col items-center gap-7">
 		<header class="flex flex-col items-center gap-5">
 			<AsciiVinyl state={vinylState} />
@@ -354,7 +354,7 @@ $effect(() => {
 
 			<div class="flex justify-end border-t px-5 py-2">
 				<span class="font-mono text-[10px] tracking-[0.12em] text-muted-foreground"
-					>MP3 128 · ID3v2</span
+					>MP3 128 kbps · ID3v2</span
 				>
 			</div>
 		</section>

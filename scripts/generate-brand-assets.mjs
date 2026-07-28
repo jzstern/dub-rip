@@ -72,7 +72,7 @@ html,body{width:1200px;height:630px;background:#191817;font-family:'Inter Tight'
 	<div class="side">
 		<div class="wordmark">DUB.RIP</div>
 		<div class="tag">YouTube audio &middot; rich metadata</div>
-		<div class="spec">SRC YOUTUBE &rarr; <b>MP3 128 &middot; ID3v2</b></div>
+		<div class="spec">SRC YOUTUBE &rarr; <b>MP3 128 kbps &middot; ID3v2</b></div>
 	</div>
 </div>
 </body></html>`;

@@ -293,6 +293,7 @@ $effect(() => {
 				<Input
 					bind:value={url}
 					placeholder="Paste a YouTube link"
+					aria-label="YouTube link"
 					disabled={loading}
 					autofocus
 					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
@@ -322,7 +323,14 @@ $effect(() => {
 
 				{#if loading || status}
 					<div class="rise-in flex flex-col gap-1.5">
-						<div class="h-0.5 overflow-hidden rounded-full bg-muted">
+						<div
+							role="progressbar"
+							aria-label="Download progress"
+							aria-valuenow={roundedProgress}
+							aria-valuemin={0}
+							aria-valuemax={100}
+							class="h-0.5 overflow-hidden rounded-full bg-muted"
+						>
 							<div
 								class="h-full bg-primary"
 								style="width: {roundedProgress}%"

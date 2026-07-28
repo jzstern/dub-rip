@@ -81,11 +81,21 @@ function renderDisc(phase: number, shimmering: boolean): Segment[] {
 
 let frame = $derived(renderDisc(renderedPhase, vinylState === "active"));
 
+let reducedMotion = $state(false);
+
 $effect(() => {
-	const prefersReducedMotion =
-		typeof window.matchMedia === "function" &&
-		window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-	if (prefersReducedMotion) return;
+	if (typeof window.matchMedia !== "function") return;
+	const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+	reducedMotion = query.matches;
+	const onChange = (event: MediaQueryListEvent): void => {
+		reducedMotion = event.matches;
+	};
+	query.addEventListener("change", onChange);
+	return () => query.removeEventListener("change", onChange);
+});
+
+$effect(() => {
+	if (reducedMotion) return;
 
 	let rafId = 0;
 	let lastTime: number | null = null;
@@ -129,7 +139,7 @@ $effect(() => {
 
 <style>
 	.vinyl {
-		font-size: clamp(10px, 2.9vw, 13px);
+		font-size: clamp(12px, 2.9vw, 13px);
 		line-height: 1.12;
 		letter-spacing: 0.06em;
 	}

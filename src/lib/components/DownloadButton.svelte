@@ -12,7 +12,7 @@ let { loading, disabled, onClick }: Props = $props();
 
 <Button
 	onclick={onClick}
-	{disabled}
+	disabled={disabled || loading}
 	class="h-11 w-full font-mono text-xs font-bold tracking-[0.14em] transition-transform duration-150 ease-out active:scale-[0.98]"
 >
 	{#if loading}

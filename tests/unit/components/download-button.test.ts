@@ -120,7 +120,7 @@ describe("DownloadButton", () => {
 			expect(button).not.toBeDisabled();
 		});
 
-		it("loading state does not automatically disable the button", () => {
+		it("disables the button while loading to prevent double submits", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -131,7 +131,7 @@ describe("DownloadButton", () => {
 
 			// #then
 			const button = screen.getByRole("button");
-			expect(button).not.toBeDisabled();
+			expect(button).toBeDisabled();
 		});
 	});
 

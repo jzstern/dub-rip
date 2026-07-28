@@ -8,7 +8,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { platform, tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 
@@ -208,6 +208,27 @@ export async function ensureBgutilPlugin(): Promise<string> {
 	return bgutilPluginPromise;
 }
 
+const JS_RUNTIME_NAMES = ["node", "bun", "deno"] as const;
+
+/**
+ * Builds the `--js-runtimes` args yt-dlp needs to solve YouTube's JS challenges.
+ *
+ * yt-dlp enables **only Deno** by default. Our Railway image ships Node (it runs
+ * the app) but no Deno, so yt-dlp reports `JS runtimes: none` and cannot solve
+ * the `n` challenge — every web-family client then yields "Only images are
+ * available for download" and the download fails with "Requested format is not
+ * available". Pointing yt-dlp at the interpreter already running this process
+ * fixes that without shipping another binary.
+ */
+export function buildJsRuntimeArgs(): string[] {
+	const runtime = JS_RUNTIME_NAMES.find((name) =>
+		basename(process.execPath).startsWith(name),
+	);
+	return runtime
+		? ["--js-runtimes", `${runtime}:${process.execPath}`]
+		: ["--js-runtimes", "node"];
+}
+
 /**
  * Builds the bgutil-pot PO-token yt-dlp args when BGUTIL_POT_URL is configured.
  *
@@ -225,7 +246,7 @@ export async function buildBgutilPotArgs(): Promise<string[]> {
 			"--plugin-dirs",
 			pluginDir,
 			"--extractor-args",
-			"youtube:player_client=default,mweb",
+			"youtube:player_client=web_safari,mweb,tv",
 			"--extractor-args",
 			`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
 		];

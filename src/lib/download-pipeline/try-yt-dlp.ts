@@ -2,7 +2,7 @@ import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
-import { parseYtDlpError } from "$lib/yt-dlp-errors";
+import { buildJsRuntimeArgs } from "$lib/yt-dlp-binary";
 
 interface YtDlpProcess {
 	on(
@@ -72,14 +72,18 @@ export async function tryYtDlpDownload({
 		"--parse-metadata",
 		"%(artist)s:%(meta_artist)s",
 		"--no-playlist",
+		...buildJsRuntimeArgs(),
 		"--plugin-dirs",
 		pluginDir,
-		// player_client=default,mweb: try yt-dlp's default chain first (web → ios → android
-		// → ...) then fall back to mweb. mweb requires a PO token (provided by bgutil-pot)
-		// but returns a narrower format set than web; some videos have no `bestaudio`-matching
-		// format in mweb's response. Multi-client mode handles both cases.
+		// Restricted to WebPO-capable clients on purpose. bgutil-pot mints *WebPO*
+		// tokens, which only the web-family clients can use. yt-dlp's `default`
+		// chain is ('visionos', 'android_vr', 'web') — the first two take a
+		// different token type bgutil cannot produce, yet their audio formats often
+		// win `bestaudio`, and their media URLs then 403 from a datacenter IP
+		// ("unable to download video data: HTTP Error 403"). Naming the web clients
+		// explicitly keeps every candidate format one bgutil can authorize.
 		"--extractor-args",
-		"youtube:player_client=default,mweb",
+		"youtube:player_client=web_safari,mweb,tv",
 		"--extractor-args",
 		`youtubepot-bgutilhttp:base_url=${bgutilPotUrl}`,
 		"-o",
@@ -151,12 +155,10 @@ export async function tryYtDlpDownload({
 		}
 	});
 
+	// Only log here: the rejection below carries the failure to download-stream's
+	// catch, which is the single place that emits the user-facing error event.
 	downloadProcess.on("error", (error: Error) => {
 		console.error("Download process error:", error);
-		send({
-			type: "error",
-			message: parseYtDlpError(error.message),
-		});
 	});
 
 	await new Promise<void>((resolve, reject) => {

@@ -71,6 +71,9 @@ PR environments — not production — are the dominant cost in this project (pr
 - Some videos require authentication and cannot be downloaded via yt-dlp fallback
 - Single video from playlist: `--no-playlist`
 - Parse stderr for user-friendly error messages (see `parseYtDlpError`)
+- **Always pass `buildJsRuntimeArgs()`** on every yt-dlp invocation. yt-dlp enables *only Deno* by default and our image has none, so without it yt-dlp reports `JS runtimes: none`, can't solve YouTube's `n` challenge, and every download fails with "Requested format is not available". A dev box with Deno installed hides this.
+- **`player_client` must stay WebPO-only** (`web_safari,mweb,tv`). bgutil-pot mints WebPO tokens; yt-dlp's `default` chain leads with `visionos`/`android_vr`, which take a different token type — their formats win `bestaudio` and then 403 on the media fetch.
+- **Every yt-dlp call is a YouTube request from one datacenter IP.** A single user download currently costs ~3 extractions (preview duration, `fetchVideoDetails`, the download itself). Bursts get the IP bot-checked for several minutes, so avoid adding call sites and don't load-test against a live environment.
 
 ## Metadata (node-id3)
 - Use node-id3 for ID3 tags (not ffmpeg)

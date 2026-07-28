@@ -42,12 +42,19 @@ For full templates, see `.claude/skills/svelte-patterns/`
 
 ## Railway Deployment
 Required environment variables for production:
-- `COBALT_API_URL` - Internal Cobalt service URL (e.g., `http://cobalt.railway.internal:9000`)
+- `COBALT_API_URL` - Internal Cobalt service URL (e.g., `http://cobalt-8x3f.railway.internal:9000`)
 - `COBALT_API_KEY` - API key for authenticated Cobalt requests
 - `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp fallback (Railway doesn't include Python by default)
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
 
-**Cobalt version pin:** the `cobalt` Railway service must use a specific image tag (`ghcr.io/imputnet/cobalt:<version>`), never `:latest`. Upstream updates `youtubei.js` frequently to keep up with YouTube's player; a stale Cobalt silently returns 0-byte tunnel bodies for some videos. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#cobalt-version-pinning) for the pinning rationale and the 0-byte-body diagnostic runbook.
+On the **`cobalt-8x3f`** service (not the app):
+- `YOUTUBE_SESSION_SERVER=http://bgutil-pot.railway.internal:4416` — **load-bearing.** Cobalt computes `retrieve_player = Boolean(sessionTokens || cookie)` on an ungated code path, so with this unset (and no `COOKIE_PATH`) it builds no youtubei.js `Player` and **every tunnel returns a 0-byte body** while still reporting `status: "tunnel"`. Point it at `bgutil-pot`, never at `yt-session-generator` — Cobalt 11.x POSTs `/get_pot`, which that image doesn't serve. Details: [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#why-youtube_session_server-must-be-set).
+
+**Cobalt version pin:** the `cobalt-8x3f` Railway service must use a specific image tag (`ghcr.io/imputnet/cobalt:<version>`), never `:latest`. Upstream updates `youtubei.js` frequently to keep up with YouTube's player; a stale Cobalt silently returns 0-byte tunnel bodies for some videos. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#cobalt-version-pinning) for the pinning rationale and the 0-byte-body diagnostic runbook.
+
+**0-byte tunnels have two causes** — check `YOUTUBE_SESSION_SERVER` before assuming a stale image. A missing `Player` does not surface as an error: with Cobalt's default `IOS` client, playability still reports `OK`.
+
+**Don't let debugging poison your own results.** Roughly 8–10 YouTube extractions within a few minutes gets the datacenter IP bot-checked, after which everything returns `error.api.youtube.login` ("Sign in to confirm you're not a bot"). Space probes ~60s apart, always include a control video (`dQw4w9WgXcQ`), and suspect your own testing before suspecting a regression.
 
 ### PR Preview Environments
 PRs get isolated Railway environments via Railway's **native GitHub PR environments** (project Settings → Environments → PR environments). Railway creates `dub-rip-pr-<number>` from production, deploys it, and **auto-deletes it when the PR closes/merges** — no GitHub Actions workflow or `RAILWAY_API_TOKEN`/`RAILWAY_PROJECT_ID` secrets involved.

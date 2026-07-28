@@ -61,13 +61,13 @@ This project is configured to deploy on Railway with a self-hosted Cobalt instan
 
 1. **dub-rip** - This app (SvelteKit + Node.js)
 2. **Cobalt** - YouTube download API (`ghcr.io/imputnet/cobalt:11.7.1`)
-3. **bgutil-pot** - PO token sidecar for yt-dlp fallback (`brainicism/bgutil-ytdlp-pot-provider:1.3.1`)
+3. **bgutil-pot** - PO token sidecar (`brainicism/bgutil-ytdlp-pot-provider:1.3.1`), used by *both* the yt-dlp fallback and Cobalt's session server
 
 ### Environment Variables
 
 ```bash
 # dub-rip service
-COBALT_API_URL=http://cobalt.railway.internal:9000
+COBALT_API_URL=http://cobalt-8x3f.railway.internal:9000
 COBALT_API_KEY=your-api-key-uuid
 RAILPACK_DEPLOY_APT_PACKAGES=python3
 # bgutil-ytdlp-pot-provider sidecar; required for yt-dlp PO tokens
@@ -77,7 +77,9 @@ BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
 API_URL=https://your-cobalt-url.up.railway.app/
 API_KEY_URL=file://keys.json
 YOUTUBE_SESSION_INNERTUBE_CLIENT=WEB_EMBEDDED
-# YOUTUBE_SESSION_SERVER intentionally unset — see docs/deployment-strategy.md
+# REQUIRED: without this Cobalt builds no youtubei.js Player and every tunnel
+# returns 0 bytes. Must be bgutil-pot — NOT yt-session-generator (wrong protocol).
+YOUTUBE_SESSION_SERVER=http://bgutil-pot.railway.internal:4416
 ```
 
 See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions.

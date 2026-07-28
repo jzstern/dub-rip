@@ -1,82 +1,155 @@
 <script lang="ts">
-const VINYL_CHARS = ["─", "━", "═", "~", "≈"];
-const GROOVE_CHARS = ["╌", "┄", "╴", "╶"];
-const LABEL_CHAR = "█";
-const SPINDLE_CHAR = "◉";
+import { untrack } from "svelte";
+
+type VinylState = "idle" | "ready" | "active";
 
 interface Props {
-	active?: boolean;
+	state?: VinylState;
 }
 
-let { active = false }: Props = $props();
+let { state: vinylState = "idle" }: Props = $props();
 
-let rotation = $state(0);
+const ROWS = 13;
+const COLS = 27;
+const RADIUS = 11.4;
+const GROOVES = ["-", "~", "="];
+const SHIMMER = ["-", "~", "=", "~"];
+const RIM = ["o", "0", "O"];
 
-const SIZE = 35;
-const CENTER = Math.floor(SIZE / 2);
-const LABEL_RADIUS = 6.5;
-const SPINDLE_RADIUS = 1.7;
-const ASPECT_RATIO = 1.6;
+const REVOLUTION = Math.PI * 2;
+const SPEEDS: Record<VinylState, number> = {
+	idle: 0.15 * REVOLUTION,
+	ready: 0.225 * REVOLUTION,
+	active: 0.45 * REVOLUTION,
+};
+const FRAME_MS = 120;
+const VELOCITY_SMOOTHING_MS = 250;
 
-function generateVinyl(): string[] {
-	const lines: string[] = [];
+interface Segment {
+	text: string;
+	label: boolean;
+}
 
-	for (let y = 0; y < SIZE; y++) {
-		let line = "";
-		for (let x = 0; x < SIZE; x++) {
-			const dx = x - CENTER;
-			const dy = (y - CENTER) * ASPECT_RATIO;
-			const distance = Math.sqrt(dx * dx + dy * dy);
-			const angle = Math.atan2(dy, dx) + rotation;
+let renderedPhase = $state(0);
 
-			if (distance < SPINDLE_RADIUS) {
-				line += SPINDLE_CHAR;
-			} else if (distance < LABEL_RADIUS) {
-				const labelPattern = Math.floor((angle * 2 + distance) % 2);
-				line += labelPattern === 0 ? LABEL_CHAR : "▓";
-			} else if (distance <= CENTER - 1) {
-				const grooveIndex = Math.floor(distance) % 2;
-				const charSet = grooveIndex === 0 ? VINYL_CHARS : GROOVE_CHARS;
-				const rawIndex = Math.floor(
-					((angle + Math.PI) / (Math.PI * 2)) * charSet.length + distance * 0.5,
-				);
-				const angleIndex =
-					((rawIndex % charSet.length) + charSet.length) % charSet.length;
-				line += charSet[angleIndex];
-			} else if (distance <= CENTER) {
-				line += "○";
+function renderDisc(phase: number, shimmering: boolean): Segment[] {
+	const cy = (ROWS - 1) / 2;
+	const cx = (COLS - 1) / 2;
+	const grooveSet = shimmering ? SHIMMER : GROOVES;
+	const segments: Segment[] = [];
+	let text = "";
+	let label = false;
+
+	const push = (ch: string, isLabel: boolean): void => {
+		if (isLabel !== label && text) {
+			segments.push({ text, label });
+			text = "";
+		}
+		label = isLabel;
+		text += ch;
+	};
+
+	for (let y = 0; y < ROWS; y++) {
+		for (let x = 0; x < COLS; x++) {
+			const nx = x - cx;
+			const ny = (y - cy) * 2.05;
+			const r = Math.hypot(nx, ny);
+			const a = Math.atan2(ny, nx) + phase;
+
+			if (r <= 1.0) {
+				push("·", true);
+			} else if (r <= 3.5) {
+				push(Math.floor(a / 0.9 + 64) % 2 === 0 ? "@" : "#", true);
+			} else if (r <= RADIUS - 1.6) {
+				const ring = Math.floor(r);
+				const seg = Math.floor(a / 0.5 + 128);
+				push(grooveSet[(seg + ring) % grooveSet.length], false);
+			} else if (r <= RADIUS - 0.5) {
+				const seg = Math.floor(a / 0.5 + 128);
+				push(RIM[seg % RIM.length], false);
+			} else if (r <= RADIUS + 0.15) {
+				push(".", false);
 			} else {
-				line += " ";
+				push(" ", false);
 			}
 		}
-		lines.push(line);
+		push("\n", false);
 	}
-
-	return lines;
+	if (text) segments.push({ text, label });
+	return segments;
 }
 
-let animationFrame: number;
-let lastTime: number | null = null;
-
-function animate(time: number) {
-	if (lastTime !== null) {
-		const delta = time - lastTime;
-		const speed = active ? 0.003 : 0.001;
-		rotation += delta * speed;
-	}
-	lastTime = time;
-	animationFrame = requestAnimationFrame(animate);
-}
+let frame = $derived(renderDisc(renderedPhase, vinylState === "active"));
 
 $effect(() => {
-	animationFrame = requestAnimationFrame(animate);
-	return () => cancelAnimationFrame(animationFrame);
-});
+	const prefersReducedMotion =
+		typeof window.matchMedia === "function" &&
+		window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	if (prefersReducedMotion) return;
 
-let vinylLines = $derived(generateVinyl());
+	let rafId = 0;
+	let lastTime: number | null = null;
+	let phase = 0;
+	let sinceRender = FRAME_MS;
+	let velocity = SPEEDS[untrack(() => vinylState)];
+
+	const tick = (now: number): void => {
+		if (lastTime !== null) {
+			const delta = now - lastTime;
+			const target = SPEEDS[vinylState];
+			velocity +=
+				(target - velocity) * (1 - Math.exp(-delta / VELOCITY_SMOOTHING_MS));
+			phase += (velocity * delta) / 1000;
+			sinceRender += delta;
+			if (sinceRender >= FRAME_MS) {
+				sinceRender = 0;
+				renderedPhase = phase;
+			}
+		}
+		lastTime = now;
+		rafId = requestAnimationFrame(tick);
+	};
+
+	rafId = requestAnimationFrame(tick);
+	return () => cancelAnimationFrame(rafId);
+});
 </script>
 
 <pre
 	aria-hidden="true"
-	class="font-mono text-[0.53rem] leading-[0.45rem] {active ? 'text-primary scale-105' : 'text-muted-foreground'} transition-all duration-300 select-none sm:text-[0.64rem] sm:leading-[0.54rem]"
->{vinylLines.join("\n")}</pre>
+	class="vinyl text-center font-mono text-muted-foreground select-none"
+	class:vinyl--idle={vinylState === "idle"}
+	class:vinyl--ready={vinylState === "ready"}
+	class:vinyl--active={vinylState === "active"}
+>{#each frame as segment, i (i)}{#if segment.label}<span class="lbl">{segment.text}</span>{:else}{segment.text}{/if}{/each}</pre>
+<p class="sr-only">
+	An ASCII drawing of a vinyl record with an amber center label. It spins
+	continuously, speeding up while a download is in progress.
+</p>
+
+<style>
+	.vinyl {
+		font-size: clamp(10px, 2.9vw, 13px);
+		line-height: 1.12;
+		letter-spacing: 0.06em;
+	}
+
+	.lbl {
+		color: hsl(var(--primary) / 0.7);
+		transition: color 250ms var(--ease-out-strong);
+	}
+
+	.vinyl--ready .lbl {
+		color: hsl(var(--primary));
+	}
+
+	.vinyl--active .lbl {
+		color: hsl(var(--amber-hot));
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.lbl {
+			transition: none;
+		}
+	}
+</style>

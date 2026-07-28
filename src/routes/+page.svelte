@@ -2,9 +2,7 @@
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
-import * as Card from "$lib/components/ui/card";
 import { Input } from "$lib/components/ui/input";
-import { Progress } from "$lib/components/ui/progress";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
 import { createProgressSmoother } from "$lib/progress-smoothing";
@@ -39,6 +37,10 @@ let loadingPreview = $state(false);
 let downloadComplete = $state(false);
 let completedFilename = $state("");
 let currentDownloadId = 0;
+
+let vinylState: "idle" | "ready" | "active" = $derived(
+	loading ? "active" : isValidUrl ? "ready" : "idle",
+);
 
 const smoother = createProgressSmoother();
 let rafId: number | null = null;
@@ -265,79 +267,113 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen items-center justify-center p-4">
-	<div class="w-full max-w-md space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2 text-center">
-			<AsciiVinyl active={loading} />
-			<h1 class="font-mono text-4xl font-bold tracking-tight">dub-rip</h1>
-			<p class="text-sm text-muted-foreground">Download YouTube audio with rich metadata</p>
-		</div>
+<div class="flex min-h-screen justify-center px-5 pt-12 pb-16">
+	<main class="flex w-full max-w-[460px] flex-col items-center gap-7">
+		<header class="flex flex-col items-center gap-5">
+			<AsciiVinyl state={vinylState} />
+			<div class="flex flex-col items-center gap-1.5">
+				<h1
+					class="font-mono text-xl font-semibold tracking-[0.42em] indent-[0.42em] text-foreground"
+				>
+					DUB.RIP
+				</h1>
+				<p
+					class="font-mono text-[10.5px] tracking-[0.24em] indent-[0.24em] text-muted-foreground"
+				>
+					YOUTUBE AUDIO · RICH METADATA
+				</p>
+			</div>
+		</header>
 
-		<!-- Main Card -->
-		<Card.Root class="p-6">
-			<Card.Content class="space-y-4 p-0">
-				<!-- Input -->
-				<div class="space-y-2">
-					<Input
-						bind:value={url}
-						placeholder="Paste YouTube URL"
-						disabled={loading}
-						autofocus
-						onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-						class="h-11"
-					/>
-					<DownloadButton
-						loading={loading}
-						disabled={loading || !isValidUrl}
-						onClick={handleDownload}
-					/>
-				</div>
+		<section
+			class="machined-panel w-full rounded-[10px] border bg-card"
+			aria-label="Downloader"
+		>
+			<div class="flex flex-col gap-3.5 p-5">
+				<Input
+					bind:value={url}
+					placeholder="Paste a YouTube link"
+					disabled={loading}
+					autofocus
+					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
+					class="h-11 bg-background font-mono text-[13px] focus-visible:ring-[3px] focus-visible:ring-ring/15"
+				/>
+				<DownloadButton
+					loading={loading}
+					disabled={loading || !isValidUrl}
+					onClick={handleDownload}
+				/>
 
-			<!-- Preview -->
-			{#if preview && !loading && !loadingPreview}
-				<VideoPreview preview={preview} formatDuration={formatDuration} />
-			{/if}
+				{#if preview && !loading && !loadingPreview}
+					<VideoPreview preview={preview} formatDuration={formatDuration} />
+				{/if}
 
-			<!-- Loading Preview -->
-			{#if loadingPreview}
-				<PreviewSkeleton />
-			{/if}
+				{#if loadingPreview}
+					<PreviewSkeleton />
+				{/if}
 
-				<!-- Error -->
 				{#if error}
-					<div class="rounded-md border border-destructive/20 bg-destructive/10 p-3">
-						<p class="text-sm text-destructive">{error}</p>
+					<div
+						class="rise-in rounded-lg border border-destructive/35 bg-destructive/10 p-3"
+					>
+						<p class="text-sm text-foreground/90">{error}</p>
 					</div>
 				{/if}
 
-				<!-- Progress -->
 				{#if loading || status}
-					<div class="space-y-3">
-						{#if videoTitle}
-							<p class="truncate text-sm font-medium">{videoTitle}</p>
-						{/if}
-
-						<p class="text-xs text-muted-foreground">{status}</p>
-
-						<div class="space-y-2">
-							<Progress value={roundedProgress} class="h-2" />
-							<div class="flex justify-between text-xs text-muted-foreground">
-								<span>{roundedProgress}%</span>
-								<div class="flex gap-2">
-									{#if speed}<span>{speed}</span>{/if}
-									{#if eta}<span>ETA: {eta}</span>{/if}
-								</div>
-							</div>
+					<div class="rise-in flex flex-col gap-1.5">
+						<div class="h-0.5 overflow-hidden rounded-full bg-muted">
+							<div
+								class="h-full bg-primary"
+								style="width: {roundedProgress}%"
+							></div>
 						</div>
-
-						{#if downloadComplete && completedFilename}
-							<p class="truncate text-xs text-muted-foreground">{completedFilename}</p>
-						{/if}
+						<div
+							class="flex items-baseline justify-between gap-3 font-mono text-[11px] text-muted-foreground"
+						>
+							<span class="tabular-nums">{roundedProgress}%</span>
+							<span class="min-w-0 truncate">
+								{#if speed || eta}
+									{speed}{speed && eta ? " · " : ""}{eta ? `ETA ${eta}` : ""}
+								{:else}
+									{status}
+								{/if}
+							</span>
+						</div>
 					</div>
 				{/if}
+			</div>
 
-			</Card.Content>
-		</Card.Root>
-	</div>
+			<div class="flex justify-end border-t px-5 py-2">
+				<span class="font-mono text-[10px] tracking-[0.12em] text-muted-foreground"
+					>MP3 128 · ID3v2</span
+				>
+			</div>
+		</section>
+	</main>
 </div>
+
+<style>
+	.rise-in {
+		animation: rise-in 200ms var(--ease-out-strong);
+	}
+
+	@keyframes rise-in {
+		from {
+			opacity: 0;
+			transform: translateY(2px);
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.rise-in {
+			animation: fade-in 150ms ease-out;
+		}
+	}
+</style>

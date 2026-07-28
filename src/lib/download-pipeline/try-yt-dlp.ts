@@ -58,7 +58,7 @@ export async function tryYtDlpDownload({
 		"--audio-format",
 		"mp3",
 		"--audio-quality",
-		"0",
+		"128K",
 		"-f",
 		"bestaudio/best",
 		"--embed-thumbnail",

@@ -3,6 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 
+function mockMatchMedia(reducedMotion: boolean): void {
+	vi.stubGlobal(
+		"matchMedia",
+		vi.fn().mockImplementation((query: string) => ({
+			matches: query.includes("prefers-reduced-motion") && reducedMotion,
+			media: query,
+			addEventListener: vi.fn(),
+			removeEventListener: vi.fn(),
+		})),
+	);
+}
+
 describe("AsciiVinyl", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
@@ -12,11 +24,13 @@ describe("AsciiVinyl", () => {
 		vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
 			clearTimeout(id);
 		});
+		mockMatchMedia(false);
 	});
 
 	afterEach(() => {
 		cleanup();
 		vi.useRealTimers();
+		vi.unstubAllGlobals();
 		vi.restoreAllMocks();
 	});
 
@@ -42,122 +56,113 @@ describe("AsciiVinyl", () => {
 				"true",
 			);
 		});
+
+		it("provides a screen-reader description", () => {
+			// #given / #when
+			const { container } = render(AsciiVinyl);
+
+			// #then
+			const description = container.querySelector(".sr-only");
+			expect(description?.textContent).toContain("vinyl record");
+		});
 	});
 
 	describe("vinyl output structure", () => {
-		it("generates vinyl with correct number of rows", () => {
+		it("generates the polar disc with 13 rows", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 			const pre = container.querySelector("pre");
-			const lines = pre?.textContent?.split("\n") || [];
+			const lines = pre?.textContent?.replace(/\n$/, "").split("\n") || [];
 
 			// #then
-			expect(lines.length).toBe(35);
+			expect(lines.length).toBe(13);
 		});
 
-		it("each row has consistent character count", () => {
+		it("each row has 27 columns", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 			const pre = container.querySelector("pre");
-			const lines = pre?.textContent?.split("\n") || [];
+			const lines = pre?.textContent?.replace(/\n$/, "").split("\n") || [];
 
 			// #then
-			const expectedLength = 35;
 			for (const line of lines) {
-				expect(line.length).toBe(expectedLength);
+				expect(line.length).toBe(27);
 			}
 		});
 
-		it("contains spindle character at center", () => {
+		it("renders the amber label as highlighted spans", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
-			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre?.textContent).toContain("◉");
+			const labelSpans = container.querySelectorAll("pre .lbl");
+			expect(labelSpans.length).toBeGreaterThan(0);
 		});
 
-		it("contains edge circle characters", () => {
+		it("contains the spindle character at the center", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre?.textContent).toContain("○");
+			expect(pre?.textContent).toContain("·");
 		});
 
-		it("contains label characters", () => {
+		it("contains groove characters", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre?.textContent).toContain("█");
-			expect(pre?.textContent).toContain("▓");
+			expect(pre?.textContent).toMatch(/[-~=]/);
 		});
 	});
 
-	describe("active state", () => {
-		it("applies the highlight effect when active", () => {
-			// #given / #when
-			const { container } = render(AsciiVinyl, { props: { active: true } });
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre).toHaveClass("text-primary");
-			expect(pre).toHaveClass("scale-105");
-		});
-
-		it("does not apply the highlight effect when inactive", () => {
-			// #given / #when
-			const { container } = render(AsciiVinyl, { props: { active: false } });
-			const pre = container.querySelector("pre");
-
-			// #then
-			expect(pre).not.toHaveClass("text-primary");
-			expect(pre).not.toHaveClass("scale-105");
-		});
-	});
-
-	describe("styling", () => {
-		it("has font-mono class on pre element", () => {
+	describe("state-driven appearance", () => {
+		it("marks the idle state by default", () => {
 			// #given / #when
 			const { container } = render(AsciiVinyl);
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("font-mono");
+			expect(pre).toHaveClass("vinyl--idle");
+			expect(pre).not.toHaveClass("vinyl--active");
 		});
 
-		it("has transition classes for smooth effects", () => {
+		it("marks the ready state when a valid link is pasted", () => {
 			// #given / #when
-			const { container } = render(AsciiVinyl);
+			const { container } = render(AsciiVinyl, {
+				props: { state: "ready" },
+			});
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("transition-all");
+			expect(pre).toHaveClass("vinyl--ready");
 		});
 
-		it("disables text selection", () => {
+		it("marks the active state while downloading", () => {
 			// #given / #when
-			const { container } = render(AsciiVinyl);
+			const { container } = render(AsciiVinyl, {
+				props: { state: "active" },
+			});
 			const pre = container.querySelector("pre");
 
 			// #then
-			expect(pre).toHaveClass("select-none");
+			expect(pre).toHaveClass("vinyl--active");
+			expect(pre).not.toHaveClass("vinyl--idle");
 		});
 	});
 
 	describe("animation lifecycle", () => {
-		it("starts animation on mount", () => {
+		it("spins continuously even when idle", () => {
 			// #given / #when
-			render(AsciiVinyl);
+			render(AsciiVinyl, { props: { state: "idle" } });
 
 			// #then
 			expect(window.requestAnimationFrame).toHaveBeenCalled();
 		});
 
-		it("cleans up animation on unmount", () => {
+		it("cleans up the animation on unmount", () => {
 			// #given
 			const { unmount } = render(AsciiVinyl);
 
@@ -166,6 +171,32 @@ describe("AsciiVinyl", () => {
 
 			// #then
 			expect(window.cancelAnimationFrame).toHaveBeenCalled();
+		});
+	});
+
+	describe("reduced motion", () => {
+		it("does not start the spin loop when the user prefers reduced motion", () => {
+			// #given
+			mockMatchMedia(true);
+
+			// #when
+			render(AsciiVinyl);
+
+			// #then
+			expect(window.requestAnimationFrame).not.toHaveBeenCalled();
+		});
+
+		it("still reflects the active state statically", () => {
+			// #given
+			mockMatchMedia(true);
+
+			// #when
+			const { container } = render(AsciiVinyl, {
+				props: { state: "active" },
+			});
+
+			// #then
+			expect(container.querySelector("pre")).toHaveClass("vinyl--active");
 		});
 	});
 });

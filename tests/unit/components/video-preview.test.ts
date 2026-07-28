@@ -165,7 +165,7 @@ describe("VideoPreview", () => {
 			expect(screen.queryByText(/^\d+:\d+$/)).not.toBeInTheDocument();
 		});
 
-		it("displays separator between artist and duration", () => {
+		it("renders the duration as a chip over the artwork", () => {
 			// #given
 			const preview: VideoPreviewType = {
 				success: true,
@@ -180,7 +180,8 @@ describe("VideoPreview", () => {
 			render(VideoPreview, { props: { preview, formatDuration } });
 
 			// #then
-			expect(screen.getByText("•")).toBeInTheDocument();
+			const chip = screen.getByText("3:00");
+			expect(chip).toHaveClass("absolute", "font-mono");
 		});
 	});
 
@@ -202,7 +203,6 @@ describe("VideoPreview", () => {
 			// #then
 			expect(screen.getByText("Just a Title")).toBeInTheDocument();
 			expect(screen.getByText("1:00")).toBeInTheDocument();
-			expect(screen.queryByText("•")).not.toBeInTheDocument();
 		});
 
 		it("handles zero duration", () => {

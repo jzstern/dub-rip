@@ -44,7 +44,9 @@ For full templates, see `.claude/skills/svelte-patterns/`
 Required environment variables for production:
 - `BGUTIL_POT_URL` - Internal bgutil-pot service URL (e.g., `http://bgutil-pot.railway.internal:4416`). Downloads fail fast without it.
 - `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp (Railway doesn't include Python by default)
-- `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
+
+Optional:
+- `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking. Deploys work without them; errors just go to logs only.
 
 **Image version pin:** the `bgutil-pot` Railway service must use a specific image tag + digest, never `:latest`. Railway caches whatever digest `:latest` resolved to at first deploy, so `:latest` gives the illusion of freshness without the freshness. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#image-version-pinning).
 

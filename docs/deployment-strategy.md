@@ -173,7 +173,7 @@ Pin service images to a specific version tag, never `:latest`.
 
 **Why it matters for bgutil-pot:** its BgUtils → BotGuard binding is tied to YouTube's current player, which ships changes frequently (often weekly). A stale bgutil-pot mints PO tokens YouTube rejects (see [symptom: BotGuard lag](#symptom-yt-dlp-fails-on-all-videos-with-unmatched-yt-dlp-error--requested-format-is-not-available) below).
 
-**Digest pinning:** `bgutil-pot` is pinned by digest in `railway.toml`. The tag is kept for human readability; the `@sha256:…` suffix is what Railway actually resolves and caches. This eliminates supply-chain risk from upstream image swaps under a tag.
+**Digest pinning:** `bgutil-pot` is pinned by digest in `railway.toml`. The tag is kept for human readability; the `@sha256:…` suffix is what Railway actually resolves and caches. This removes tag-retargeting and deployment-drift risk — the tag can't be silently repointed at different content under us. It does **not** protect against a compromised publisher or vulnerabilities in the image itself; reviewing what a new digest contains before bumping it is still on us.
 
 ### Capturing a digest
 
@@ -307,7 +307,7 @@ You can check service logs directly in the Railway dashboard.
 ## Security Considerations
 
 1. **Internal Networking**: bgutil-pot is not exposed publicly
-2. **HTTPS Only**: Railway provides automatic SSL
+2. **Transport**: public ingress to the app terminates on Railway-provided HTTPS. App-to-sidecar traffic (`http://bgutil-pot.railway.internal:4416`) is plain HTTP over Railway's private network, which never leaves the project and is not reachable from the internet.
 3. **Input Validation**: YouTube URLs are validated and video IDs extracted before reaching yt-dlp
 
 ## Risks and Mitigations

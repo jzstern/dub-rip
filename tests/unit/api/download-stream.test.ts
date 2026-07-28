@@ -203,32 +203,14 @@ describe("parseYtDlpError", () => {
 });
 
 describe("GET /api/download-stream - bgutil-pot env requirement", () => {
-	beforeEach(() => {
-		vi.resetModules();
-		vi.clearAllMocks();
-	});
-
-	afterEach(() => {
-		vi.doUnmock("$env/dynamic/private");
-		vi.doUnmock("$lib/cobalt");
-	});
-
 	// We mock `$env/dynamic/private` rather than `vi.stubEnv` because SvelteKit's
 	// $env modules are virtual — they snapshot at module-resolve time, not from
 	// process.env at handler-invoke time, so stubEnv would land in the wrong place.
-	it("emits an SSE error event when BGUTIL_POT_URL is unset and Cobalt has failed", async () => {
-		// #given
+	async function readStreamUntilError(): Promise<string> {
 		vi.doMock("$env/dynamic/private", () => ({
 			env: { BGUTIL_POT_URL: "" },
 		}));
 		vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
-		vi.doMock("$lib/cobalt", () => ({
-			CobaltError: class CobaltError extends Error {},
-			requestCobaltAudio: vi
-				.fn()
-				.mockRejectedValue(new Error("simulated cobalt failure")),
-			fetchCobaltAudio: vi.fn(),
-		}));
 
 		const { GET } = await import(
 			"../../../src/routes/api/download-stream/+server"
@@ -237,21 +219,70 @@ describe("GET /api/download-stream - bgutil-pot env requirement", () => {
 			url: createMockURL({ url: "https://youtube.com/watch?v=dQw4w9WgXcQ" }),
 		} as unknown as Parameters<typeof GET>[0];
 
-		// #when
 		const response = await GET(event);
 		const reader = response.body?.getReader();
 		const decoder = new TextDecoder();
 		let buffer = "";
-		let sawError = false;
-		while (!sawError) {
+		while (!buffer.includes('"type":"error"')) {
 			const chunk = await reader?.read();
 			if (!chunk || chunk.done) break;
 			buffer += decoder.decode(chunk.value);
-			if (buffer.includes('"type":"error"')) sawError = true;
 		}
+		return buffer;
+	}
+
+	beforeEach(() => {
+		vi.resetModules();
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.doUnmock("$env/dynamic/private");
+	});
+
+	it("emits an SSE error event when BGUTIL_POT_URL is unset", async () => {
+		// #given / #when
+		const buffer = await readStreamUntilError();
 
 		// #then
-		expect(sawError).toBe(true);
+		expect(buffer).toMatch(/"type":"error"/);
 		expect(buffer).toMatch(/BGUTIL_POT_URL/);
+	});
+
+	it("reports the missing bgutil-pot config to Sentry", async () => {
+		// #given / #when
+		await readStreamUntilError();
+
+		// #then
+		expect(Sentry.captureMessage).toHaveBeenCalledWith(
+			"BGUTIL_POT_URL is unset",
+			expect.objectContaining({ level: "error" }),
+		);
+	});
+
+	it("does not advertise a fast path before starting the download", async () => {
+		// #given / #when
+		const buffer = await readStreamUntilError();
+
+		// #then — yt-dlp is the only path, so there is nothing to fall back from
+		expect(buffer).not.toMatch(/Trying fast download/);
+	});
+
+	it("emits the yt-dlp start status before failing", async () => {
+		// #given / #when
+		const buffer = await readStreamUntilError();
+
+		// #then
+		expect(buffer).toMatch(/Starting download/);
+	});
+});
+
+describe("DownloadMethod", () => {
+	it("reports yt-dlp as the only download method", async () => {
+		// #given
+		const { YT_DLP_METHOD } = await import("$lib/types");
+
+		// #when / #then
+		expect(YT_DLP_METHOD).toBe("yt-dlp");
 	});
 });

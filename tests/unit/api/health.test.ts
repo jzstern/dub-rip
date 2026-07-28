@@ -22,9 +22,8 @@ describe("GET /api/health", () => {
 		for (const key of Object.keys(mockEnv)) delete mockEnv[key];
 	});
 
-	it("returns 200 when both downstream services respond", async () => {
+	it("returns 200 when bgutil-pot responds", async () => {
 		// #given
-		mockEnv.COBALT_API_URL = "http://c";
 		mockEnv.BGUTIL_POT_URL = "http://b";
 		fetchMock.mockResolvedValue({ ok: true, status: 200 });
 
@@ -36,17 +35,43 @@ describe("GET /api/health", () => {
 		// #then
 		expect(res.status).toBe(200);
 		expect(body.ok).toBe(true);
-		expect(body.checks.cobalt.ok).toBe(true);
 		expect(body.checks.bgutil_pot.ok).toBe(true);
+	});
+
+	it("probes the bgutil-pot /ping endpoint", async () => {
+		// #given
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		await GET({} as never);
+
+		// #then
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://b/ping",
+			expect.objectContaining({ method: "HEAD" }),
+		);
+	});
+
+	it("no longer reports a cobalt check", async () => {
+		// #given
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
+
+		// #then
+		expect(body.checks).not.toHaveProperty("cobalt");
 	});
 
 	it("returns 503 when bgutil-pot is unreachable", async () => {
 		// #given
-		mockEnv.COBALT_API_URL = "http://c";
 		mockEnv.BGUTIL_POT_URL = "http://b";
-		fetchMock
-			.mockResolvedValueOnce({ ok: true, status: 200 })
-			.mockRejectedValueOnce(new Error("ECONNREFUSED"));
+		fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
 
 		// #when
 		const { GET } = await import("../../../src/routes/api/health/+server");
@@ -58,7 +83,7 @@ describe("GET /api/health", () => {
 		expect(body.checks.bgutil_pot.error).toMatch(/ECONNREFUSED/);
 	});
 
-	it("flags missing env vars as 'not configured'", async () => {
+	it("flags a missing BGUTIL_POT_URL as 'not configured'", async () => {
 		// #given — mockEnv is empty (cleared in beforeEach)
 
 		// #when
@@ -68,7 +93,6 @@ describe("GET /api/health", () => {
 
 		// #then
 		expect(res.status).toBe(503);
-		expect(body.checks.cobalt.error).toBe("not configured");
 		expect(body.checks.bgutil_pot.error).toBe("not configured");
 	});
 });

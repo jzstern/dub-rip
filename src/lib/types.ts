@@ -18,7 +18,9 @@ export interface DownloadProgress {
 	eta: string;
 }
 
-export type DownloadMethod = "cobalt" | "yt-dlp";
+export const YT_DLP_METHOD = "yt-dlp";
+
+export type DownloadMethod = typeof YT_DLP_METHOD;
 
 export interface StreamEvent {
 	type: "status" | "info" | "progress" | "complete" | "error" | "event";

@@ -18,9 +18,8 @@ import { env } from "$env/dynamic/private";
  * - Linux x64: Production (Railway) and CI
  *
  * Other platforms (Windows, ARM) are not supported because:
- * 1. Cobalt is the primary download method; yt-dlp is only a fallback
- * 2. Production runs on a fixed Linux x64 environment
- * 3. Adding complexity for unused platforms increases maintenance burden
+ * 1. Production runs on a fixed Linux x64 environment
+ * 2. Adding complexity for unused platforms increases maintenance burden
  *
  * PR review bots flagged edge cases (Windows .exe extension, ARM64, ARMv7),
  * but these don't apply to our actual deployment context.

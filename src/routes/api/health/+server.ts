@@ -32,30 +32,21 @@ async function probe(url: string): Promise<CheckResult> {
 }
 
 export const GET: RequestHandler = async () => {
-	const cobaltUrl = env.COBALT_API_URL;
 	const bgutilUrl = env.BGUTIL_POT_URL;
 
-	const [cobalt, bgutil] = await Promise.all([
-		cobaltUrl
-			? probe(cobaltUrl)
-			: Promise.resolve({ ok: false, error: "not configured", latencyMs: 0 }),
-		bgutilUrl
-			? probe(`${bgutilUrl}/ping`)
-			: Promise.resolve({ ok: false, error: "not configured", latencyMs: 0 }),
-	]);
-
-	const allOk = cobalt.ok && bgutil.ok;
+	const bgutil = bgutilUrl
+		? await probe(`${bgutilUrl}/ping`)
+		: { ok: false, error: "not configured", latencyMs: 0 };
 
 	return new Response(
 		JSON.stringify({
-			ok: allOk,
+			ok: bgutil.ok,
 			checks: {
-				cobalt: { ...cobalt, url: cobaltUrl ?? null },
 				bgutil_pot: { ...bgutil, url: bgutilUrl ?? null },
 			},
 		}),
 		{
-			status: allOk ? 200 : 503,
+			status: bgutil.ok ? 200 : 503,
 			headers: { "content-type": "application/json" },
 		},
 	);

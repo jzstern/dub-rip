@@ -6,12 +6,11 @@ import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
-import { tryCobaltDownload } from "$lib/download-pipeline/try-cobalt";
 import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
 } from "$lib/download-pipeline/try-yt-dlp";
-import type { DownloadMethod } from "$lib/types";
+import { YT_DLP_METHOD } from "$lib/types";
 import {
 	fetchThumbnailBuffer,
 	fetchVideoDetails,
@@ -153,59 +152,43 @@ export const GET: RequestHandler = async ({ url }) => {
 					}
 				}
 
-				let actualFilePath = `${outputPath}.mp3`;
-				let downloadMethod: DownloadMethod = "yt-dlp";
+				send({ type: "status", message: "Starting download..." });
 
-				send({ type: "status", message: "Trying fast download..." });
+				if (!env.BGUTIL_POT_URL) {
+					send({
+						type: "error",
+						message:
+							"Server is misconfigured: BGUTIL_POT_URL is not set. Downloads cannot run without the bgutil-pot sidecar.",
+					});
+					Sentry.captureMessage("BGUTIL_POT_URL is unset", {
+						level: "error",
+						tags: {
+							service: "download-stream",
+							operation: "bgutil-pot-config",
+						},
+					});
+					closeStream();
+					return;
+				}
 
-				const cobaltResult = await tryCobaltDownload({
+				const debugMode = url.searchParams.get("debug") === "1";
+				const ytDlp = await getYTDlp();
+				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
+				const pluginDir = await ensureBgutilPlugin();
+
+				await tryYtDlpDownload({
 					videoUrl: normalizedUrl,
-					outputPath: actualFilePath,
+					outputPath,
+					bgutilPotUrl: env.BGUTIL_POT_URL,
+					ffmpegPath: ffmpegInstaller.path,
+					pluginDir,
+					debugMode,
+					ytDlp,
+					titleState,
 					send,
 				});
 
-				if (cobaltResult.ok) {
-					downloadMethod = cobaltResult.method;
-				} else {
-					send({ type: "status", message: "Starting download..." });
-
-					if (!env.BGUTIL_POT_URL) {
-						send({
-							type: "error",
-							message:
-								"Server is misconfigured: BGUTIL_POT_URL is not set. The yt-dlp fallback cannot run without the bgutil-pot sidecar.",
-						});
-						Sentry.captureMessage("BGUTIL_POT_URL is unset", {
-							level: "error",
-							tags: {
-								service: "download-stream",
-								operation: "bgutil-pot-config",
-							},
-						});
-						closeStream();
-						return;
-					}
-
-					const debugMode = url.searchParams.get("debug") === "1";
-					const ytDlp = await getYTDlp();
-					const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
-					const pluginDir = await ensureBgutilPlugin();
-
-					await tryYtDlpDownload({
-						videoUrl: normalizedUrl,
-						outputPath,
-						bgutilPotUrl: env.BGUTIL_POT_URL,
-						ffmpegPath: ffmpegInstaller.path,
-						pluginDir,
-						debugMode,
-						ytDlp,
-						titleState,
-						send,
-					});
-
-					actualFilePath = `${outputPath}.mp3`;
-					downloadMethod = "yt-dlp";
-				}
+				const actualFilePath = `${outputPath}.mp3`;
 
 				if (!existsSync(actualFilePath)) {
 					send({
@@ -228,7 +211,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					videoTitle: titleState.videoTitle,
 					artist: titleState.artist,
 					trackTitle: titleState.trackTitle,
-					downloadMethod,
+					downloadMethod: YT_DLP_METHOD,
 					videoId,
 					detailsPromise,
 					thumbnailPromise,

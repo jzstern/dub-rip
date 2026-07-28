@@ -42,12 +42,13 @@ For full templates, see `.claude/skills/svelte-patterns/`
 
 ## Railway Deployment
 Required environment variables for production:
-- `COBALT_API_URL` - Internal Cobalt service URL (e.g., `http://cobalt.railway.internal:9000`)
-- `COBALT_API_KEY` - API key for authenticated Cobalt requests
-- `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp fallback (Railway doesn't include Python by default)
+- `BGUTIL_POT_URL` - Internal bgutil-pot service URL (e.g., `http://bgutil-pot.railway.internal:4416`). Downloads fail fast without it.
+- `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp (Railway doesn't include Python by default)
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking
 
-**Cobalt version pin:** the `cobalt` Railway service must use a specific image tag (`ghcr.io/imputnet/cobalt:<version>`), never `:latest`. Upstream updates `youtubei.js` frequently to keep up with YouTube's player; a stale Cobalt silently returns 0-byte tunnel bodies for some videos. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#cobalt-version-pinning) for the pinning rationale and the 0-byte-body diagnostic runbook.
+**Image version pin:** the `bgutil-pot` Railway service must use a specific image tag + digest, never `:latest`. Railway caches whatever digest `:latest` resolved to at first deploy, so `:latest` gives the illusion of freshness without the freshness. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#image-version-pinning).
+
+**Cobalt was removed (2026-07).** It was the primary download path and silently returned empty bodies for most videos. Do not reintroduce it without reading [`docs/decisions/0001-remove-cobalt.md`](../docs/decisions/0001-remove-cobalt.md) first.
 
 ### PR Preview Environments
 PRs get isolated Railway environments via Railway's **native GitHub PR environments** (project Settings → Environments → PR environments). Railway creates `dub-rip-pr-<number>` from production, deploys it, and **auto-deletes it when the PR closes/merges** — no GitHub Actions workflow or `RAILWAY_API_TOKEN`/`RAILWAY_PROJECT_ID` secrets involved.
@@ -57,18 +58,19 @@ PR environments inherit production variables and get unique domains.
 **Do not re-add a custom PR-env GitHub workflow.** A hand-rolled `railway-pr.yml` previously ran alongside native PR envs, creating two environments per PR (`pr-N` *and* `dub-rip-pr-N`) and breaking teardown — orphaned envs piled up and billed idle compute 24/7. Use exactly one mechanism (native).
 
 ### Railway Cost Practices
-PR environments — not production — are the dominant cost in this project (production steady-state is ~$2.50/mo across all three services; a July 2026 audit measured ~80% of usage coming from PR envs).
+PR environments — not production — are the dominant cost in this project (a July 2026 audit measured ~80% of usage coming from PR envs).
 
-- **Keep PRs short-lived.** Every open PR holds a full 3-service environment (app + cobalt + bgutil-pot). Close design-option/preview PRs once a direction is picked — branches survive, and reopening a PR redeploys its preview.
+- **Keep PRs short-lived.** Every open PR holds a full environment (app + bgutil-pot). Close design-option/preview PRs once a direction is picked — branches survive, and reopening a PR redeploys its preview.
 - **Never leave a PR env alive across releases.** Envs deployed from builds older than #57 generate PO tokens in-process, which produces constant outbound traffic that defeats Railway app-sleep — one such env ran awake continuously for 6 months (`dub-rip-pr-44`, Jan 30 → Jul 17, 2026).
-- **Do not point an uptime monitor at `/api/health`.** It actively probes cobalt and bgutil-pot, so any periodic pinger keeps all three services awake 24/7 (~+$10–12/mo). If external monitoring is ever needed, monitor a static asset or accept the sleep trade-off explicitly.
+- **Do not point an uptime monitor at `/api/health`.** It actively probes bgutil-pot, so any periodic pinger keeps both services awake 24/7. If external monitoring is ever needed, monitor a static asset or accept the sleep trade-off explicitly.
 - **Workspace usage caps** (set 2026-07-17): soft $20 (email alert), hard $40 (Railway stops services). If a legitimate traffic spike hits the hard cap, raise it in workspace billing settings rather than removing it.
 
 ## yt-dlp Integration
-- yt-dlp is used as a **fallback** when Cobalt fails (primary download method is Cobalt)
+- yt-dlp is the **only** download path — there is no fallback. A failure is user-visible.
 - Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)
+- Requires `BGUTIL_POT_URL`; the route returns an explicit config error without it
 - **Do NOT use** `--cookies-from-browser` on Railway (no browser available)
-- Some videos require authentication and cannot be downloaded via yt-dlp fallback
+- Some videos require authentication and cannot be downloaded
 - Single video from playlist: `--no-playlist`
 - Parse stderr for user-friendly error messages (see `parseYtDlpError`)
 - **Always pass `buildJsRuntimeArgs()`** on every yt-dlp invocation. yt-dlp enables *only Deno* by default and our image has none, so without it yt-dlp reports `JS runtimes: none`, can't solve YouTube's `n` challenge, and every download fails with "Requested format is not available". A dev box with Deno installed hides this.

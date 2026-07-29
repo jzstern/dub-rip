@@ -1,15 +1,7 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { json } from "@sveltejs/kit";
+import { getVideoDetails } from "$lib/video-details-cache";
 import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
-import {
-	buildBgutilPotArgs,
-	buildJsRuntimeArgs,
-	ensureYtDlpBinary,
-} from "$lib/yt-dlp-binary";
 import type { RequestHandler } from "./$types";
-
-const execFilePromise = promisify(execFile);
 
 const DURATION_EXTRACTION_TIMEOUT_MS = 12_000;
 
@@ -26,32 +18,19 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "Invalid YouTube URL" }, { status: 400 });
 		}
 
-		const binaryPath = await ensureYtDlpBinary();
 		const normalizedUrl = buildWatchUrl(videoId);
 
-		const result = await execFilePromise(
-			binaryPath,
-			[
-				"--skip-download",
-				"--no-warnings",
-				"--no-playlist",
-				"--print",
-				"%(duration)s",
-				...buildJsRuntimeArgs(),
-				...(await buildBgutilPotArgs()),
-				normalizedUrl,
-			],
-			{ timeout: DURATION_EXTRACTION_TIMEOUT_MS },
-		);
+		const details = await getVideoDetails(videoId, normalizedUrl, {
+			timeout: DURATION_EXTRACTION_TIMEOUT_MS,
+		});
 
-		const duration = Number.parseInt(result.stdout.trim(), 10);
-		if (Number.isNaN(duration)) {
+		if (!details || typeof details.duration !== "number") {
 			throw new Error("Could not parse duration from yt-dlp output");
 		}
 
 		return json({
 			success: true,
-			duration,
+			duration: details.duration,
 		});
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : String(error);

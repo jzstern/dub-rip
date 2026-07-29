@@ -1,11 +1,14 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as Sentry from "@sentry/sveltekit";
+import { retryWithBackoff } from "./retry";
 import {
 	buildBgutilPotArgs,
 	buildJsRuntimeArgs,
 	ensureYtDlpBinary,
 } from "./yt-dlp-binary";
+import { withYtDlpConcurrencyLimit } from "./yt-dlp-concurrency";
+import { isRetryableYtDlpError } from "./yt-dlp-errors";
 
 const execFilePromise = promisify(execFile);
 
@@ -21,6 +24,7 @@ export interface VideoDetails {
 	track?: string;
 	artist?: string;
 	bpm?: number;
+	duration?: number;
 }
 
 export interface ThumbnailImage {
@@ -40,6 +44,7 @@ interface YtDlpJson {
 	album_artist?: string;
 	composer?: string;
 	bpm?: number;
+	duration?: number;
 }
 
 function parseYear(
@@ -69,42 +74,64 @@ function pickGenre(
 	return undefined;
 }
 
+async function fetchVideoDetailsOnce(
+	videoUrl: string,
+	timeout: number,
+): Promise<VideoDetails> {
+	const deadline = Date.now() + timeout;
+	const remaining = () => Math.max(1, deadline - Date.now());
+
+	const binaryPath = await ensureYtDlpBinary();
+	if (Date.now() >= deadline) {
+		throw new Error("yt-dlp binary initialization exceeded timeout");
+	}
+	const args = [
+		"--dump-json",
+		"--no-warnings",
+		"--no-playlist",
+		"--skip-download",
+		...buildJsRuntimeArgs(),
+		...(await buildBgutilPotArgs()),
+		videoUrl,
+	];
+	const result = await withYtDlpConcurrencyLimit(() =>
+		execFilePromise(binaryPath, args, {
+			timeout: remaining(),
+			maxBuffer: 10 * 1024 * 1024,
+		}),
+	);
+	const info = JSON.parse(result.stdout) as YtDlpJson;
+
+	return {
+		year: parseYear(info.upload_date, info.release_date, info.release_year),
+		genre: pickGenre(info.genre, info.categories),
+		album: info.album?.trim() || undefined,
+		albumArtist: info.album_artist?.trim() || undefined,
+		composer: info.composer?.trim() || undefined,
+		track: info.track?.trim() || undefined,
+		artist: info.artist?.trim() || undefined,
+		bpm: typeof info.bpm === "number" && info.bpm > 0 ? info.bpm : undefined,
+		duration:
+			typeof info.duration === "number" && info.duration > 0
+				? Math.round(info.duration)
+				: undefined,
+	};
+}
+
 export async function fetchVideoDetails(
 	videoUrl: string,
 	timeout: number = DETAILS_TIMEOUT,
 ): Promise<VideoDetails | null> {
-	const deadline = Date.now() + timeout;
-	const remaining = () => Math.max(1, deadline - Date.now());
 	try {
-		const binaryPath = await ensureYtDlpBinary();
-		if (Date.now() >= deadline) {
-			throw new Error("yt-dlp binary initialization exceeded timeout");
-		}
-		const args = [
-			"--dump-json",
-			"--no-warnings",
-			"--no-playlist",
-			"--skip-download",
-			...buildJsRuntimeArgs(),
-			...(await buildBgutilPotArgs()),
-			videoUrl,
-		];
-		const result = await execFilePromise(binaryPath, args, {
-			timeout: remaining(),
-			maxBuffer: 10 * 1024 * 1024,
-		});
-		const info = JSON.parse(result.stdout) as YtDlpJson;
-
-		return {
-			year: parseYear(info.upload_date, info.release_date, info.release_year),
-			genre: pickGenre(info.genre, info.categories),
-			album: info.album?.trim() || undefined,
-			albumArtist: info.album_artist?.trim() || undefined,
-			composer: info.composer?.trim() || undefined,
-			track: info.track?.trim() || undefined,
-			artist: info.artist?.trim() || undefined,
-			bpm: typeof info.bpm === "number" && info.bpm > 0 ? info.bpm : undefined,
-		};
+		return await retryWithBackoff(
+			() => fetchVideoDetailsOnce(videoUrl, timeout),
+			{
+				isRetryable: (error) =>
+					isRetryableYtDlpError(
+						error instanceof Error ? error.message : String(error),
+					),
+			},
+		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.warn("[video-metadata] fetchVideoDetails failed:", message);

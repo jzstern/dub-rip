@@ -33,7 +33,7 @@ export interface StreamEvent {
 	eta?: string;
 	filename?: string;
 	size?: number;
-	data?: string;
+	token?: string;
 	eventType?: string;
 	eventData?: string;
 	downloadMethod?: DownloadMethod;

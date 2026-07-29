@@ -246,19 +246,11 @@ function handleDownload() {
 					setTimeout(() => {
 						if (currentDownloadId !== thisDownloadId) return;
 						try {
-							const binaryString = atob(data.data);
-							const bytes = new Uint8Array(binaryString.length);
-							for (let i = 0; i < binaryString.length; i++) {
-								bytes[i] = binaryString.charCodeAt(i);
-							}
-							const blob = new Blob([bytes], { type: "audio/mpeg" });
-							const downloadUrl = window.URL.createObjectURL(blob);
 							const a = document.createElement("a");
-							a.href = downloadUrl;
+							a.href = `/api/download-file?token=${encodeURIComponent(data.token)}`;
 							a.download = data.filename;
 							document.body.appendChild(a);
 							a.click();
-							window.URL.revokeObjectURL(downloadUrl);
 							document.body.removeChild(a);
 
 							progress = 100;

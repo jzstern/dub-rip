@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
-import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
+import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
 import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
@@ -259,7 +259,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
-				const result = await encodeAndStreamMp3({
+				const result = await finalizeMp3({
 					filePath: actualFilePath,
 					videoTitle: titleState.videoTitle,
 					artist: titleState.artist,
@@ -271,17 +271,16 @@ export const GET: RequestHandler = async ({ url }) => {
 					send,
 				});
 
+				// The file is deliberately left on disk: the browser fetches it from
+				// /api/download-file next. Ownership passes to the token registry,
+				// which unlinks it once transferred or once the token expires.
 				send({
 					type: "complete",
 					filename: result.filename,
 					size: result.size,
-					data: result.data,
+					token: result.token,
 					downloadMethod: result.downloadMethod,
 				});
-
-				try {
-					unlinkSync(actualFilePath);
-				} catch {}
 
 				closeStream();
 			} catch (error: unknown) {

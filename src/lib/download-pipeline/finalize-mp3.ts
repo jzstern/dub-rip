@@ -1,6 +1,8 @@
+import { stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import * as Sentry from "@sentry/sveltekit";
 import { resolveAlbumArtImage } from "$lib/artwork";
+import { registerDownload } from "$lib/download-pipeline/download-tokens";
 import type { DownloadMethod } from "$lib/types";
 import {
 	buildID3Tags,
@@ -10,7 +12,7 @@ import {
 
 const require = createRequire(import.meta.url);
 
-export interface EncodeAndStreamInput {
+export interface FinalizeMp3Input {
 	filePath: string;
 	videoTitle: string;
 	artist: string;
@@ -22,14 +24,36 @@ export interface EncodeAndStreamInput {
 	send: (data: Record<string, unknown>) => void;
 }
 
-export interface EncodeAndStreamResult {
+export interface FinalizeMp3Result {
 	filename: string;
 	size: number;
-	data: string;
+	token: string;
 	downloadMethod: DownloadMethod;
 }
 
-export async function encodeAndStreamMp3({
+export function buildDownloadFilename({
+	artist,
+	trackTitle,
+	videoTitle,
+}: {
+	artist: string;
+	trackTitle: string;
+	videoTitle: string;
+}): string {
+	if (artist && trackTitle) {
+		const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
+		const safeTrack = trackTitle.replace(/[<>:"/\\|?*]/g, "").trim();
+		if (safeArtist && safeTrack) {
+			return `${safeArtist} - ${safeTrack}.mp3`;
+		}
+	}
+	if (videoTitle) {
+		return `${videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_")}.mp3`;
+	}
+	return "audio.mp3";
+}
+
+export async function finalizeMp3({
 	filePath,
 	videoTitle,
 	artist,
@@ -39,7 +63,7 @@ export async function encodeAndStreamMp3({
 	detailsPromise,
 	thumbnailPromise,
 	send,
-}: EncodeAndStreamInput): Promise<EncodeAndStreamResult> {
+}: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
 
 	try {
@@ -95,43 +119,16 @@ export async function encodeAndStreamMp3({
 		});
 	}
 
-	send({ type: "progress", percent: 85 });
+	send({ type: "progress", percent: 90 });
 	send({ type: "status", message: "Preparing download..." });
 
-	const fs = await import("node:fs/promises");
-	const stats = await fs.stat(filePath);
+	const { size } = await stat(filePath);
+	const filename = buildDownloadFilename({ artist, trackTitle, videoTitle });
+	const token = registerDownload({ filePath, filename, size });
 
-	send({ type: "progress", percent: 88 });
-
-	const fileContent = await fs.readFile(filePath);
-	const base64Data = Buffer.from(fileContent).toString("base64");
+	console.log("Final filename:", filename);
 
 	send({ type: "progress", percent: 95 });
 
-	let finalFilename: string;
-	if (artist && trackTitle) {
-		const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
-		const safeTrack = trackTitle.replace(/[<>:"/\\|?*]/g, "").trim();
-		if (safeArtist && safeTrack) {
-			finalFilename = `${safeArtist} - ${safeTrack}.mp3`;
-		} else {
-			finalFilename = `${(videoTitle || "audio")
-				.replace(/[<>:"/\\|?*]/g, "_")
-				.replace(/_+/g, "_")}.mp3`;
-		}
-	} else if (videoTitle) {
-		finalFilename =
-			videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_") + ".mp3";
-	} else {
-		finalFilename = "audio.mp3";
-	}
-
-	console.log("Final filename:", finalFilename);
-
-	return {
-		filename: finalFilename,
-		size: stats.size,
-		data: base64Data,
-		downloadMethod,
-	};
+	return { filename, size, token, downloadMethod };
 }

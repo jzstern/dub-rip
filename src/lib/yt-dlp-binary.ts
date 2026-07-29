@@ -4,6 +4,7 @@ import {
 	existsSync,
 	mkdirSync,
 	renameSync,
+	statSync,
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
@@ -28,6 +29,7 @@ import { env } from "$env/dynamic/private";
 const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
 const API_TIMEOUT_MS = 15_000;
 const BINARY_DOWNLOAD_TIMEOUT_MS = 120_000;
+const BINARY_REFRESH_TTL_MS = 24 * 60 * 60 * 1000;
 
 const BGUTIL_PLUGIN_VERSION = "1.3.1";
 const BGUTIL_PLUGIN_DIR = join(tmpdir(), "yt-dlp-plugins");
@@ -116,8 +118,29 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 	chmodSync(destPath, 0o755);
 }
 
+function isBinaryStale(path: string): boolean {
+	try {
+		const stats = statSync(path);
+		return Date.now() - stats.mtimeMs > BINARY_REFRESH_TTL_MS;
+	} catch {
+		return true;
+	}
+}
+
+/**
+ * Returns the cached yt-dlp binary path, downloading it first if missing and
+ * refreshing it once it's older than `BINARY_REFRESH_TTL_MS`. yt-dlp fetches
+ * "latest" only at download time — without a TTL-based refresh, a binary
+ * cached at process start (or on a long-lived instance) would never pick up
+ * upstream fixes for YouTube's ever-changing extraction. A refresh that
+ * fails degrades gracefully to the existing cached binary rather than
+ * hard-failing a call that would otherwise have succeeded; only the very
+ * first download (no cached binary at all) propagates its error, since
+ * there's nothing to fall back to.
+ */
 export async function ensureYtDlpBinary(): Promise<string> {
-	if (existsSync(YTDLP_BINARY_PATH)) {
+	const binaryExists = existsSync(YTDLP_BINARY_PATH);
+	if (binaryExists && !isBinaryStale(YTDLP_BINARY_PATH)) {
 		return YTDLP_BINARY_PATH;
 	}
 
@@ -127,14 +150,34 @@ export async function ensureYtDlpBinary(): Promise<string> {
 
 	downloadPromise = (async () => {
 		try {
-			if (existsSync(YTDLP_BINARY_PATH)) {
+			if (existsSync(YTDLP_BINARY_PATH) && !isBinaryStale(YTDLP_BINARY_PATH)) {
 				return YTDLP_BINARY_PATH;
 			}
 
+			const hadExistingBinary = existsSync(YTDLP_BINARY_PATH);
 			const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
 
-			console.log("Downloading yt-dlp binary...");
-			await downloadYtDlpBinary(tempPath);
+			console.log(
+				hadExistingBinary
+					? "Refreshing yt-dlp binary..."
+					: "Downloading yt-dlp binary...",
+			);
+
+			try {
+				await downloadYtDlpBinary(tempPath);
+			} catch (err) {
+				if (hadExistingBinary) {
+					console.warn(
+						"yt-dlp binary refresh failed; continuing with the cached binary:",
+						err,
+					);
+					Sentry.captureException(err, {
+						tags: { service: "yt-dlp-binary", operation: "refresh-fallback" },
+					});
+					return YTDLP_BINARY_PATH;
+				}
+				throw err;
+			}
 
 			try {
 				renameSync(tempPath, YTDLP_BINARY_PATH);

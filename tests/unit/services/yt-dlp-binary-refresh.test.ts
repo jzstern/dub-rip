@@ -105,7 +105,7 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it("refreshes the binary once the cached copy is older than the TTL", async () => {
+	it("returns the stale cached binary immediately and refreshes it in the background", async () => {
 		// #given
 		existsSyncMock.mockReturnValue(true);
 		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
@@ -113,14 +113,14 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
-		await ensureYtDlpBinary();
+		const path = await ensureYtDlpBinary();
 
-		// #then
-		expect(fetchMock).toHaveBeenCalledTimes(2);
-		expect(renameSyncMock).toHaveBeenCalled();
+		// #then — caller is never blocked on the refresh
+		expect(path).toMatch(/yt-dlp$/);
+		await vi.waitFor(() => expect(renameSyncMock).toHaveBeenCalled());
 	});
 
-	it("falls back to the existing cached binary when a refresh download fails", async () => {
+	it("keeps the cached binary when a background refresh fails", async () => {
 		// #given
 		existsSyncMock.mockReturnValue(true);
 		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
@@ -137,7 +137,29 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 
 		// #then — degrades gracefully instead of throwing
 		expect(path).toMatch(/yt-dlp$/);
+		await vi.waitFor(() => expect(unlinkSyncMock).toHaveBeenCalled());
 		expect(renameSyncMock).not.toHaveBeenCalled();
+	});
+
+	it("does not re-attempt a failed refresh within the retry cooldown", async () => {
+		// #given — first background refresh fails
+		existsSyncMock.mockReturnValue(true);
+		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
+		fetchMock.mockResolvedValueOnce({
+			ok: false,
+			status: 503,
+			statusText: "Service Unavailable",
+			text: () => Promise.resolve(""),
+		});
+		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
+		await ensureYtDlpBinary();
+		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+		// #when — a second request arrives while still inside the cooldown
+		await ensureYtDlpBinary();
+
+		// #then — no new refresh is started
+		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 
 	it("propagates the error when there is no cached binary to fall back to", async () => {
@@ -192,7 +214,8 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 		});
 		await Promise.all([first, second]);
 
-		// #then
+		// #then — one shared background refresh, not one per caller
+		await vi.waitFor(() => expect(renameSyncMock).toHaveBeenCalledTimes(1));
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 });

@@ -79,6 +79,20 @@ export function classifyYtDlpError(errorMessage: string): ClassifiedYtDlpError {
 			return { message: rule.message, retryable: rule.retryable };
 		}
 	}
+	return GENERIC_ERROR;
+}
+
+/**
+ * Unmatched errors are reported to Sentry only here — the terminal,
+ * user-facing path — not in `classifyYtDlpError`, which retry logic calls
+ * once per attempt and would otherwise report the same failure several
+ * times per download.
+ */
+export function parseYtDlpError(errorMessage: string): string {
+	const classified = classifyYtDlpError(errorMessage);
+	if (classified !== GENERIC_ERROR) {
+		return classified.message;
+	}
 	Sentry.captureMessage(
 		`Unmatched yt-dlp error: ${errorMessage.slice(0, 500)}`,
 		{
@@ -86,11 +100,7 @@ export function classifyYtDlpError(errorMessage: string): ClassifiedYtDlpError {
 			tags: { service: "yt-dlp-errors", operation: "unmatched-fallthrough" },
 		},
 	);
-	return GENERIC_ERROR;
-}
-
-export function parseYtDlpError(errorMessage: string): string {
-	return classifyYtDlpError(errorMessage).message;
+	return classified.message;
 }
 
 export function isRetryableYtDlpError(errorMessage: string): boolean {

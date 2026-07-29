@@ -302,7 +302,7 @@ $effect(() => {
 					disabled={loading}
 					autofocus
 					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-					class="h-11 bg-background font-mono text-[13px]"
+					class="h-11 bg-background font-mono text-base sm:text-[13px]"
 				/>
 				<DownloadButton
 					loading={loading}

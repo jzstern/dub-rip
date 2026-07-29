@@ -94,14 +94,27 @@ $effect(() => {
 	return () => query.removeEventListener("change", onChange);
 });
 
+let onScreen = $state(true);
+let discEl = $state<HTMLPreElement | null>(null);
+
 $effect(() => {
-	if (reducedMotion) return;
+	if (!discEl || typeof IntersectionObserver !== "function") return;
+	const observer = new IntersectionObserver((entries) => {
+		onScreen = entries[entries.length - 1].isIntersecting;
+	});
+	observer.observe(discEl);
+	return () => observer.disconnect();
+});
+
+let phase = 0;
+let velocity = SPEEDS[untrack(() => vinylState)];
+
+$effect(() => {
+	if (reducedMotion || !onScreen) return;
 
 	let rafId = 0;
 	let lastTime: number | null = null;
-	let phase = 0;
 	let sinceRender = FRAME_MS;
-	let velocity = SPEEDS[untrack(() => vinylState)];
 
 	const tick = (now: number): void => {
 		if (lastTime !== null) {
@@ -126,6 +139,7 @@ $effect(() => {
 </script>
 
 <pre
+	bind:this={discEl}
 	aria-hidden="true"
 	class="vinyl text-center font-mono text-muted-foreground select-none"
 	class:vinyl--idle={vinylState === "idle"}

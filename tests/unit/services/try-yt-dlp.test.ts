@@ -155,3 +155,49 @@ describe("tryYtDlpDownload()", () => {
 		expect(sent.filter((event) => event.type === "error")).toHaveLength(0);
 	});
 });
+
+describe("tryYtDlpDownload() concurrency limiting", () => {
+	function runAgainst(process: FakeProcess) {
+		const ytDlp: YtDlpInstance = {
+			exec: () => process as unknown as ReturnType<YtDlpInstance["exec"]>,
+		} as YtDlpInstance;
+
+		return tryYtDlpDownload({
+			videoUrl: "https://www.youtube.com/watch?v=q9lZ4p5YRkY",
+			outputPath: "/tmp/out",
+			bgutilPotUrl: "http://bgutil-pot.railway.internal:4416",
+			ffmpegPath: "/usr/bin/ffmpeg",
+			pluginDir: "/tmp/yt-dlp-plugins",
+			debugMode: false,
+			ytDlp,
+			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
+			send: () => {},
+		});
+	}
+
+	function flushMicrotasks() {
+		return new Promise<void>((resolve) => setTimeout(resolve, 0));
+	}
+
+	it("queues a download past the global concurrency limit until a slot frees up", async () => {
+		// #given — MAX_CONCURRENT_YT_DLP_PROCESSES is 3; start 4 downloads and
+		// leave every process open (no "close" emitted yet).
+		const processes = Array.from({ length: 4 }, () => new FakeProcess());
+		const promises = processes.map((p) => runAgainst(p));
+		await flushMicrotasks();
+
+		// #when — the 4th caller is still queued, so its process never received
+		// any listeners because tryYtDlpDownload hasn't called ytDlp.exec for it
+		const fourthHasListeners = Object.keys(processes[3].handlers).length > 0;
+
+		// #then
+		expect(fourthHasListeners).toBe(false);
+
+		// #cleanup — release the first three so the 4th can run and the test
+		// doesn't leak a queued promise into later tests.
+		for (const p of processes.slice(0, 3)) p.emit("close", 0);
+		await flushMicrotasks();
+		processes[3].emit("close", 0);
+		await Promise.all(promises);
+	});
+});

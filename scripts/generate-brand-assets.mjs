@@ -1,79 +1,106 @@
 import { chromium } from "@playwright/test";
 
-const FONTS = `
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-`;
+const BG = "#191817";
+const BONE = "#e6e1d8";
+const MUTED = "#8d877c";
+const AMBER = "#e8a33c";
+const MONO = 'ui-monospace, "SF Mono", Menlo, monospace';
+
+const GROOVES = ["-", "~", "="];
+const RIM = ["o", "0", "O"];
+
+function renderDisc({
+	rows,
+	cols,
+	radius,
+	aspect,
+	hub,
+	label,
+	grooveInset = 1.6,
+	rimInset = 0.5,
+	phase = 0,
+}) {
+	const cy = (rows - 1) / 2;
+	const cx = (cols - 1) / 2;
+	let html = "";
+	let inLabel = false;
+
+	const push = (ch, isLabel) => {
+		if (isLabel !== inLabel) {
+			html += isLabel ? "<b>" : "</b>";
+			inLabel = isLabel;
+		}
+		html += ch;
+	};
+
+	for (let y = 0; y < rows; y++) {
+		for (let x = 0; x < cols; x++) {
+			const nx = x - cx;
+			const ny = (y - cy) * aspect;
+			const r = Math.hypot(nx, ny);
+			const a = Math.atan2(ny, nx) + phase;
+
+			if (r <= hub) {
+				push("·", true);
+			} else if (r <= label) {
+				push(Math.floor(a / 0.9 + 64) % 2 === 0 ? "@" : "#", true);
+			} else if (r <= radius - grooveInset) {
+				const ring = Math.floor(r);
+				const seg = Math.floor(a / 0.5 + 128);
+				push(GROOVES[(seg + ring) % GROOVES.length], false);
+			} else if (r <= radius - rimInset) {
+				const seg = Math.floor(a / 0.5 + 128);
+				push(RIM[seg % RIM.length], false);
+			} else if (r <= radius + 0.15) {
+				push(".", false);
+			} else {
+				push(" ", false);
+			}
+		}
+		push("\n", false);
+	}
+	if (inLabel) html += "</b>";
+	return html;
+}
+
+const SITE_DISC = renderDisc({
+	rows: 13,
+	cols: 27,
+	radius: 11.4,
+	aspect: 2.05,
+	hub: 1,
+	label: 3.5,
+});
 
 const MARK_SVG = `
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-	<rect x="1" y="1" width="62" height="62" rx="12" fill="#191817" stroke="#000000" stroke-width="2"/>
-	<path d="M16 3.5 H48" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.5" stroke-linecap="round"/>
-	<g stroke="#8d877c" stroke-width="2" stroke-linecap="round">
-		<line x1="14.5" y1="30" x2="17" y2="34"/>
-		<line x1="23" y1="22.5" x2="25" y2="26.8"/>
-		<line x1="34" y1="19.5" x2="34.6" y2="24.2"/>
-		<line x1="45" y1="22.5" x2="43" y2="26.8"/>
-		<line x1="53.5" y1="30" x2="51" y2="34"/>
-	</g>
-	<line x1="32" y1="46" x2="45" y2="24" stroke="#e8a33c" stroke-width="3.5" stroke-linecap="round"/>
-	<circle cx="32" cy="46" r="4" fill="#e8a33c"/>
-	<rect x="14" y="53" width="22" height="3" rx="1.5" fill="#e8a33c"/>
-	<rect x="38" y="53" width="12" height="3" rx="1.5" fill="#3a3735"/>
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+	<rect width="100" height="100" fill="${BG}"/>
+	<circle cx="50" cy="50" r="35" fill="none" stroke="${BONE}" stroke-opacity="0.28" stroke-width="2.5"/>
+	<circle cx="50" cy="50" r="18" fill="${AMBER}"/>
 </svg>
 `;
 
 const ICON_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
-html,body{margin:0;padding:0;background:#191817}
+html,body{margin:0;padding:0;background:${BG}}
 </style></head><body>${MARK_SVG}</body></html>`;
 
-const OG_HTML = `<!doctype html><html><head><meta charset="utf-8">${FONTS}<style>
+const OG_HTML = `<!doctype html><html><head><meta charset="utf-8"><style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:1200px;height:630px;background:#191817;font-family:'Inter Tight',sans-serif;color:#e6e1d8;overflow:hidden}
-.wrap{display:flex;align-items:center;justify-content:center;gap:88px;height:100%}
-.strip{width:340px;background:#211f1e;border:1px solid #35322f;border-radius:8px;box-shadow:inset 0 1px 0 rgb(255 255 255 / 0.04),0 1px 0 #000}
-.section{padding:26px 28px;border-top:1px solid rgb(141 135 124 / 0.18)}
-.section:first-child{border-top:none}
-.label{font-size:13px;font-weight:500;letter-spacing:0.16em;text-transform:uppercase;color:#8d877c;margin-bottom:16px}
-.well{height:48px;background:#141312;border:1px solid #35322f;border-radius:5px;box-shadow:inset 0 1px 2px rgb(0 0 0 / 0.35);display:flex;align-items:center;padding:0 16px;color:#8d877c;font-size:15px}
-.key{margin-top:12px;height:48px;background:#2a2725;border:1px solid #35322f;border-radius:5px;box-shadow:inset 0 1px 0 rgb(255 255 255 / 0.04),0 1px 0 #000;display:flex;align-items:center;justify-content:center;gap:12px;font-size:14px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase}
-.key .dot{color:#e8a33c;font-size:10px}
-.track{position:relative;height:12px;background:#141312;border:1px solid #35322f;border-radius:3px;box-shadow:inset 0 1px 2px rgb(0 0 0 / 0.35);overflow:hidden}
-.fill{position:absolute;inset:0;right:38%;background:#e8a33c}
-.peak{position:absolute;top:0;bottom:0;left:70%;width:2px;background:#e8a33c}
-.ticks{display:flex;justify-content:space-between;margin-top:7px;padding:0 1px}
-.ticks i{display:block;width:1px;height:4px;background:rgb(141 135 124 / 0.45)}
-.ticks i.M{height:7px;background:rgb(141 135 124 / 0.75)}
-.nums{display:flex;justify-content:space-between;margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8d877c}
-.readout{margin-top:16px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8d877c}
-.readout .pct{color:#e8a33c}
-.side{max-width:520px}
-.wordmark{font-size:88px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;line-height:1}
-.tag{margin-top:28px;font-size:22px;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:#8d877c}
-.spec{margin-top:44px;font-family:'JetBrains Mono',monospace;font-size:18px;color:#8d877c}
-.spec b{color:#e8a33c;font-weight:500}
+html,body{width:1200px;height:630px;background:${BG};color:${BONE};font-family:${MONO};overflow:hidden}
+.wrap{position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding-left:96px}
+.rule{width:64px;height:3px;background:${AMBER};margin-bottom:38px}
+.wordmark{font-size:74px;font-weight:600;letter-spacing:0.3em;white-space:nowrap}
+.tag{margin-top:30px;font-size:19px;letter-spacing:0.26em;color:${MUTED}}
+.spec{margin-top:76px;font-size:15px;letter-spacing:0.14em;color:${AMBER}}
+pre.disc{position:absolute;top:50%;right:-268px;transform:translateY(-50%);font-size:40px;line-height:1.12;letter-spacing:0.06em;white-space:pre;color:${MUTED}}
+pre.disc b{color:${AMBER}}
 </style></head><body>
 <div class="wrap">
-	<div class="strip">
-		<div class="section">
-			<div class="label">Input</div>
-			<div class="well">Paste YouTube URL</div>
-			<div class="key"><span class="dot">&#9679;</span> Download</div>
-		</div>
-		<div class="section">
-			<div class="label">Level</div>
-			<div class="track"><div class="fill"></div><div class="peak"></div></div>
-			<div class="ticks"><i class="M"></i><i></i><i></i><i></i><i></i><i class="M"></i><i></i><i></i><i></i><i></i><i class="M"></i><i></i><i></i><i></i><i></i><i class="M"></i><i></i><i></i><i></i><i></i><i class="M"></i></div>
-			<div class="nums"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
-			<div class="readout"><span>Downloading&hellip;</span><span class="pct">62%</span></div>
-		</div>
-	</div>
-	<div class="side">
-		<div class="wordmark">DUB.RIP</div>
-		<div class="tag">YouTube audio &middot; rich metadata</div>
-		<div class="spec">SRC YOUTUBE &rarr; <b>MP3 128 kbps &middot; ID3v2</b></div>
-	</div>
+	<pre class="disc">${SITE_DISC}</pre>
+	<div class="rule"></div>
+	<div class="wordmark">DUB.RIP</div>
+	<div class="tag">DOWNLOAD AUDIO W/ RICH METADATA</div>
+	<div class="spec">MP3 128 kbps</div>
 </div>
 </body></html>`;
 

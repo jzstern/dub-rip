@@ -28,7 +28,8 @@ export function smoothCollapse(
 	params: SmoothCollapseParams = {},
 ): TransitionConfig {
 	const style = getComputedStyle(node);
-	const targetOpacity = Number(style.opacity) || 1;
+	const parsedOpacity = Number.parseFloat(style.opacity);
+	const targetOpacity = Number.isFinite(parsedOpacity) ? parsedOpacity : 1;
 
 	if (prefersReducedMotion()) {
 		return {

@@ -1,4 +1,5 @@
 <script lang="ts">
+import { LoaderCircle } from "lucide-svelte";
 import { Button } from "$lib/components/ui/button";
 
 interface Props {
@@ -16,10 +17,13 @@ let { loading, disabled, onClick }: Props = $props();
 	class="h-11 w-full font-mono text-xs font-bold tracking-[0.14em] transition-transform duration-150 ease-out active:scale-[0.98]"
 >
 	{#if loading}
-		<span
-			data-testid="download-working"
-			class="text-primary-foreground/80 motion-safe:animate-pulse">DOWNLOADING…</span
-		>
+		<span data-testid="download-working" class="flex items-center gap-2">
+			<LoaderCircle
+				aria-hidden="true"
+				class="size-3.5 motion-safe:animate-spin"
+			/>
+			DOWNLOADING
+		</span>
 	{:else}
 		DOWNLOAD
 	{/if}

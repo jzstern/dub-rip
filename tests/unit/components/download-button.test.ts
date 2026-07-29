@@ -18,7 +18,7 @@ describe("DownloadButton", () => {
 			expect(screen.getByText("DOWNLOAD")).toBeInTheDocument();
 		});
 
-		it("displays 'DOWNLOADING…' text when loading", () => {
+		it("displays 'DOWNLOADING' text when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -28,10 +28,12 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("DOWNLOADING…")).toBeInTheDocument();
+			expect(screen.getByTestId("download-working")).toHaveTextContent(
+				"DOWNLOADING",
+			);
 		});
 
-		it("shows the pulsing working state when loading", () => {
+		it("shows a spinner in the working state when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -41,9 +43,11 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByTestId("download-working")).toHaveClass(
-				"motion-safe:animate-pulse",
-			);
+			expect(
+				screen
+					.getByTestId("download-working")
+					.querySelector(".motion-safe\\:animate-spin"),
+			).not.toBeNull();
 		});
 
 		it("does not show the working state when not loading", () => {

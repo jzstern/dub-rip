@@ -130,8 +130,13 @@ $effect(() => {
 		}
 	}
 
-	if (!isValidUrl || loading) {
+	if (!isValidUrl) {
 		preview = null;
+		loadingPreview = false;
+		return;
+	}
+
+	if (loading) {
 		loadingPreview = false;
 		return;
 	}
@@ -280,7 +285,7 @@ $effect(() => {
 				<p
 					class="font-mono text-[10.5px] tracking-[0.24em] indent-[0.24em] text-muted-foreground"
 				>
-					YOUTUBE AUDIO · RICH METADATA
+					DOWNLOAD AUDIO W/ RICH METADATA
 				</p>
 			</div>
 		</header>
@@ -297,7 +302,7 @@ $effect(() => {
 					disabled={loading}
 					autofocus
 					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
-					class="h-11 bg-background font-mono text-[13px] focus-visible:ring-[3px] focus-visible:ring-ring/15"
+					class="h-11 bg-background font-mono text-[13px]"
 				/>
 				<DownloadButton
 					loading={loading}
@@ -305,7 +310,7 @@ $effect(() => {
 					onClick={handleDownload}
 				/>
 
-				{#if preview && !loading && !loadingPreview}
+				{#if preview && !loadingPreview}
 					<VideoPreview preview={preview} formatDuration={formatDuration} />
 				{/if}
 
@@ -343,7 +348,7 @@ $effect(() => {
 							<span class="min-w-0 truncate">
 								{#if speed || eta}
 									{speed}{speed && eta ? " · " : ""}{eta ? `ETA ${eta}` : ""}
-								{:else}
+								{:else if !loading && status}
 									{status}
 								{/if}
 							</span>

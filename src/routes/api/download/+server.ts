@@ -88,7 +88,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				"--audio-format",
 				"mp3",
 				"--audio-quality",
-				"0",
+				"128K",
 				"--embed-thumbnail",
 				"--add-metadata",
 				"--ffmpeg-location",

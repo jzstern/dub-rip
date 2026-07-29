@@ -5,7 +5,7 @@ import DownloadButton from "$lib/components/DownloadButton.svelte";
 
 describe("DownloadButton", () => {
 	describe("rendering", () => {
-		it("displays 'Download' text when not loading", () => {
+		it("displays 'DOWNLOAD' text when not loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -15,10 +15,10 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("Download")).toBeInTheDocument();
+			expect(screen.getByText("DOWNLOAD")).toBeInTheDocument();
 		});
 
-		it("displays 'Downloading' text when loading", () => {
+		it("displays 'DOWNLOADING' text when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -28,35 +28,39 @@ describe("DownloadButton", () => {
 			});
 
 			// #then
-			expect(screen.getByText("Downloading")).toBeInTheDocument();
+			expect(screen.getByTestId("download-working")).toHaveTextContent(
+				"DOWNLOADING",
+			);
 		});
 
-		it("shows loading spinner when loading", () => {
+		it("shows a spinner in the working state when loading", () => {
 			// #given
 			const onClick = vi.fn();
 
 			// #when
-			const { container } = render(DownloadButton, {
+			render(DownloadButton, {
 				props: { loading: true, disabled: false, onClick },
 			});
 
 			// #then
-			const spinner = container.querySelector(".animate-spin");
-			expect(spinner).toBeInTheDocument();
+			expect(
+				screen
+					.getByTestId("download-working")
+					.querySelector(".motion-safe\\:animate-spin"),
+			).not.toBeNull();
 		});
 
-		it("does not show spinner when not loading", () => {
+		it("does not show the working state when not loading", () => {
 			// #given
 			const onClick = vi.fn();
 
 			// #when
-			const { container } = render(DownloadButton, {
+			render(DownloadButton, {
 				props: { loading: false, disabled: false, onClick },
 			});
 
 			// #then
-			const spinner = container.querySelector(".animate-spin");
-			expect(spinner).not.toBeInTheDocument();
+			expect(screen.queryByTestId("download-working")).not.toBeInTheDocument();
 		});
 	});
 
@@ -120,7 +124,7 @@ describe("DownloadButton", () => {
 			expect(button).not.toBeDisabled();
 		});
 
-		it("loading state does not automatically disable the button", () => {
+		it("disables the button while loading to prevent double submits", () => {
 			// #given
 			const onClick = vi.fn();
 
@@ -131,7 +135,7 @@ describe("DownloadButton", () => {
 
 			// #then
 			const button = screen.getByRole("button");
-			expect(button).not.toBeDisabled();
+			expect(button).toBeDisabled();
 		});
 	});
 
@@ -162,6 +166,20 @@ describe("DownloadButton", () => {
 			// #then
 			const button = screen.getByRole("button");
 			expect(button).toHaveClass("h-11");
+		});
+
+		it("has press feedback on active state", () => {
+			// #given
+			const onClick = vi.fn();
+
+			// #when
+			render(DownloadButton, {
+				props: { loading: false, disabled: false, onClick },
+			});
+
+			// #then
+			const button = screen.getByRole("button");
+			expect(button).toHaveClass("active:scale-[0.98]");
 		});
 	});
 });

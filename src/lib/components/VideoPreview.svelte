@@ -22,51 +22,58 @@ function handleArtworkError() {
 }
 </script>
 
-<div class="preview-card flex items-center gap-3 rounded-md border bg-muted/50 p-3">
-	<div class="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded bg-muted">
-		<img
-			src={imageSrc}
-			alt={preview.title}
-			onload={() => (imageLoaded = true)}
-			onerror={handleArtworkError}
-			class="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 {imageLoaded
-				? 'opacity-100'
-				: 'opacity-0'}"
-		/>
+<div
+	class="preview-card flex items-center gap-3.5 rounded-lg border bg-background p-3"
+>
+	<div class="relative h-14 w-14 flex-shrink-0">
+		<div class="h-full w-full overflow-hidden rounded-md bg-muted">
+			<img
+				src={imageSrc}
+				alt={preview.title || preview.videoTitle}
+				onload={() => (imageLoaded = true)}
+				onerror={handleArtworkError}
+				class="h-full w-full object-cover transition-opacity duration-300 {imageLoaded
+					? 'opacity-100'
+					: 'opacity-0'}"
+			/>
+		</div>
+		{#if preview.duration}
+			<span
+				class="absolute -right-1 -bottom-1 rounded border bg-background px-1 font-mono text-[9.5px] leading-normal text-foreground tabular-nums"
+			>{formatDuration(preview.duration)}</span>
+		{/if}
 	</div>
 	<div class="min-w-0 flex-1 space-y-0.5">
-		<p class="truncate text-sm font-medium">{preview.title || preview.videoTitle}</p>
-		<div class="flex items-center gap-2 text-xs text-muted-foreground">
-			{#if preview.artist}
-				<span class="truncate">{preview.artist}</span>
-			{/if}
-			{#if preview.duration}
-				{#if preview.artist}
-					<span>•</span>
-				{/if}
-				<span>{formatDuration(preview.duration)}</span>
-			{/if}
-		</div>
+		<p class="truncate text-sm font-semibold text-foreground">
+			{preview.title || preview.videoTitle}
+		</p>
+		{#if preview.artist}
+			<p class="truncate text-xs text-muted-foreground">{preview.artist}</p>
+		{/if}
 	</div>
 </div>
 
 <style>
 	.preview-card {
-		animation: preview-in 200ms ease-out;
+		animation: preview-in 200ms var(--ease-out-strong);
 	}
 
 	@keyframes preview-in {
 		from {
 			opacity: 0;
+			transform: translateY(2px);
 		}
-		to {
-			opacity: 1;
+	}
+
+	@keyframes preview-fade {
+		from {
+			opacity: 0;
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.preview-card {
-			animation: none;
+			animation: preview-fade 200ms ease-out;
 		}
 
 		.preview-card img {

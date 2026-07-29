@@ -13,16 +13,25 @@ describe("PreviewSkeleton", () => {
 				'[data-testid="preview-skeleton"]',
 			);
 			expect(skeleton).toBeInTheDocument();
-			expect(skeleton).toHaveClass("animate-pulse");
+			expect(skeleton).toHaveClass("motion-safe:animate-pulse");
 		});
 
-		it("displays placeholder elements for thumbnail and text", () => {
+		it("displays placeholder elements for artwork and two text lines", () => {
 			// #given / #when
 			const { container } = render(PreviewSkeleton);
 
 			// #then
 			const placeholders = container.querySelectorAll(".bg-muted");
-			expect(placeholders.length).toBeGreaterThanOrEqual(3);
+			expect(placeholders.length).toBe(3);
+		});
+
+		it("matches the preview card geometry with a square artwork block", () => {
+			// #given / #when
+			const { container } = render(PreviewSkeleton);
+
+			// #then
+			const artwork = container.querySelector(".h-14.w-14");
+			expect(artwork).toBeInTheDocument();
 		});
 
 		it("has correct layout structure", () => {
@@ -30,8 +39,10 @@ describe("PreviewSkeleton", () => {
 			const { container } = render(PreviewSkeleton);
 
 			// #then
-			const flexContainer = container.querySelector(".flex.items-center.gap-3");
-			expect(flexContainer).toBeInTheDocument();
+			const skeleton = container.querySelector(
+				'[data-testid="preview-skeleton"]',
+			);
+			expect(skeleton).toHaveClass("flex", "items-center");
 		});
 	});
 });

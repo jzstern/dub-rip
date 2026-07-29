@@ -1,11 +1,11 @@
 {
-	"name": "dub-rip",
-	"short_name": "dub-rip",
+	"name": "DUB.RIP",
+	"short_name": "DUB.RIP",
 	"icons": [
 		{ "src": "/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
 		{ "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
 	],
-	"theme_color": "#f97316",
-	"background_color": "#1a1a1a",
+	"theme_color": "#191817",
+	"background_color": "#191817",
 	"display": "browser"
 }

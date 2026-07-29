@@ -1,4 +1,5 @@
 <script lang="ts">
+import { fade } from "svelte/transition";
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
@@ -6,6 +7,7 @@ import { Input } from "$lib/components/ui/input";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
 import { createProgressSmoother } from "$lib/progress-smoothing";
+import { smoothCollapse } from "$lib/transitions";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
 
 let url = $state("");
@@ -272,7 +274,7 @@ $effect(() => {
 });
 </script>
 
-<div class="flex min-h-screen items-center justify-center px-5 py-12">
+<div class="page-enter flex min-h-screen items-center justify-center px-5 py-12">
 	<main class="flex w-full max-w-[460px] flex-col items-center gap-7">
 		<header class="flex flex-col items-center gap-5">
 			<AsciiVinyl state={vinylState} />
@@ -294,7 +296,7 @@ $effect(() => {
 			class="machined-panel w-full rounded-[10px] border bg-card"
 			aria-label="Downloader"
 		>
-			<div class="flex flex-col gap-3.5 p-5">
+			<div class="flex flex-col p-5">
 				<Input
 					bind:value={url}
 					placeholder="Paste a YouTube link"
@@ -304,30 +306,42 @@ $effect(() => {
 					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
 					class="h-11 bg-background font-mono text-base sm:text-[13px]"
 				/>
-				<DownloadButton
-					loading={loading}
-					disabled={loading || !isValidUrl}
-					onClick={handleDownload}
-				/>
+				<div class="mt-3.5">
+					<DownloadButton
+						loading={loading}
+						disabled={loading || !isValidUrl}
+						onClick={handleDownload}
+					/>
+				</div>
 
-				{#if preview && !loadingPreview}
-					<VideoPreview preview={preview} formatDuration={formatDuration} />
-				{/if}
-
-				{#if loadingPreview}
-					<PreviewSkeleton />
+				{#if loadingPreview || preview}
+					<div
+						class="preview-slot mt-3.5 grid"
+						transition:smoothCollapse={{ opacity: false }}
+					>
+						{#if loadingPreview}
+							<div class="preview-layer" transition:fade={{ duration: 160 }}>
+								<PreviewSkeleton />
+							</div>
+						{:else if preview}
+							<div class="preview-layer" transition:fade={{ duration: 160 }}>
+								<VideoPreview preview={preview} formatDuration={formatDuration} />
+							</div>
+						{/if}
+					</div>
 				{/if}
 
 				{#if error}
 					<div
-						class="rise-in rounded-lg border border-destructive/35 bg-destructive/10 p-3"
+						class="mt-3.5 rounded-lg border border-destructive/35 bg-destructive/10 p-3"
+						transition:smoothCollapse
 					>
 						<p class="text-sm text-foreground/90">{error}</p>
 					</div>
 				{/if}
 
 				{#if loading || status}
-					<div class="rise-in flex flex-col gap-1.5">
+					<div class="mt-3.5 flex flex-col gap-1.5" transition:smoothCollapse>
 						<div
 							role="progressbar"
 							aria-label="Download progress"
@@ -338,7 +352,7 @@ $effect(() => {
 						>
 							<div
 								class="h-full bg-primary"
-								style="width: {roundedProgress}%"
+								style="width: {displayProgress}%"
 							></div>
 						</div>
 						<div
@@ -367,26 +381,30 @@ $effect(() => {
 </div>
 
 <style>
-	.rise-in {
-		animation: rise-in 200ms var(--ease-out-strong);
+	.preview-layer {
+		grid-area: 1 / 1;
 	}
 
-	@keyframes rise-in {
-		from {
-			opacity: 0;
-			transform: translateY(2px);
-		}
+	.page-enter {
+		animation: page-enter 400ms var(--ease-out-strong) both;
 	}
 
-	@keyframes fade-in {
+	@keyframes page-enter {
 		from {
 			opacity: 0;
+			transform: translateY(6px);
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.rise-in {
-			animation: fade-in 150ms ease-out;
+		.page-enter {
+			animation: page-fade 300ms ease-out both;
+		}
+	}
+
+	@keyframes page-fade {
+		from {
+			opacity: 0;
 		}
 	}
 </style>

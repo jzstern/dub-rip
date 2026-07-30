@@ -157,6 +157,9 @@ breadcrumbs.
 - Uncaught exceptions and unhandled rejections (`registerProcessErrorHandlers`,
   which flushes before exiting so the crash isn't lost)
 - Download failures, categorized as above
+- yt-dlp exiting 0 with no output file — an invariant break with no error
+  message to classify, so it's captured directly rather than through
+  `classifyYtDlpError`
 - Missing `BGUTIL_POT_URL` configuration
 - Unexpected `/api/preview` and `/api/preview/details` failures
 - yt-dlp binary and bgutil plugin download/install failures
@@ -196,6 +199,12 @@ breadcrumbs.
 - **Temp-file `unlink` failures** in the download token registry. The usual
   cause is the file already being gone, which is exactly what was wanted, and
   the container's `/tmp` is discarded on restart either way.
+- **A client disconnecting mid-download** is the user walking away, not a
+  defect. The download route checks the abort signal in its catch and reports
+  a breadcrumb instead of an exception.
+- **A full yt-dlp queue** (`YtDlpQueueFullError`) is load shedding working as
+  designed. Capturing it would turn an ordinary traffic spike into an issue
+  storm instead of the friendly retry message it already sends the user.
 
 ## PII
 

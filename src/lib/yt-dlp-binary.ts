@@ -4,6 +4,7 @@ import {
 	existsSync,
 	mkdirSync,
 	renameSync,
+	statSync,
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
@@ -28,6 +29,10 @@ import { env } from "$env/dynamic/private";
 const YTDLP_BINARY_PATH = join(tmpdir(), "yt-dlp");
 const API_TIMEOUT_MS = 15_000;
 const BINARY_DOWNLOAD_TIMEOUT_MS = 120_000;
+const BINARY_REFRESH_TTL_MS = 24 * 60 * 60 * 1000;
+const REFRESH_RETRY_COOLDOWN_MS = 15 * 60 * 1000;
+
+let lastRefreshAttemptAt = 0;
 
 const BGUTIL_PLUGIN_VERSION = "1.3.1";
 const BGUTIL_PLUGIN_DIR = join(tmpdir(), "yt-dlp-plugins");
@@ -116,8 +121,86 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 	chmodSync(destPath, 0o755);
 }
 
+function isBinaryStale(path: string): boolean {
+	try {
+		const stats = statSync(path);
+		return Date.now() - stats.mtimeMs > BINARY_REFRESH_TTL_MS;
+	} catch {
+		return true;
+	}
+}
+
+function installBinary(tempPath: string): string {
+	try {
+		renameSync(tempPath, YTDLP_BINARY_PATH);
+	} catch (err) {
+		if (existsSync(tempPath)) unlinkSync(tempPath);
+		if (existsSync(YTDLP_BINARY_PATH)) {
+			return YTDLP_BINARY_PATH;
+		}
+		const originalError = err instanceof Error ? err : new Error(String(err));
+		const error = new Error("Failed to install yt-dlp binary", {
+			cause: originalError,
+		});
+		Sentry.captureException(error, {
+			tags: { service: "yt-dlp-binary", operation: "install" },
+		});
+		throw error;
+	}
+	return YTDLP_BINARY_PATH;
+}
+
+/**
+ * Stale-while-revalidate refresh: callers keep getting the cached binary
+ * with zero added latency while a replacement downloads in the background.
+ * Blocking on the refresh would make one unlucky user per TTL window absorb
+ * the full GitHub API + binary download time — and if GitHub is down or
+ * rate-limiting, every request would absorb the failure timeout until a
+ * refresh succeeded. The cooldown bounds how often failed refreshes are
+ * re-attempted for the same reason.
+ */
+function refreshBinaryInBackground(): void {
+	if (downloadPromise) return;
+	if (Date.now() - lastRefreshAttemptAt < REFRESH_RETRY_COOLDOWN_MS) return;
+	lastRefreshAttemptAt = Date.now();
+
+	downloadPromise = (async () => {
+		const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
+		try {
+			console.log("Refreshing yt-dlp binary in the background...");
+			await downloadYtDlpBinary(tempPath);
+			return installBinary(tempPath);
+		} catch (err) {
+			console.warn(
+				"yt-dlp binary refresh failed; continuing with the cached binary:",
+				err,
+			);
+			Sentry.captureException(err, {
+				tags: { service: "yt-dlp-binary", operation: "refresh-fallback" },
+			});
+			if (existsSync(tempPath)) unlinkSync(tempPath);
+			return YTDLP_BINARY_PATH;
+		} finally {
+			downloadPromise = null;
+		}
+	})();
+}
+
+/**
+ * Returns the cached yt-dlp binary path, downloading it first if missing.
+ * yt-dlp fetches "latest" only at download time — without a TTL-based
+ * refresh, a binary cached at process start (or on a long-lived instance)
+ * would never pick up upstream fixes for YouTube's ever-changing extraction.
+ * A stale binary is refreshed in the background (see
+ * `refreshBinaryInBackground`); only the very first download (no cached
+ * binary at all) blocks the caller and propagates its error, since there's
+ * nothing to fall back to.
+ */
 export async function ensureYtDlpBinary(): Promise<string> {
 	if (existsSync(YTDLP_BINARY_PATH)) {
+		if (isBinaryStale(YTDLP_BINARY_PATH)) {
+			refreshBinaryInBackground();
+		}
 		return YTDLP_BINARY_PATH;
 	}
 
@@ -132,29 +215,9 @@ export async function ensureYtDlpBinary(): Promise<string> {
 			}
 
 			const tempPath = `${YTDLP_BINARY_PATH}.${randomBytes(8).toString("hex")}.tmp`;
-
 			console.log("Downloading yt-dlp binary...");
 			await downloadYtDlpBinary(tempPath);
-
-			try {
-				renameSync(tempPath, YTDLP_BINARY_PATH);
-			} catch (err) {
-				if (existsSync(tempPath)) unlinkSync(tempPath);
-				if (existsSync(YTDLP_BINARY_PATH)) {
-					return YTDLP_BINARY_PATH;
-				}
-				const originalError =
-					err instanceof Error ? err : new Error(String(err));
-				const error = new Error("Failed to install yt-dlp binary", {
-					cause: originalError,
-				});
-				Sentry.captureException(error, {
-					tags: { service: "yt-dlp-binary", operation: "install" },
-				});
-				throw error;
-			}
-
-			return YTDLP_BINARY_PATH;
+			return installBinary(tempPath);
 		} finally {
 			downloadPromise = null;
 		}

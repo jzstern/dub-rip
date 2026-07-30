@@ -10,10 +10,11 @@ import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
 } from "$lib/download-pipeline/try-yt-dlp";
+import { retryWithBackoff } from "$lib/retry";
 import { YT_DLP_METHOD } from "$lib/types";
+import { getVideoDetails } from "$lib/video-details-cache";
 import {
 	fetchThumbnailBuffer,
-	fetchVideoDetails,
 	type ThumbnailImage,
 	type VideoDetails,
 } from "$lib/video-metadata";
@@ -23,7 +24,7 @@ import {
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
 import { ensureBgutilPlugin, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
-import { parseYtDlpError } from "$lib/yt-dlp-errors";
+import { isRetryableYtDlpError, parseYtDlpError } from "$lib/yt-dlp-errors";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
@@ -107,7 +108,8 @@ export const GET: RequestHandler = async ({ url }) => {
 					uploader: "",
 				};
 
-				const detailsPromise: Promise<VideoDetails | null> = fetchVideoDetails(
+				const detailsPromise: Promise<VideoDetails | null> = getVideoDetails(
+					videoId,
 					normalizedUrl,
 				).catch(() => null);
 				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
@@ -175,18 +177,31 @@ export const GET: RequestHandler = async ({ url }) => {
 				const ytDlp = await getYTDlp();
 				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 				const pluginDir = await ensureBgutilPlugin();
+				const bgutilPotUrl = env.BGUTIL_POT_URL;
 
-				await tryYtDlpDownload({
-					videoUrl: normalizedUrl,
-					outputPath,
-					bgutilPotUrl: env.BGUTIL_POT_URL,
-					ffmpegPath: ffmpegInstaller.path,
-					pluginDir,
-					debugMode,
-					ytDlp,
-					titleState,
-					send,
-				});
+				await retryWithBackoff(
+					() =>
+						tryYtDlpDownload({
+							videoUrl: normalizedUrl,
+							outputPath,
+							bgutilPotUrl,
+							ffmpegPath: ffmpegInstaller.path,
+							pluginDir,
+							debugMode,
+							ytDlp,
+							titleState,
+							send,
+						}),
+					{
+						isRetryable: (error) =>
+							isRetryableYtDlpError(
+								error instanceof Error ? error.message : String(error),
+							),
+						onRetry: () => {
+							send({ type: "status", message: "Retrying download..." });
+						},
+					},
+				);
 
 				const actualFilePath = `${outputPath}.mp3`;
 

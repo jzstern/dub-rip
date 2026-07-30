@@ -167,6 +167,80 @@ describe("fetchVideoDetails", () => {
 		const passedArgs = execFileMock.mock.calls[0][1] as string[];
 		expect(passedArgs).toContain("--plugin-dirs");
 	});
+
+	it("extracts and rounds duration from dump-json output", async () => {
+		// #given
+		mockExecFileJson({ duration: 245.4 });
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details?.duration).toBe(245);
+	});
+
+	it("omits duration when the field is absent from yt-dlp output", async () => {
+		// #given
+		mockExecFileJson({ upload_date: "20200101" });
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details?.duration).toBeUndefined();
+	});
+
+	it("retries once on a transient failure and succeeds on the next attempt", async () => {
+		// #given
+		vi.useFakeTimers();
+		try {
+			let callCount = 0;
+			execFileMock.mockImplementation(
+				(
+					_bin: string,
+					_args: string[],
+					_opts: unknown,
+					cb: (
+						err: Error | null,
+						res?: { stdout: string; stderr: string },
+					) => void,
+				) => {
+					callCount += 1;
+					if (callCount === 1) {
+						cb(new Error("Sign in to confirm you're not a bot"));
+					} else {
+						cb(null, {
+							stdout: JSON.stringify({ duration: 200 }),
+							stderr: "",
+						});
+					}
+				},
+			);
+
+			// #when
+			const promise = fetchVideoDetails("https://youtu.be/abc");
+			await vi.runAllTimersAsync();
+			const details = await promise;
+
+			// #then
+			expect(details?.duration).toBe(200);
+			expect(execFileMock).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("does not retry a permanent failure", async () => {
+		// #given
+		mockExecFileError(new Error("ERROR: Video unavailable"));
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details).toBeNull();
+		expect(execFileMock).toHaveBeenCalledTimes(1);
+	});
 });
 
 describe("fetchThumbnailBuffer", () => {

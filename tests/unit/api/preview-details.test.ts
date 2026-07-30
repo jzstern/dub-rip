@@ -78,7 +78,7 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 	buildJsRuntimeArgs: (...args: unknown[]) => buildJsRuntimeArgsMock(...args),
 }));
 
-function mockYtDlpStdout(stdout: string) {
+function mockYtDlpJson(json: unknown) {
 	execFileMock.mockImplementation(
 		(
 			_bin: string,
@@ -86,7 +86,7 @@ function mockYtDlpStdout(stdout: string) {
 			_opts: unknown,
 			cb: (err: Error | null, res: { stdout: string; stderr: string }) => void,
 		) => {
-			cb(null, { stdout, stderr: "" });
+			cb(null, { stdout: JSON.stringify(json), stderr: "" });
 		},
 	);
 }
@@ -116,16 +116,18 @@ function makeEvent(body: unknown) {
 }
 
 describe("POST /api/preview/details - duration extraction", () => {
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.clearAllMocks();
 		ensureYtDlpBinaryMock.mockResolvedValue("/tmp/yt-dlp");
 		buildBgutilPotArgsMock.mockResolvedValue([]);
 		buildJsRuntimeArgsMock.mockReturnValue([]);
+		const { clearVideoDetailsCache } = await import("$lib/video-details-cache");
+		clearVideoDetailsCache();
 	});
 
 	it("returns parsed duration on success", async () => {
 		// #given
-		mockYtDlpStdout("213\n");
+		mockYtDlpJson({ duration: 213 });
 		const POST = await importPost();
 
 		// #when
@@ -136,6 +138,21 @@ describe("POST /api/preview/details - duration extraction", () => {
 
 		// #then
 		expect(data).toEqual({ success: true, duration: 213 });
+	});
+
+	it("rounds a fractional duration to the nearest second", async () => {
+		// #given
+		mockYtDlpJson({ duration: 213.6 });
+		const POST = await importPost();
+
+		// #when
+		const response = await POST(
+			makeEvent({ url: "https://youtube.com/watch?v=dQw4w9WgXcQ" }),
+		);
+		const data = await response.json();
+
+		// #then
+		expect(data).toEqual({ success: true, duration: 214 });
 	});
 
 	it("attaches bgutil-pot args when BGUTIL_POT_URL is configured", async () => {
@@ -149,7 +166,7 @@ describe("POST /api/preview/details - duration extraction", () => {
 			"youtubepot-bgutilhttp:base_url=http://pot.internal:4416",
 		];
 		buildBgutilPotArgsMock.mockResolvedValue(potArgs);
-		mockYtDlpStdout("100\n");
+		mockYtDlpJson({ duration: 100 });
 		const POST = await importPost();
 
 		// #when
@@ -169,7 +186,7 @@ describe("POST /api/preview/details - duration extraction", () => {
 	it("omits bgutil-pot args when BGUTIL_POT_URL is unset", async () => {
 		// #given
 		buildBgutilPotArgsMock.mockResolvedValue([]);
-		mockYtDlpStdout("100\n");
+		mockYtDlpJson({ duration: 100 });
 		const POST = await importPost();
 
 		// #when
@@ -181,8 +198,9 @@ describe("POST /api/preview/details - duration extraction", () => {
 	});
 
 	it("returns 500 with friendly message when yt-dlp fails", async () => {
-		// #given
-		mockYtDlpError(new Error("Sign in to confirm you're not a bot"));
+		// #given — a permanent failure so the retry-on-transient-errors path
+		// doesn't add real backoff delay to this test.
+		mockYtDlpError(new Error("Video unavailable"));
 		const POST = await importPost();
 
 		// #when
@@ -196,9 +214,33 @@ describe("POST /api/preview/details - duration extraction", () => {
 		expect(data).toEqual({ error: "Failed to load details" });
 	});
 
-	it("returns 500 when duration output is not a number", async () => {
+	it("retries a transient failure before giving up, using fake timers to skip backoff delay", async () => {
 		// #given
-		mockYtDlpStdout("NA\n");
+		vi.useFakeTimers();
+		try {
+			mockYtDlpError(new Error("Sign in to confirm you're not a bot"));
+			const POST = await importPost();
+
+			// #when
+			const responsePromise = POST(
+				makeEvent({ url: "https://youtube.com/watch?v=dSA1oUhCdy8" }),
+			);
+			await vi.runAllTimersAsync();
+			const response = await responsePromise;
+			const data = await response.json();
+
+			// #then
+			expect(response.status).toBe(500);
+			expect(data).toEqual({ error: "Failed to load details" });
+			expect(execFileMock.mock.calls.length).toBeGreaterThan(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("returns 500 when duration is missing from yt-dlp output", async () => {
+		// #given
+		mockYtDlpJson({});
 		const POST = await importPost();
 
 		// #when
@@ -221,5 +263,20 @@ describe("POST /api/preview/details - duration extraction", () => {
 		// #then
 		expect(response.status).toBe(400);
 		expect(data).toEqual({ error: "URL is required" });
+	});
+
+	it("reuses a cached extraction for the same video within the TTL", async () => {
+		// #given
+		mockYtDlpJson({ duration: 150 });
+		const POST = await importPost();
+		const event = () =>
+			makeEvent({ url: "https://youtube.com/watch?v=dQw4w9WgXcQ" });
+
+		// #when
+		await POST(event());
+		await POST(event());
+
+		// #then
+		expect(execFileMock).toHaveBeenCalledTimes(1);
 	});
 });

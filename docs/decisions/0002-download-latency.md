@@ -166,6 +166,18 @@ first and did them better:
   extraction, but YouTube format URLs expire and yt-dlp skips expired ones with HTTP 403 —
   reintroducing exactly the silent-fallback class of failure ADR 0001 exists to prevent. Revisit
   only with an explicit, loud failure path.
+- **A container replaced mid-handoff loses the download.** The token registry is in-process and
+  the temp file is container-local, so a deploy, crash or sleep/wake between the SSE `complete`
+  event and the browser's fetch takes both with it. Observed once on a PR environment during a
+  force-push redeploy. The base64 payload could not fail this way — the bytes were already in the
+  event.
+
+  Accepted rather than fixed. The window is milliseconds, and the alternatives are all worse:
+  auto-retrying costs a fresh YouTube extraction against the IP that ADR 0001 says is already
+  rate-limited, and persisting the file needs a volume. Instead the endpoint logs the miss (an
+  unlogged 404 there is indistinguishable from a client bug — that cost real diagnosis time
+  once) and the client says what actually recovers it, with the URL and preview left on screen
+  so re-downloading is one click.
 - **A temp file now outlives its request.** Ownership passes to the token registry, which unlinks
   on transfer or on TTL expiry (swept on access, not on a timer — a timer would be background
   activity on a service deliberately allowed to sleep). A container restart clears any strays.

@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
 import {
+	accessSync,
 	chmodSync,
+	constants,
 	existsSync,
 	mkdirSync,
 	renameSync,
@@ -9,9 +11,24 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { platform, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
+/**
+ * The pins live outside `$lib` because the build step that bakes them runs as
+ * plain `node`/`bun` and cannot import this module — `$env/dynamic/private`
+ * only resolves inside the SvelteKit graph. The pin module is side-effect-free
+ * on purpose: importing the build script itself would pull its fs, network and
+ * CLI entrypoint into the server bundle.
+ */
+import {
+	BAKED_PLUGIN_DIR_NAME,
+	BAKED_YTDLP_NAME,
+	BGUTIL_PLUGIN_FILENAME,
+	BGUTIL_PLUGIN_VERSION,
+	BIN_DIR_NAME,
+} from "../../scripts/yt-dlp-pin.mjs";
 
 /**
  * Platform support rationale:
@@ -34,17 +51,70 @@ const REFRESH_RETRY_COOLDOWN_MS = 15 * 60 * 1000;
 
 let lastRefreshAttemptAt = 0;
 
-const BGUTIL_PLUGIN_VERSION = "1.3.1";
-const BGUTIL_PLUGIN_DIR = join(tmpdir(), "yt-dlp-plugins");
-const BGUTIL_PLUGIN_PATH = join(
-	BGUTIL_PLUGIN_DIR,
-	"bgutil-ytdlp-pot-provider.zip",
-);
-const BGUTIL_PLUGIN_URL = `https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_PLUGIN_VERSION}/bgutil-ytdlp-pot-provider.zip`;
+const BGUTIL_PLUGIN_DIR = join(tmpdir(), BAKED_PLUGIN_DIR_NAME);
+const BGUTIL_PLUGIN_PATH = join(BGUTIL_PLUGIN_DIR, BGUTIL_PLUGIN_FILENAME);
+const BGUTIL_PLUGIN_URL = `https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_PLUGIN_VERSION}/${BGUTIL_PLUGIN_FILENAME}`;
+
+const MAX_ROOT_WALK_DEPTH = 6;
 
 let bgutilPluginPromise: Promise<string> | null = null;
 
 let downloadPromise: Promise<string> | null = null;
+
+/**
+ * Directories that might hold the `bin/` baked at build time.
+ *
+ * `node build/index.js` runs from the project root, so cwd normally wins. The
+ * walk up from this module covers the cases cwd doesn't: a process started from
+ * elsewhere, and the bundled server chunk whose nesting depth under `build/` is
+ * a Rollup implementation detail we shouldn't hard-code.
+ */
+function* candidateRoots(): Generator<string> {
+	yield process.cwd();
+
+	let dir = dirname(fileURLToPath(import.meta.url));
+	for (let depth = 0; depth < MAX_ROOT_WALK_DEPTH; depth++) {
+		yield dir;
+		const parent = dirname(dir);
+		if (parent === dir) return;
+		dir = parent;
+	}
+}
+
+let loggedBakedLookup = false;
+
+/**
+ * Whether the bake survived into the deploy image is only answerable from
+ * logs, and it is a silent no-op if it didn't — so say which path was taken,
+ * once, rather than on every request.
+ */
+function logBakedLookupOnce(message: string): void {
+	if (loggedBakedLookup) return;
+	loggedBakedLookup = true;
+	console.log(message);
+}
+
+function resolveBakedPath(...segments: string[]): string | null {
+	for (const root of candidateRoots()) {
+		const candidate = join(root, BIN_DIR_NAME, ...segments);
+		if (existsSync(candidate)) return candidate;
+	}
+	return null;
+}
+
+/**
+ * A baked binary that survived the image but lost its executable bit would
+ * fail at spawn time, by which point the /tmp fallback has already been
+ * skipped. Checking here keeps that failure recoverable.
+ */
+function isExecutable(path: string): boolean {
+	try {
+		accessSync(path, constants.X_OK);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 function getYtDlpBinaryName(): string {
 	const os = platform();
@@ -204,6 +274,23 @@ export async function ensureYtDlpBinary(): Promise<string> {
 		return YTDLP_BINARY_PATH;
 	}
 
+	// A cold container has an empty /tmp, so without this the very first
+	// download blocks on a ~40MB fetch — and with `Sleep when inactive` most
+	// sessions are cold. The baked binary is a pinned floor, never a ceiling:
+	// it only serves the window before the background refresh lands, after
+	// which /tmp wins above and the TTL behaviour is exactly as it was.
+	const bakedBinary = resolveBakedPath(BAKED_YTDLP_NAME);
+	if (bakedBinary && isExecutable(bakedBinary)) {
+		logBakedLookupOnce(`Using baked yt-dlp binary at ${bakedBinary}`);
+		refreshBinaryInBackground();
+		return bakedBinary;
+	}
+	logBakedLookupOnce(
+		bakedBinary
+			? `Baked yt-dlp binary at ${bakedBinary} is not executable; downloading to /tmp`
+			: "No baked yt-dlp binary found; downloading to /tmp",
+	);
+
 	if (downloadPromise) {
 		return downloadPromise;
 	}
@@ -233,6 +320,16 @@ export function getYtDlpBinaryPath(): string {
 export async function ensureBgutilPlugin(): Promise<string> {
 	if (existsSync(BGUTIL_PLUGIN_PATH)) {
 		return BGUTIL_PLUGIN_DIR;
+	}
+	// Unlike the binary, this one is pinned everywhere: the plugin and the
+	// bgutil-pot sidecar speak a versioned protocol, so a baked copy at the
+	// pinned version is the same artifact the runtime would fetch.
+	const bakedPlugin = resolveBakedPath(
+		BAKED_PLUGIN_DIR_NAME,
+		BGUTIL_PLUGIN_FILENAME,
+	);
+	if (bakedPlugin) {
+		return dirname(bakedPlugin);
 	}
 	if (bgutilPluginPromise) {
 		return bgutilPluginPromise;

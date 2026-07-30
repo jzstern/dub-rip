@@ -191,7 +191,7 @@ describe("tryYtDlpDownload()", () => {
 		// #then
 		expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
 			expect.objectContaining({
-				category: "yt-dlp",
+				category: "download",
 				level: "warning",
 				message: expect.stringContaining("GVS PO Token"),
 			}),

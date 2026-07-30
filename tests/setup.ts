@@ -5,7 +5,6 @@ vi.mock("@sentry/sveltekit", () => ({
 	addBreadcrumb: vi.fn(),
 	captureException: vi.fn(),
 	captureMessage: vi.fn(),
-	addBreadcrumb: vi.fn(),
 	init: vi.fn(),
 	handleErrorWithSentry: vi.fn(() => vi.fn()),
 	sentryHandle: vi.fn(() => vi.fn()),

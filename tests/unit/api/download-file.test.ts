@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as Sentry from "@sentry/sveltekit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	clearDownloadTokens,
@@ -207,5 +208,75 @@ describe("GET /api/download-file", () => {
 
 		// #then
 		expect(existsSync(filePath)).toBe(false);
+	});
+});
+
+describe("GET /api/download-file - error reporting", () => {
+	beforeEach(() => {
+		clearDownloadTokens();
+		vi.mocked(Sentry.captureMessage).mockClear();
+		vi.mocked(Sentry.captureException).mockClear();
+	});
+
+	afterEach(() => {
+		clearDownloadTokens();
+	});
+
+	it("reports an unknown token so a lost container is visible", async () => {
+		// #given a token whose issuing container is gone
+		const orphaned = "c".repeat(64);
+
+		// #when
+		await callGet(orphaned);
+
+		// #then
+		expect(Sentry.captureMessage).toHaveBeenCalledWith(
+			"Download token not found",
+			expect.objectContaining({ level: "warning" }),
+		);
+	});
+
+	it("does not report a malformed token as an incident", async () => {
+		// #given a token that never came from us
+		// #when
+		await callGet("not-a-token");
+
+		// #then
+		expect(Sentry.captureMessage).not.toHaveBeenCalled();
+	});
+
+	it("reports a registered token whose file vanished", async () => {
+		// #given
+		const token = registerDownload({
+			filePath: join(tmpdir(), "dub-rip-vanished.mp3"),
+			filename: "Gone.mp3",
+			size: 1,
+		});
+
+		// #when
+		await callGet(token);
+
+		// #then
+		expect(Sentry.captureException).toHaveBeenCalledWith(
+			expect.any(Error),
+			expect.objectContaining({ level: "warning" }),
+		);
+	});
+
+	it("does not report a successful transfer", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		const token = registerDownload({
+			filePath,
+			filename: "Artist - Track.mp3",
+			size: FILE_CONTENT.length,
+		});
+
+		// #when
+		const res = await callGet(token);
+		await res.text();
+
+		// #then
+		expect(Sentry.captureException).not.toHaveBeenCalled();
 	});
 });

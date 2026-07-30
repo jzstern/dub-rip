@@ -204,14 +204,20 @@ async function saveDownload(
 			recordClientBreadcrumb("Download file request rejected", {
 				status: response.status,
 			});
-			// A 404 means the prepared file is gone — its container was replaced
-			// between finishing and this fetch. The URL and preview are still on
-			// screen, so say the one thing that actually recovers it.
-			throw new ServerRejectionError(
-				response.status === 404
-					? "The prepared file expired before it reached you. Press Download to try again."
-					: "Download finished but the file could not be retrieved",
-			);
+			// Only 404 is a failure the server answered for and reported: the
+			// prepared file is gone because its container was replaced between
+			// finishing and this fetch. The URL and preview are still on screen, so
+			// say the one thing that recovers it.
+			//
+			// Any other status is unexpected — a 400 would mean we sent a token the
+			// server considers malformed, which is our bug and is reported nowhere
+			// else, so it must not be swallowed as a server rejection.
+			if (response.status === 404) {
+				throw new ServerRejectionError(
+					"The prepared file expired before it reached you. Press Download to try again.",
+				);
+			}
+			throw new Error(`Download file request failed: ${response.status}`);
 		}
 
 		const blob = await response.blob();

@@ -31,6 +31,9 @@ function prewarmBgutilPot(): void {
 
 	fetch(`${env.BGUTIL_POT_URL}/ping`, {
 		signal: AbortSignal.timeout(BGUTIL_PREWARM_TIMEOUT),
+		// Deliberately unreported: the sidecar sleeps, so a cold or slow /ping is
+		// the normal case and the download path wakes it regardless. See the
+		// exclusions in docs/error-reporting.md.
 	}).catch(() => undefined);
 }
 

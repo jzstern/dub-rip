@@ -175,7 +175,7 @@ export async function tryYtDlpDownload({
 				if (!line.includes("WARNING:")) continue;
 				console.warn("yt-dlp warning:", line);
 				Sentry.addBreadcrumb({
-					category: "yt-dlp",
+					category: "download",
 					level: "warning",
 					message: line.slice(0, 500),
 				});

@@ -21,6 +21,9 @@ const pending = new Map<string, StoredDownload>();
  * would be background activity on a service that is deliberately allowed to
  * sleep when idle (see docs/deployment-strategy.md), and the temp files it
  * would reap live in a container-local /tmp that is discarded on every restart.
+ *
+ * Unlink failures are deliberately unreported: the usual cause is the file
+ * already being gone, which is the desired end state anyway.
  */
 function sweepExpired(): void {
 	const now = Date.now();

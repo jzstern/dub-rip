@@ -59,6 +59,18 @@ insurance against a rare edge case; it is the live path for those sessions. That
 fallback target matters so much: a 15–23 MB 360p progressive stream versus an 80 MB 1080p
 HLS one.
 
+**How often does this actually fire in production? Less than the local numbers suggest.** The
+9 probes above ran on a workstation with no `bgutil-pot`, so formats needing a GVS PO token
+were being filtered out — which is precisely what pushes selection onto `/best`. A download
+run against a deployed PR environment, with the sidecar minting real tokens, selected
+**format 251** (audio-only opus, 3.27 MiB) and produced a correct 3,487,570-byte MP3.
+
+So the local frequency was inflated by the missing sidecar and should not be read as a
+production rate. The bug is still real — `/best` is genuinely unbounded, and the SABR
+condition below can strip the `tv` client's formats even when tokens are fine — but the
+bounded fallback is better understood as cheap insurance against a tail case than as a fix
+for something happening on every download. It costs nothing either way.
+
 Two further things worth recording, both verified:
 
 - **`tv` is the only client in our set that supplies audio-only DASH formats.** `web`,
@@ -160,9 +172,12 @@ first and did them better:
 - **The filename now reaches an HTTP header.** It is derived from YouTube titles, so
   `Content-Disposition` is built with an escaped ASCII fallback plus RFC 5987 `filename*`, and is
   regression-tested against CRLF injection.
-- **Railpack build-artifact preservation is an assumption.** The baked binary must be confirmed
-  present in a Railway PR environment. The runtime download fallback means a failure here is slow,
-  not fatal.
+- **Railpack build-artifact preservation is confirmed.** Verified on the PR environment for this
+  change — the build log shows `[fetch-yt-dlp] yt-dlp_linux 2026.07.04 → /app/bin/yt-dlp
+  (39924536 bytes)` and the boot log shows `Using baked yt-dlp binary at /app/bin/yt-dlp`
+  followed by `Refreshing yt-dlp binary in the background...`. The blocking
+  `Downloading yt-dlp binary...` that production logs at every container start is gone. The
+  `/tmp` fallback stays regardless, since nothing guarantees a future builder behaves the same.
 - **Do not benchmark this against production.** Per `.claude/CLAUDE.md`, bursts get the datacenter
   IP bot-checked for several minutes. Measure locally or in a short-lived PR environment.
 

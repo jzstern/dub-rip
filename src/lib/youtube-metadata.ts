@@ -39,6 +39,19 @@ export async function fetchYouTubeMetadata(
 			if (response.status === 404) {
 				throw new YouTubeMetadataError("Video not found", true);
 			}
+			/**
+			 * Reported here rather than by callers: this is the only place that
+			 * still knows the failure was a 5xx rather than an unavailable video,
+			 * and both arrive at callers as the same error type.
+			 */
+			Sentry.captureException(
+				new Error(`oEmbed request failed: ${response.status}`),
+				{
+					level: "warning",
+					tags: { service: "youtube-metadata", operation: "fetch" },
+					extra: { videoId, status: response.status },
+				},
+			);
 			throw new YouTubeMetadataError(
 				`oEmbed request failed: ${response.status}`,
 			);
@@ -69,6 +82,11 @@ export async function fetchYouTubeMetadata(
 		}
 		if (error instanceof Error) {
 			if (error.name === "AbortError") {
+				Sentry.captureException(error, {
+					level: "warning",
+					tags: { service: "youtube-metadata", operation: "fetch" },
+					extra: { videoId, timeout },
+				});
 				throw new YouTubeMetadataError("Metadata request timed out");
 			}
 			Sentry.captureException(error, {

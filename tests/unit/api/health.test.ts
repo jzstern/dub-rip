@@ -137,6 +137,54 @@ describe("GET /api/health", () => {
 		expect(body.sentry.serverEnvironment).toBe("staging");
 	});
 
+	it("lets PUBLIC_SENTRY_ENVIRONMENT override the browser environment", async () => {
+		// #given
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		mockPublicEnv.PUBLIC_SENTRY_ENVIRONMENT = "preview";
+		fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
+
+		// #then
+		expect(body.sentry.browserEnvironment).toBe("preview");
+	});
+
+	it("surfaces server/browser drift rather than hiding it", async () => {
+		// #given — the failure mode this endpoint exists to catch
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		mockEnv.SENTRY_ENVIRONMENT = "production";
+		mockPublicEnv.PUBLIC_SENTRY_ENVIRONMENT = "development";
+		fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
+
+		// #then
+		expect(body.sentry.serverEnvironment).not.toBe(
+			body.sentry.browserEnvironment,
+		);
+	});
+
+	it("reports whether browser-side reporting is actually configured", async () => {
+		// #given
+		mockEnv.BGUTIL_POT_URL = "http://b";
+		mockPublicEnv.PUBLIC_SENTRY_DSN = "https://k@o1.ingest.sentry.io/2";
+		fetchMock.mockResolvedValue({ ok: true, status: 200 });
+
+		// #when
+		const { GET } = await import("../../../src/routes/api/health/+server");
+		const res = await GET({} as never);
+		const body = await res.json();
+
+		// #then
+		expect(body.sentry.browserEnabled).toBe(true);
+	});
+
 	it("reports whether server-side reporting is actually configured", async () => {
 		// #given — no SENTRY_DSN set
 		mockEnv.BGUTIL_POT_URL = "http://b";

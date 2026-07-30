@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockFetch = vi.fn();
@@ -209,6 +210,60 @@ describe("fetchYouTubeMetadata", () => {
 				name: "YouTubeMetadataError",
 				message: expect.stringContaining("timed out"),
 			});
+		});
+	});
+
+	describe("error reporting", () => {
+		it("reports an oEmbed 5xx at warning level, since callers cannot tell it apart", async () => {
+			// #given
+			mockFetch.mockResolvedValue({ ok: false, status: 500 });
+
+			// #when
+			await expect(fetchYouTubeMetadata("server500")).rejects.toThrow();
+
+			// #then
+			expect(Sentry.captureException).toHaveBeenCalledWith(
+				expect.any(Error),
+				expect.objectContaining({ level: "warning" }),
+			);
+		});
+
+		it("reports a timeout at warning level", async () => {
+			// #given
+			const abortError = new Error("Aborted");
+			abortError.name = "AbortError";
+			mockFetch.mockRejectedValue(abortError);
+
+			// #when
+			await expect(fetchYouTubeMetadata("slowVideo", 100)).rejects.toThrow();
+
+			// #then
+			expect(Sentry.captureException).toHaveBeenCalledWith(
+				abortError,
+				expect.objectContaining({ level: "warning" }),
+			);
+		});
+
+		it("does not report an unavailable video, which is normal operation", async () => {
+			// #given
+			mockFetch.mockResolvedValue({ ok: false, status: 404 });
+
+			// #when
+			await expect(fetchYouTubeMetadata("missing404")).rejects.toThrow();
+
+			// #then
+			expect(Sentry.captureException).not.toHaveBeenCalled();
+		});
+
+		it("does not report a private video either", async () => {
+			// #given
+			mockFetch.mockResolvedValue({ ok: false, status: 403 });
+
+			// #when
+			await expect(fetchYouTubeMetadata("private403")).rejects.toThrow();
+
+			// #then
+			expect(Sentry.captureException).not.toHaveBeenCalled();
 		});
 	});
 

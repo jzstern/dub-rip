@@ -116,6 +116,14 @@ the server already answered for, it records a **breadcrumb**, not an event:
 Capturing on both sides files two issues for one incident and makes rate
 trends meaningless.
 
+The same rule decides *which layer* reports a metadata failure.
+`fetchYouTubeMetadata` is the only place that still knows whether a failure was
+an unavailable video, an oEmbed 5xx, or a timeout — callers receive all three as
+the same `YouTubeMetadataError`. So it reports them itself (5xx and timeouts at
+`warning`, unavailable videos not at all) and **callers never capture a
+`YouTubeMetadataError`.** Routes still report anything else that reaches their
+catch, since those are genuinely unexpected.
+
 The same reasoning made `parseYtDlpError` pure. It used to call
 `captureMessage` for unmatched errors, but retry logic calls it once per
 attempt, so a single failed download could produce several events on top of the

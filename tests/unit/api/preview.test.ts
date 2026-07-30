@@ -310,6 +310,40 @@ describe("POST /api/preview", () => {
 			);
 		});
 
+		it("does not re-report a non-unavailable metadata failure already reported downstream", async () => {
+			// #given — fetchYouTubeMetadata reports 5xx and timeouts itself
+			vi.mocked(extractVideoId).mockReturnValue("serverError1");
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("oEmbed request failed: 500", false),
+			);
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=serverError1",
+			});
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(Sentry.captureException).not.toHaveBeenCalled();
+		});
+
+		it("still returns 500 for that already-reported failure", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("serverError1");
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("oEmbed request failed: 500", false),
+			);
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=serverError1",
+			});
+
+			// #when
+			const response = await POST(event);
+
+			// #then
+			expect(response.status).toBe(500);
+		});
+
 		it("does not report an unavailable video, which is normal operation", async () => {
 			// #given
 			vi.mocked(extractVideoId).mockReturnValue("privateVideo1");

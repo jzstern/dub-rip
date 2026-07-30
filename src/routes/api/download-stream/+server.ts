@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
-import { encodeAndStreamMp3 } from "$lib/download-pipeline/encode-and-stream";
+import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
 import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
@@ -259,7 +259,7 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "progress", percent: 78 });
 				send({ type: "status", message: "Processing metadata..." });
 
-				const result = await encodeAndStreamMp3({
+				const result = await finalizeMp3({
 					filePath: actualFilePath,
 					videoTitle: titleState.videoTitle,
 					artist: titleState.artist,
@@ -271,17 +271,16 @@ export const GET: RequestHandler = async ({ url }) => {
 					send,
 				});
 
+				// The file is deliberately left on disk: the browser fetches it from
+				// /api/download-file next. Ownership passes to the token registry,
+				// which unlinks it once transferred or once the token expires.
 				send({
 					type: "complete",
 					filename: result.filename,
 					size: result.size,
-					data: result.data,
+					token: result.token,
 					downloadMethod: result.downloadMethod,
 				});
-
-				try {
-					unlinkSync(actualFilePath);
-				} catch {}
 
 				closeStream();
 			} catch (error: unknown) {
@@ -302,11 +301,14 @@ export const GET: RequestHandler = async ({ url }) => {
 				closeStream();
 
 				try {
-					const possibleFiles = [
-						`${outputPath}.mp3`,
-						`${outputPath}.webm`,
-						`${outputPath}.m4a`,
-					];
+					// `.mp4` covers the bounded video fallback in the format selector,
+					// and `.part` the retry that gave up mid-transfer — both are
+					// reachable now in a way they weren't when this list was written.
+					const extensions = ["mp3", "webm", "m4a", "mp4"];
+					const possibleFiles = extensions.flatMap((ext) => [
+						`${outputPath}.${ext}`,
+						`${outputPath}.${ext}.part`,
+					]);
 					for (const file of possibleFiles) {
 						if (existsSync(file)) {
 							unlinkSync(file);

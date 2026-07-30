@@ -160,6 +160,13 @@ breadcrumbs.
 - Missing `BGUTIL_POT_URL` configuration
 - Unexpected `/api/preview` and `/api/preview/details` failures
 - yt-dlp binary and bgutil plugin download/install failures
+- Download token misses on `/api/download-file` (`warning`) — the prepared MP3
+  lives in one container's `/tmp`, so a deploy or restart between the SSE
+  `complete` event and the browser's fetch loses it. Reported server-side
+  because that is the only layer that knows *why* the token missed; the browser
+  breadcrumbs the rejection so one incident stays one issue
+- Mid-transfer read failures while streaming that MP3 — the response has already
+  been handed to the adapter, so no route-level catch ever runs
 - Metadata extraction failures
 - Artwork resolution failures (`warning` — the track still ships, without a
   cover)
@@ -182,6 +189,13 @@ breadcrumbs.
   reported.
 - **Thumbnail 404s** are expected; `maxresdefault.jpg` legitimately doesn't
   exist for many videos, hence the fallback chain.
+- **The bgutil-pot prewarm ping** from `/api/preview` is fire-and-forget. The
+  sidecar sleeps, so a cold or slow `/ping` is the normal case and the download
+  path wakes it regardless — reporting would file an event on most previews for
+  something that costs nothing when it fails.
+- **Temp-file `unlink` failures** in the download token registry. The usual
+  cause is the file already being gone, which is exactly what was wanted, and
+  the container's `/tmp` is discarded on restart either way.
 
 ## PII
 

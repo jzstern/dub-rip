@@ -55,6 +55,7 @@ The main web application that provides the user interface and orchestrates downl
 **Deployment:**
 - Connect GitHub repository to Railway
 - Automatic deployment on push to main
+- `bun run build` runs `scripts/fetch-yt-dlp.mjs` first, which bakes a pinned yt-dlp and the bgutil plugin into `bin/` (see [yt-dlp version pinning and the baked binary](#yt-dlp-version-pinning-and-the-baked-binary))
 
 **Environment Variables:**
 ```bash
@@ -197,6 +198,40 @@ curl -sI "https://registry-1.docker.io/v2/brainicism/bgutil-ytdlp-pot-provider/m
 3. Update both `railway.toml` (`services.bgutil-pot.source.image`) and this doc's pinned tag + digest.
 4. Deploy. Verify with a known-bad video (see below) before closing the ticket.
 
+## yt-dlp version pinning and the baked binary
+
+**The pin lives in `scripts/yt-dlp-pin.mjs`** (`YTDLP_VERSION`, `BGUTIL_PLUGIN_VERSION`). Both the build step and `src/lib/yt-dlp-binary.ts` import it rather than restating the values — plain `node`/`bun` can't import the TypeScript module, so the dependency points that way round. It is deliberately side-effect-free: importing the build script itself would pull its fs, network and CLI entrypoint into the server bundle.
+
+**The pin is a floor, not a ceiling.** The runtime still resolves `releases/latest` on a 24h background refresh, and that is deliberate — yt-dlp ships extraction fixes as YouTube changes, and a frozen binary eventually stops working. The baked pin exists only so a *cold* container has something to run instantly instead of blocking on a 40 MB fetch. Once the background refresh lands, `/tmp` wins and the pin is out of the picture until the next cold start.
+
+So the pin needs to be a version known to work, not necessarily the newest. Upstream has shipped releases that regressed YouTube throughput ~30x ([yt-dlp#15036](https://github.com/yt-dlp/yt-dlp/issues/15036)), and that is exactly what you don't want frozen into the image.
+
+**To upgrade yt-dlp:** bump `YTDLP_VERSION`, open a PR, and download a real video in the PR's preview environment before merging. Watch throughput, not just success.
+
+### Cold starts and the baked binary
+
+Both services sleep when inactive, so most sessions on a low-traffic app start cold. The yt-dlp binary is ~40 MB and `/tmp` is ephemeral, so every container start used to re-download it (measured at 7.8s on a fast connection) — and `/api/preview/details` awaits `ensureYtDlpBinary()`, putting that fetch in front of the user's first preview.
+
+`scripts/fetch-yt-dlp.mjs` now downloads it at build time into `bin/`, which the deploy image carries. When `/tmp` is empty, `ensureYtDlpBinary()` returns `bin/yt-dlp` without waiting on anything and kicks off the normal background refresh, so the caller is never blocked and freshness still arrives. A baked binary missing its executable bit is ignored, since the `/tmp` fallback would otherwise already have been skipped. `ensureBgutilPlugin()` does the same with `bin/yt-dlp-plugins/` — that one is pinned end to end, because the plugin and the sidecar speak a versioned protocol.
+
+**The `/tmp` download path is still there and must stay.** It is the safety net for when the bake doesn't reach the deploy image. Same reason the fetch script exits 0 on failure: an unreachable GitHub at build time costs startup latency, not a broken deploy.
+
+`bin/` is gitignored — it's a build artifact, and the binary is platform-specific (`yt-dlp_macos` locally, `yt-dlp_linux` on Railway).
+
+**Verify a deploy actually got the baked binary.** The app logs its decision once at boot:
+
+```text
+Using baked yt-dlp binary at /app/bin/yt-dlp
+```
+
+If you instead see `No baked yt-dlp binary found; falling back to runtime download` followed by `Downloading yt-dlp binary...`, the bake did not survive into the deploy image. Downloads still work; they're just slow again. Check that Railpack ran the build script and preserved `bin/`.
+
+### Sidecar prewarm from the preview request
+
+`POST /api/preview` fires a fire-and-forget `GET ${BGUTIL_POT_URL}/ping` after URL validation. bgutil-pot sleeps too, and its first PO token costs a BotGuard bootstrap (~2.3 MB of YouTube's `base.js`) on top of the container start. A user pastes a URL seconds before clicking Download, so the ping moves that wake off the download's critical path at zero idle cost — it was going to happen anyway, just later and in front of the user.
+
+It pings `/ping` (the healthcheck) and never `/get_pot`, which would make the sidecar do real BotGuard work speculatively. The call is not awaited, is bounded by an `AbortSignal.timeout`, and swallows its own rejection, so a dead sidecar cannot affect the preview response.
+
 ## Removed: the 0-byte-tunnel runbook
 
 This doc used to carry a Cobalt setup section, a Cobalt version-pinning rule, and a
@@ -319,6 +354,8 @@ You can check service logs directly in the Railway dashboard.
 | bgutil-pot falls behind YouTube's player | Upgrade the image tag (see [Image version pinning](#image-version-pinning)) |
 | Single download path — no fallback | Accepted deliberately; the previous fallback was non-functional. See [ADR 0001](decisions/0001-remove-cobalt.md) |
 | Datacenter IP rate-limited by YouTube | Avoid adding yt-dlp call sites; don't load-test live environments |
+| A yt-dlp release regresses download speed | Version is pinned in `scripts/fetch-yt-dlp.mjs`; bumps are deliberate and verified in a PR env |
+| Baked `bin/` missing from the deploy image | Runtime `/tmp` download still works; boot log names which path was taken |
 
 ## References
 

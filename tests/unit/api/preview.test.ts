@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mutable rather than re-mocked per test: the route reads `env.BGUTIL_POT_URL`
+// at request time, so flipping a field here avoids resetting the module graph
+// (which would hand the route fresh, unconfigured mocks of everything else).
+const mockEnv = vi.hoisted(() => ({}) as Record<string, string>);
+
+vi.mock("$env/dynamic/private", () => ({ env: mockEnv }));
+
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
 }));
@@ -359,6 +366,126 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(Sentry.captureException).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("bgutil-pot prewarm", () => {
+		const POT_URL = "http://bgutil-pot.railway.internal:4416";
+		const fetchMock = vi.fn();
+
+		function validPreviewEvent() {
+			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
+				artist: "Rick Astley",
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+			});
+			return createMockEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+			});
+		}
+
+		beforeEach(() => {
+			mockEnv.BGUTIL_POT_URL = POT_URL;
+			fetchMock.mockReset().mockResolvedValue({ ok: true });
+			vi.stubGlobal("fetch", fetchMock);
+		});
+
+		afterEach(() => {
+			vi.unstubAllGlobals();
+			delete mockEnv.BGUTIL_POT_URL;
+		});
+
+		it("pings the sidecar so its BotGuard bootstrap happens before the download", async () => {
+			// #given
+			const event = validPreviewEvent();
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(fetchMock).toHaveBeenCalledWith(
+				`${POT_URL}/ping`,
+				expect.anything(),
+			);
+		});
+
+		it("bounds the ping with an abort signal", async () => {
+			// #given
+			const event = validPreviewEvent();
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(fetchMock).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.objectContaining({ signal: expect.any(AbortSignal) }),
+			);
+		});
+
+		it("never asks the sidecar for a PO token speculatively", async () => {
+			// #given
+			const event = validPreviewEvent();
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(fetchMock).not.toHaveBeenCalledWith(
+				expect.stringContaining("/get_pot"),
+				expect.anything(),
+			);
+		});
+
+		it("skips the ping when BGUTIL_POT_URL is unset", async () => {
+			// #given
+			delete mockEnv.BGUTIL_POT_URL;
+			const event = validPreviewEvent();
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it("skips the ping for an invalid YouTube URL", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue(null);
+			const event = createMockEvent({ url: "https://vimeo.com/123456" });
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it("does not block the response on a sidecar that never answers", async () => {
+			// #given
+			fetchMock.mockReturnValue(new Promise(() => {}));
+			const event = validPreviewEvent();
+
+			// #when
+			const response = await POST(event);
+
+			// #then
+			expect(response.status).toBe(200);
+		});
+
+		it("still returns the preview when the ping fails", async () => {
+			// #given
+			fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
+			const event = validPreviewEvent();
+
+			// #when
+			const response = await POST(event);
+
+			// #then
+			expect(response.status).toBe(200);
 		});
 	});
 

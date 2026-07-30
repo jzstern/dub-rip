@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
@@ -60,19 +61,31 @@ export async function tryYtDlpDownload({
 		"mp3",
 		"--audio-quality",
 		"128K",
+		// Audio-only DASH formats drop out of YouTube's response intermittently —
+		// they get skipped whenever a GVS PO token isn't minted for the client — and
+		// a bare `best` then lands on 1080p HLS: one measured run pulled 84MB over 39
+		// fragments (plus an ffmpeg fixup pass) where a 3.4MB audio stream existed.
+		// itag 18 (360p progressive, ~15-23MB) bounds the worst case before `best`
+		// is ever reached.
 		"-f",
-		"bestaudio/best",
-		"--embed-thumbnail",
-		"--add-metadata",
+		"bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
+		// Only bites on the fragmented fallbacks above, which are otherwise serial.
+		"--concurrent-fragments",
+		"4",
+		// No metadata or thumbnail postprocessors here on purpose: the downstream
+		// tagging step calls NodeID3.write(), which replaces the whole ID3 tag, so
+		// anything yt-dlp embeds is overwritten moments later. Asking for it cost a
+		// thumbnail fetch and two extra ffmpeg rewrites of the MP3 for nothing.
 		"--ffmpeg-location",
 		ffmpegPath,
 		"--newline",
-		"--no-warnings",
-		"--parse-metadata",
-		"%(title)s:%(meta_title)s",
-		"--parse-metadata",
-		"%(artist)s:%(meta_artist)s",
 		"--no-playlist",
+		// The binary is pinned, so yt-dlp's "your version is older than 90 days"
+		// notice is expected rather than actionable. Without this it would fire on
+		// every download once the pin ages past the threshold, and — now that
+		// warnings are no longer suppressed wholesale — bury the PO-token and
+		// format-skip warnings we removed `--no-warnings` to be able to see.
+		"--no-update",
 		...buildJsRuntimeArgs(),
 		"--plugin-dirs",
 		pluginDir,
@@ -154,6 +167,18 @@ export async function tryYtDlpDownload({
 			console.error("yt-dlp stderr:", text);
 			if (text.includes("ERROR:")) {
 				errorMessage += text;
+			}
+			// Warnings are deliberately not suppressed (`--no-warnings` is absent): a
+			// skipped-format warning is the only signal that YouTube withheld the
+			// audio-only streams and we fell through to a video format.
+			for (const line of text.split("\n")) {
+				if (!line.includes("WARNING:")) continue;
+				console.warn("yt-dlp warning:", line);
+				Sentry.addBreadcrumb({
+					category: "download",
+					level: "warning",
+					message: line.slice(0, 500),
+				});
 			}
 		});
 

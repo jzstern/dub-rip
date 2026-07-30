@@ -1,5 +1,6 @@
 import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
+import { env } from "$env/dynamic/private";
 import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
@@ -10,6 +11,31 @@ import type { RequestHandler } from "./$types";
 
 const PREVIEW_ARTWORK_SIZE = 300;
 const PREVIEW_ARTWORK_TIMEOUT = 4000;
+const BGUTIL_PREWARM_TIMEOUT = 2000;
+
+/**
+ * Nudges the sleeping bgutil-pot sidecar awake, without waiting for it.
+ *
+ * The sidecar sleeps when inactive, and its first PO token costs a BotGuard
+ * bootstrap (~2.3 MB of YouTube's `base.js`) on top of the container start.
+ * A user pastes a URL seconds before clicking Download, so paying that here
+ * moves it off the download's critical path at zero idle cost — the wake was
+ * going to happen anyway.
+ *
+ * `/ping` is the healthcheck (`healthcheckPath` in `railway.toml`); it starts
+ * the container without doing speculative BotGuard work, which `/get_pot`
+ * would.
+ */
+function prewarmBgutilPot(): void {
+	if (!env.BGUTIL_POT_URL) return;
+
+	fetch(`${env.BGUTIL_POT_URL}/ping`, {
+		signal: AbortSignal.timeout(BGUTIL_PREWARM_TIMEOUT),
+		// Deliberately unreported: the sidecar sleeps, so a cold or slow /ping is
+		// the normal case and the download path wakes it regardless. See the
+		// exclusions in docs/error-reporting.md.
+	}).catch(() => undefined);
+}
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
@@ -23,6 +49,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (!videoId) {
 			return json({ error: "Invalid YouTube URL" }, { status: 400 });
 		}
+
+		prewarmBgutilPot();
 
 		const metadata = await fetchYouTubeMetadata(videoId);
 		const artwork = await resolveArtworkUrl(

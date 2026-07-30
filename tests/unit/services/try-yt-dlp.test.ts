@@ -4,6 +4,7 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 	buildJsRuntimeArgs: vi.fn(() => ["--js-runtimes", "node:/usr/bin/node"]),
 }));
 
+import * as Sentry from "@sentry/sveltekit";
 import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
@@ -37,6 +38,9 @@ class FakeProcess {
 const BOT_CHECK_STDERR =
 	"ERROR: [youtube] q9lZ4p5YRkY: Sign in to confirm you're not a bot.\n";
 
+const PO_TOKEN_WARNING_STDERR =
+	"WARNING: [youtube] q9lZ4p5YRkY: mweb client https formats require a GVS PO Token which was not provided. They will be skipped as they may yield HTTP Error 403.\n";
+
 describe("tryYtDlpDownload()", () => {
 	let proc: FakeProcess;
 	let execArgs: string[];
@@ -44,6 +48,7 @@ describe("tryYtDlpDownload()", () => {
 	let ytDlp: YtDlpInstance;
 
 	beforeEach(() => {
+		vi.mocked(Sentry.addBreadcrumb).mockClear();
 		proc = new FakeProcess();
 		execArgs = [];
 		sent = [];
@@ -116,6 +121,106 @@ describe("tryYtDlpDownload()", () => {
 			arg.startsWith("youtube:player_client="),
 		);
 		expect(clientArg).not.toMatch(/default|visionos|android_vr/);
+	});
+
+	it("prefers an audio-only stream and caps the fallback at 360p", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(execArgs[execArgs.indexOf("-f") + 1]).toBe(
+			"bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
+		);
+	});
+
+	it("fetches fragmented fallback formats in parallel", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(execArgs[execArgs.indexOf("--concurrent-fragments") + 1]).toBe("4");
+	});
+
+	it("skips metadata postprocessors that NodeID3.write would overwrite anyway", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(execArgs).toEqual(
+			expect.not.arrayContaining([
+				"--embed-thumbnail",
+				"--add-metadata",
+				"--parse-metadata",
+			]),
+		);
+	});
+
+	it("leaves warnings visible so skipped-format diagnostics reach the logs", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(execArgs).not.toContain("--no-warnings");
+	});
+
+	it("records a Sentry breadcrumb for each yt-dlp warning", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emitStderr(PO_TOKEN_WARNING_STDERR);
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+			expect.objectContaining({
+				category: "download",
+				level: "warning",
+				message: expect.stringContaining("GVS PO Token"),
+			}),
+		);
+	});
+
+	it("treats a warning-only stderr as success when yt-dlp exits cleanly", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emitStderr(PO_TOKEN_WARNING_STDERR);
+		proc.emit("close", 0);
+
+		// #then
+		await expect(promise).resolves.toBeUndefined();
+	});
+
+	it("keeps warnings out of the rejection message when yt-dlp also errors", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emitStderr(PO_TOKEN_WARNING_STDERR);
+		proc.emitStderr(BOT_CHECK_STDERR);
+		proc.emit("close", 1);
+
+		// #then
+		await expect(promise).rejects.toThrow(new Error(BOT_CHECK_STDERR));
 	});
 
 	it("resolves when yt-dlp exits cleanly", async () => {

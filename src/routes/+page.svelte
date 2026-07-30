@@ -1,5 +1,9 @@
 <script lang="ts">
 import { fade } from "svelte/transition";
+import {
+	recordClientBreadcrumb,
+	reportClientIssue,
+} from "$lib/client-reporting";
 import AsciiVinyl from "$lib/components/AsciiVinyl.svelte";
 import DownloadButton from "$lib/components/DownloadButton.svelte";
 import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
@@ -22,6 +26,18 @@ function isValidYouTubeUrl(input: string): boolean {
 		/^https?:\/\/m\.youtube\.com\/watch\?v=[\w-]{11}/,
 	];
 	return patterns.some((pattern) => pattern.test(input));
+}
+
+/**
+ * Marks a failure the server already answered for — it logged and reported
+ * the error on its way out, so the browser only records a breadcrumb rather
+ * than filing a second issue for the same incident.
+ */
+class ServerRejectionError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "ServerRejectionError";
+	}
 }
 
 let isValidUrl = $derived(isValidYouTubeUrl(url));
@@ -79,8 +95,11 @@ async function loadPreview(targetUrl: string) {
 		});
 
 		if (!response.ok) {
-			const data = await response.json();
-			throw new Error(data.error || "Failed to load preview");
+			const data = await response.json().catch(() => ({}));
+			recordClientBreadcrumb("Preview request rejected", {
+				status: response.status,
+			});
+			throw new ServerRejectionError(data.error || "Failed to load preview");
 		}
 
 		if (url !== targetUrl) return;
@@ -92,19 +111,39 @@ async function loadPreview(targetUrl: string) {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ url: targetUrl }),
 		})
-			.then((res) => res.json())
+			.then(async (res) => {
+				if (!res.ok) {
+					recordClientBreadcrumb("Preview details request rejected", {
+						status: res.status,
+					});
+					return null;
+				}
+				return res.json();
+			})
 			.then((details) => {
-				if (url === targetUrl && preview && details.success) {
+				if (url === targetUrl && preview && details?.success) {
 					preview = {
 						...preview,
 						duration: details.duration,
 					};
 				}
 			})
-			.catch((err) => console.error("Details error:", err));
+			.catch((err) => {
+				console.error("Details error:", err);
+				reportClientIssue(err, {
+					operation: "preview-details-fetch",
+					extra: { targetUrl },
+				});
+			});
 	} catch (err) {
 		if (url !== targetUrl) return;
 		console.error("Preview error:", err);
+		if (!(err instanceof ServerRejectionError)) {
+			reportClientIssue(err, {
+				operation: "preview-fetch",
+				extra: { targetUrl },
+			});
+		}
 		error = err instanceof Error ? err.message : "Failed to load preview";
 		errorUrl = targetUrl;
 		preview = null;
@@ -234,6 +273,10 @@ function handleDownload() {
 							preview = null;
 						} catch (err) {
 							console.error("Failed to save file:", err);
+							reportClientIssue(err, {
+								operation: "download-save-file",
+								extra: { filename: data.filename, size: data.size },
+							});
 							error = "Failed to save file";
 							loading = false;
 							status = "";
@@ -244,6 +287,9 @@ function handleDownload() {
 				}
 
 				case "error":
+					recordClientBreadcrumb("Download stream reported an error", {
+						message: data.message,
+					});
 					error = data.message;
 					errorUrl = url;
 					eventSource.close();
@@ -254,11 +300,24 @@ function handleDownload() {
 			}
 		} catch (err) {
 			console.error("Failed to parse event:", err);
+			reportClientIssue(err, {
+				operation: "download-stream-parse",
+				extra: { rawEvent: String(event.data).slice(0, 200) },
+			});
 		}
 	};
 
 	eventSource.onerror = () => {
+		/**
+		 * Only an unexplained drop is worth reporting. When the server sends an
+		 * `error` event it closes the stream itself, and it has already filed
+		 * that failure — so a disconnect with `error` set is a duplicate.
+		 */
 		if (!error) {
+			reportClientIssue(new Error("Download stream connection lost"), {
+				operation: "download-stream-transport",
+				extra: { readyState: eventSource.readyState },
+			});
 			error = "Connection lost";
 		}
 		errorUrl = url;

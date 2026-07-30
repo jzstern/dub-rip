@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const captureExceptionMock = vi.fn();
 const flushMock = vi.fn();
+const addBreadcrumbMock = vi.fn();
 
 vi.mock("@sentry/sveltekit", () => ({
 	init: vi.fn(),
 	captureException: captureExceptionMock,
+	addBreadcrumb: addBreadcrumbMock,
 	flush: flushMock,
 	sentryHandle:
 		() =>
@@ -19,6 +21,7 @@ const HANDLER_TAG = Symbol.for("dub-rip.process-error-handlers");
 describe("registerProcessErrorHandlers()", () => {
 	beforeEach(() => {
 		captureExceptionMock.mockReset();
+		addBreadcrumbMock.mockReset();
 		flushMock.mockReset().mockResolvedValue(true);
 		// Critical: clear the global tag so registerProcessErrorHandlers()
 		// doesn't early-return on subsequent test imports. Then strip any
@@ -111,14 +114,15 @@ describe("registerProcessErrorHandlers()", () => {
 		expect(process.listenerCount("warning")).toBe(1);
 	});
 
-	it("captures process warnings to Sentry at warning level", async () => {
+	it("captures defect-indicating process warnings to Sentry at warning level", async () => {
 		// #given
 		const { registerProcessErrorHandlers } = await import(
 			"../../src/hooks.server"
 		);
 		registerProcessErrorHandlers();
 
-		const warning = new Error("test warning");
+		const warning = new Error("possible EventEmitter memory leak detected");
+		warning.name = "MaxListenersExceededWarning";
 
 		// #when
 		process.emit("warning", warning);
@@ -127,6 +131,44 @@ describe("registerProcessErrorHandlers()", () => {
 		expect(captureExceptionMock).toHaveBeenCalledWith(warning, {
 			level: "warning",
 			tags: { service: "hooks.server", operation: "process-warning" },
+		});
+	});
+
+	it("leaves a routine deprecation warning as a breadcrumb, not an issue", async () => {
+		// #given
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const warning = new Error("punycode is deprecated");
+		warning.name = "DeprecationWarning";
+
+		// #when
+		process.emit("warning", warning);
+
+		// #then
+		expect(captureExceptionMock).not.toHaveBeenCalled();
+	});
+
+	it("records the breadcrumb for a warning it does not report", async () => {
+		// #given
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const warning = new Error("punycode is deprecated");
+		warning.name = "DeprecationWarning";
+
+		// #when
+		process.emit("warning", warning);
+
+		// #then
+		expect(addBreadcrumbMock).toHaveBeenCalledWith({
+			category: "process.warning",
+			level: "warning",
+			message: "DeprecationWarning: punycode is deprecated",
 		});
 	});
 });

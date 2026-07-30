@@ -71,9 +71,16 @@ This project is configured to deploy on Railway. Downloads run through yt-dlp, w
 RAILPACK_DEPLOY_APT_PACKAGES=python3
 # bgutil-ytdlp-pot-provider sidecar; required for yt-dlp PO tokens
 BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
+
+# Optional — error monitoring. Omit all three to run without Sentry.
+SENTRY_DSN=https://...
+PUBLIC_SENTRY_DSN=https://...
+# Build-time only; without it no source maps are uploaded and browser
+# stack traces stay minified.
+SENTRY_AUTH_TOKEN=sntrys_...
 ```
 
-See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions.
+See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions, and [error-reporting.md](docs/error-reporting.md) for what gets reported and why.
 
 ### PR Preview Environments
 

@@ -100,4 +100,45 @@ describe("retryWithBackoff()", () => {
 			expect(delayMs).toBeLessThanOrEqual(1_000);
 		}
 	});
+
+	it("never calls fn when the signal is already aborted", async () => {
+		// #given
+		const controller = new AbortController();
+		controller.abort();
+		const fn = vi.fn().mockResolvedValue("ok");
+		const sleep = vi.fn().mockResolvedValue(undefined);
+
+		// #when / #then
+		await expect(
+			retryWithBackoff(fn, { signal: controller.signal, sleep }),
+		).rejects.toBeTruthy();
+		expect(fn).not.toHaveBeenCalled();
+	});
+
+	it("does not wait out the full backoff once aborted mid-sleep, and never retries again", async () => {
+		// #given — this sleep never resolves on its own; the only way
+		// retryWithBackoff can settle is by racing it against the abort
+		const controller = new AbortController();
+		const failure = new Error("transient");
+		const fn = vi.fn().mockRejectedValue(failure);
+		let sleepStarted = false;
+		const sleep = vi.fn().mockImplementation(() => {
+			sleepStarted = true;
+			return new Promise<void>(() => {});
+		});
+
+		// #when
+		const promise = retryWithBackoff(fn, {
+			maxAttempts: 5,
+			isRetryable: () => true,
+			signal: controller.signal,
+			sleep,
+		});
+		await vi.waitFor(() => expect(sleepStarted).toBe(true));
+		controller.abort();
+
+		// #then
+		await expect(promise).rejects.toThrow("transient");
+		expect(fn).toHaveBeenCalledTimes(1);
+	});
 });

@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	MAX_CONCURRENT_YT_DLP_PROCESSES,
+	MAX_QUEUED_YT_DLP_REQUESTS,
 	withYtDlpConcurrencyLimit,
+	YtDlpQueueFullError,
 } from "$lib/yt-dlp-concurrency";
 
 function deferred<T>() {
@@ -113,5 +115,84 @@ describe("withYtDlpConcurrencyLimit()", () => {
 
 		// #then
 		await expect(waiting).resolves.toBe("queued-slot-ran");
+	});
+});
+
+describe("withYtDlpConcurrencyLimit() queue bound", () => {
+	beforeEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("rejects immediately once the queue reaches MAX_QUEUED_YT_DLP_REQUESTS", async () => {
+		// #given — fill every concurrency slot and the entire queue behind it
+		const backlogSize =
+			MAX_CONCURRENT_YT_DLP_PROCESSES + MAX_QUEUED_YT_DLP_REQUESTS;
+		const gates = Array.from({ length: backlogSize }, () => deferred<void>());
+		const calls = gates.map((gate) =>
+			withYtDlpConcurrencyLimit(async () => {
+				await gate.promise;
+			}),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		// #when
+		const overflow = withYtDlpConcurrencyLimit(async () => "should not run");
+
+		// #then
+		await expect(overflow).rejects.toBeInstanceOf(YtDlpQueueFullError);
+
+		// #cleanup
+		for (const gate of gates) gate.resolve();
+		await Promise.all(calls);
+	});
+
+	it("identifies a full queue by error type rather than by message", async () => {
+		// #given
+		const backlogSize =
+			MAX_CONCURRENT_YT_DLP_PROCESSES + MAX_QUEUED_YT_DLP_REQUESTS;
+		const gates = Array.from({ length: backlogSize }, () => deferred<void>());
+		const calls = gates.map((gate) =>
+			withYtDlpConcurrencyLimit(async () => {
+				await gate.promise;
+			}),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		// #when
+		let caught: unknown;
+		try {
+			await withYtDlpConcurrencyLimit(async () => "should not run");
+		} catch (error) {
+			caught = error;
+		}
+
+		// #then
+		expect(caught).toBeInstanceOf(YtDlpQueueFullError);
+		expect((caught as Error).name).toBe("YtDlpQueueFullError");
+
+		// #cleanup
+		for (const gate of gates) gate.resolve();
+		await Promise.all(calls);
+	});
+
+	it("still queues normally for callers under the queue cap", async () => {
+		// #given — fill every concurrency slot, leaving room in the queue
+		const gates = Array.from({ length: MAX_CONCURRENT_YT_DLP_PROCESSES }, () =>
+			deferred<void>(),
+		);
+		const running = gates.map((gate) =>
+			withYtDlpConcurrencyLimit(async () => {
+				await gate.promise;
+			}),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		// #when
+		const queued = withYtDlpConcurrencyLimit(async () => "queued-slot-ran");
+		for (const gate of gates) gate.resolve();
+		await Promise.all(running);
+
+		// #then
+		await expect(queued).resolves.toBe("queued-slot-ran");
 	});
 });

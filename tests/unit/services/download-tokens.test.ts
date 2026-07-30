@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	clearDownloadTokens,
 	discardDownload,
+	MAX_PENDING_DOWNLOADS,
 	registerDownload,
 	releaseDownload,
 	resolveDownload,
@@ -163,5 +164,44 @@ describe("download token registry", () => {
 
 		// #then
 		expect(resolveDownload(token)).toBeNull();
+	});
+
+	it("evicts the oldest pending download once MAX_PENDING_DOWNLOADS is reached", async () => {
+		// #given — fill the registry to capacity
+		let oldestToken = "";
+		let oldestFilePath = "";
+		for (let i = 0; i < MAX_PENDING_DOWNLOADS; i++) {
+			const filePath = await createTempMp3();
+			const token = register(filePath);
+			if (i === 0) {
+				oldestToken = token;
+				oldestFilePath = filePath;
+			}
+		}
+
+		// #when — one more registration pushes the registry past capacity
+		const newFilePath = await createTempMp3();
+		const newToken = register(newFilePath);
+
+		// #then — the oldest entry is gone, but the newest one and its file survive
+		expect(resolveDownload(oldestToken)).toBeNull();
+		await vi.waitFor(() => expect(existsSync(oldestFilePath)).toBe(false));
+		expect(resolveDownload(newToken)).not.toBeNull();
+	});
+
+	it("does not evict anything while under MAX_PENDING_DOWNLOADS", async () => {
+		// #given
+		const filePaths: string[] = [];
+		for (let i = 0; i < MAX_PENDING_DOWNLOADS - 1; i++) {
+			filePaths.push(await createTempMp3());
+		}
+
+		// #when
+		const tokens = filePaths.map((filePath) => register(filePath));
+
+		// #then
+		for (const token of tokens) {
+			expect(resolveDownload(token)).not.toBeNull();
+		}
 	});
 });

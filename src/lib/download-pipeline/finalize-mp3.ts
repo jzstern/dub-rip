@@ -3,6 +3,10 @@ import { createRequire } from "node:module";
 import * as Sentry from "@sentry/sveltekit";
 import { resolveAlbumArtImage } from "$lib/artwork";
 import { registerDownload } from "$lib/download-pipeline/download-tokens";
+import {
+	ID3_TAGS_WRITTEN_PERCENT,
+	PREPARING_DOWNLOAD_PERCENT,
+} from "$lib/download-pipeline/progress-stages";
 import type { DownloadMethod } from "$lib/types";
 import {
 	buildID3Tags,
@@ -22,6 +26,7 @@ export interface FinalizeMp3Input {
 	detailsPromise: Promise<VideoDetails | null>;
 	thumbnailPromise: Promise<ThumbnailImage | null>;
 	send: (data: Record<string, unknown>) => void;
+	signal?: AbortSignal;
 }
 
 export interface FinalizeMp3Result {
@@ -29,6 +34,30 @@ export interface FinalizeMp3Result {
 	size: number;
 	token: string;
 	downloadMethod: DownloadMethod;
+}
+
+const FILENAME_UNSAFE_CHARS = '<>:"/\\|?*';
+
+function isUnsafeFilenameChar(char: string): boolean {
+	const code = char.codePointAt(0) ?? 0;
+	return code <= 0x1f || code === 0x7f || FILENAME_UNSAFE_CHARS.includes(char);
+}
+
+/**
+ * Strips everything that can't safely round-trip through a filesystem path
+ * or, downstream, an HTTP Content-Disposition header: the reserved
+ * `<>:"/\|?*` set, ASCII control characters, and a leading dot (which would
+ * otherwise produce a hidden file). Iterates by code point rather than a
+ * regex, matching `buildContentDisposition` in download-file's +server.ts,
+ * since Biome's control-character rule flags a control-char range even when
+ * it's the intended match.
+ */
+export function sanitizeFilenameSegment(value: string): string {
+	let sanitized = "";
+	for (const char of value) {
+		if (!isUnsafeFilenameChar(char)) sanitized += char;
+	}
+	return sanitized.replace(/^\.+/, "").trim();
 }
 
 export function buildDownloadFilename({
@@ -41,14 +70,17 @@ export function buildDownloadFilename({
 	videoTitle: string;
 }): string {
 	if (artist && trackTitle) {
-		const safeArtist = artist.replace(/[<>:"/\\|?*]/g, "").trim();
-		const safeTrack = trackTitle.replace(/[<>:"/\\|?*]/g, "").trim();
+		const safeArtist = sanitizeFilenameSegment(artist);
+		const safeTrack = sanitizeFilenameSegment(trackTitle);
 		if (safeArtist && safeTrack) {
 			return `${safeArtist} - ${safeTrack}.mp3`;
 		}
 	}
 	if (videoTitle) {
-		return `${videoTitle.replace(/[<>:"/\\|?*]/g, "_").replace(/_+/g, "_")}.mp3`;
+		const safeTitle = sanitizeFilenameSegment(videoTitle);
+		if (safeTitle) {
+			return `${safeTitle}.mp3`;
+		}
 	}
 	return "audio.mp3";
 }
@@ -63,6 +95,7 @@ export async function finalizeMp3({
 	detailsPromise,
 	thumbnailPromise,
 	send,
+	signal,
 }: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
 
@@ -119,16 +152,25 @@ export async function finalizeMp3({
 		});
 	}
 
-	send({ type: "progress", percent: 90 });
+	send({ type: "progress", percent: ID3_TAGS_WRITTEN_PERCENT });
 	send({ type: "status", message: "Preparing download..." });
 
 	const { size } = await stat(filePath);
 	const filename = buildDownloadFilename({ artist, trackTitle, videoTitle });
+
+	if (signal?.aborted) {
+		// The artwork/ID3 work above this line is wasted if the client is gone,
+		// but that's cheap to accept. Registering a token — and pinning this
+		// file in /tmp for the full TTL — for a client that is provably never
+		// coming back is the leak this check exists to prevent.
+		throw signal.reason ?? new Error("Download aborted");
+	}
+
 	const token = registerDownload({ filePath, filename, size });
 
 	console.log("Final filename:", filename);
 
-	send({ type: "progress", percent: 95 });
+	send({ type: "progress", percent: PREPARING_DOWNLOAD_PERCENT });
 
 	return { filename, size, token, downloadMethod };
 }

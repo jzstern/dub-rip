@@ -1,11 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { existsSync, unlinkSync } from "node:fs";
+import { access, unlink } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
+import { METADATA_PROCESSING_PERCENT } from "$lib/download-pipeline/progress-stages";
 import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
@@ -24,6 +25,7 @@ import {
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
 import { ensureBgutilPlugin, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+import { YtDlpQueueFullError } from "$lib/yt-dlp-concurrency";
 import {
 	type ClassifiedYtDlpError,
 	classifyYtDlpError,
@@ -32,6 +34,18 @@ import {
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
+
+const QUEUE_FULL_MESSAGE =
+	"The downloader is busy right now. Please try again in a moment.";
+
+async function pathExists(path: string): Promise<boolean> {
+	try {
+		await access(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Videos that can never be downloaded (private, age-restricted, copyright)
@@ -103,6 +117,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	const normalizedUrl = buildWatchUrl(videoId);
+	const abortController = new AbortController();
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -229,6 +244,7 @@ export const GET: RequestHandler = async ({ url }) => {
 							ytDlp,
 							titleState,
 							send,
+							signal: abortController.signal,
 						}),
 					{
 						isRetryable: (error) =>
@@ -238,17 +254,28 @@ export const GET: RequestHandler = async ({ url }) => {
 						onRetry: () => {
 							send({ type: "status", message: "Retrying download..." });
 						},
+						signal: abortController.signal,
 					},
 				);
 
 				const actualFilePath = `${outputPath}.mp3`;
 
-				if (!existsSync(actualFilePath)) {
+				if (!(await pathExists(actualFilePath))) {
 					send({
 						type: "error",
 						message: "Download completed but file not found",
 					});
-					controller.close();
+					Sentry.captureException(
+						new Error("yt-dlp exited 0 but produced no output file"),
+						{
+							tags: {
+								service: "download-stream",
+								operation: "missing-output-file",
+							},
+							extra: { videoId },
+						},
+					);
+					closeStream();
 					return;
 				}
 
@@ -256,8 +283,16 @@ export const GET: RequestHandler = async ({ url }) => {
 				console.log("Parsed artist:", titleState.artist);
 				console.log("Parsed track title:", titleState.trackTitle);
 
-				send({ type: "progress", percent: 78 });
+				send({ type: "progress", percent: METADATA_PROCESSING_PERCENT });
 				send({ type: "status", message: "Processing metadata..." });
+
+				if (abortController.signal.aborted) {
+					// yt-dlp can finish (or get killed and still report a clean close —
+					// see try-yt-dlp.ts) after the client has already disconnected. A
+					// bare `return` here would skip the catch block's temp-file cleanup
+					// below and strand the finished .mp3; throwing routes through it.
+					throw abortController.signal.reason ?? new Error("Download aborted");
+				}
 
 				const result = await finalizeMp3({
 					filePath: actualFilePath,
@@ -269,6 +304,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					detailsPromise,
 					thumbnailPromise,
 					send,
+					signal: abortController.signal,
 				});
 
 				// The file is deliberately left on disk: the browser fetches it from
@@ -284,21 +320,51 @@ export const GET: RequestHandler = async ({ url }) => {
 
 				closeStream();
 			} catch (error: unknown) {
-				console.error("Download error:", error);
-				const normalizedError =
-					error instanceof Error
-						? error
-						: new Error(`Unknown download error: ${String(error)}`);
-				const rawMessage =
-					error instanceof Error ? error.message : "Unknown error";
-				const classified = classifyYtDlpError(rawMessage);
-				reportDownloadFailure(normalizedError, classified, videoId);
-				try {
-					send({ type: "error", message: classified.message });
-				} catch (sendErr) {
-					console.error("Failed to send final error SSE event:", sendErr);
+				if (abortController.signal.aborted) {
+					// The client walked away — normal operation, not a defect. No SSE
+					// event either: there is nothing left listening for it, and no
+					// closeStream(): cancel() already put the controller in a closed
+					// state, so calling close() here would only throw and log noise.
+					console.log("Download aborted: client disconnected");
+					Sentry.addBreadcrumb({
+						category: "download",
+						level: "info",
+						message: "Download aborted: client disconnected before it finished",
+						data: { videoId },
+					});
+				} else if (error instanceof YtDlpQueueFullError) {
+					// Load shedding working as designed, not a defect — a traffic spike
+					// would otherwise turn every rejected request into an issue.
+					console.warn("Download rejected: yt-dlp queue is full");
+					Sentry.addBreadcrumb({
+						category: "download",
+						level: "info",
+						message: "Download rejected: downloader queue is full",
+						data: { videoId },
+					});
+					try {
+						send({ type: "error", message: QUEUE_FULL_MESSAGE });
+					} catch (sendErr) {
+						console.error("Failed to send final error SSE event:", sendErr);
+					}
+					closeStream();
+				} else {
+					console.error("Download error:", error);
+					const normalizedError =
+						error instanceof Error
+							? error
+							: new Error(`Unknown download error: ${String(error)}`);
+					const rawMessage =
+						error instanceof Error ? error.message : "Unknown error";
+					const classified = classifyYtDlpError(rawMessage);
+					reportDownloadFailure(normalizedError, classified, videoId);
+					try {
+						send({ type: "error", message: classified.message });
+					} catch (sendErr) {
+						console.error("Failed to send final error SSE event:", sendErr);
+					}
+					closeStream();
 				}
-				closeStream();
 
 				try {
 					// `.mp4` covers the bounded video fallback in the format selector,
@@ -310,12 +376,15 @@ export const GET: RequestHandler = async ({ url }) => {
 						`${outputPath}.${ext}.part`,
 					]);
 					for (const file of possibleFiles) {
-						if (existsSync(file)) {
-							unlinkSync(file);
+						if (await pathExists(file)) {
+							await unlink(file);
 						}
 					}
 				} catch {}
 			}
+		},
+		cancel() {
+			abortController.abort();
 		},
 	});
 

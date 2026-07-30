@@ -1,5 +1,9 @@
 import * as Sentry from "@sentry/sveltekit";
 import {
+	DOWNLOAD_COMPLETE_PERCENT,
+	DOWNLOAD_START_PERCENT,
+} from "$lib/download-pipeline/progress-stages";
+import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
@@ -18,6 +22,7 @@ interface YtDlpProcess {
 	on(event: "error", callback: (error: Error) => void): void;
 	on(event: "close", callback: (code: number) => void): void;
 	stderr?: { on(event: string, callback: (data: Buffer) => void): void };
+	ytDlpProcess?: { kill(signal?: NodeJS.Signals): boolean };
 }
 
 export interface YtDlpInstance {
@@ -41,6 +46,7 @@ export interface TryYtDlpInput {
 	ytDlp: YtDlpInstance;
 	titleState: TitleState;
 	send: (data: Record<string, unknown>) => void;
+	signal?: AbortSignal;
 }
 
 export async function tryYtDlpDownload({
@@ -53,6 +59,7 @@ export async function tryYtDlpDownload({
 	ytDlp,
 	titleState,
 	send,
+	signal,
 }: TryYtDlpInput): Promise<void> {
 	const args = [
 		videoUrl,
@@ -109,94 +116,130 @@ export async function tryYtDlpDownload({
 	}
 
 	await withYtDlpConcurrencyLimit(async () => {
+		if (signal?.aborted) {
+			// The caller may have aborted while this call was queued behind
+			// MAX_CONCURRENT_YT_DLP_PROCESSES other downloads — by the time a slot
+			// frees up there's nothing left to spawn a process for.
+			throw signal.reason ?? new Error("Download aborted");
+		}
+
 		const downloadProcess = ytDlp.exec(args);
 
-		downloadProcess.on("progress", (progress: Record<string, unknown>) => {
-			const rawPercent = Math.min(
-				100,
-				Math.max(0, (progress.percent as number) || 0),
-			);
-			send({
-				type: "progress",
-				percent: Math.round(5 + (rawPercent / 100) * 70),
-				speed: (progress.currentSpeed as string) || "",
-				eta: (progress.eta as string) || "",
+		// Killing here — rather than only having retryWithBackoff stop scheduling
+		// further attempts — frees the concurrency slot and stops the YouTube
+		// request immediately instead of letting it run to completion for a
+		// caller that already walked away.
+		const killOnAbort = () => {
+			downloadProcess.ytDlpProcess?.kill("SIGTERM");
+		};
+		signal?.addEventListener("abort", killOnAbort, { once: true });
+
+		try {
+			downloadProcess.on("progress", (progress: Record<string, unknown>) => {
+				const rawPercent = Math.min(
+					100,
+					Math.max(0, (progress.percent as number) || 0),
+				);
+				send({
+					type: "progress",
+					percent: Math.round(
+						DOWNLOAD_START_PERCENT +
+							(rawPercent / 100) *
+								(DOWNLOAD_COMPLETE_PERCENT - DOWNLOAD_START_PERCENT),
+					),
+					speed: (progress.currentSpeed as string) || "",
+					eta: (progress.eta as string) || "",
+				});
 			});
-		});
 
-		downloadProcess.on("ytDlpEvent", (eventType: string, eventData: string) => {
-			console.log("yt-dlp event:", eventType, "|", eventData);
+			downloadProcess.on(
+				"ytDlpEvent",
+				(eventType: string, eventData: string) => {
+					console.log("yt-dlp event:", eventType, "|", eventData);
 
-			if (!titleState.videoTitle) {
-				if (eventType === "Destination") {
-					const match = eventData.match(/\/([^/]+)\.\w+$/);
-					if (match) {
-						titleState.videoTitle = match[1].replace(/_/g, " ");
+					if (!titleState.videoTitle) {
+						if (eventType === "Destination") {
+							const match = eventData.match(/\/([^/]+)\.\w+$/);
+							if (match) {
+								titleState.videoTitle = match[1].replace(/_/g, " ");
+							}
+						} else if (
+							eventData.includes(".mp3") ||
+							eventData.includes(".webm")
+						) {
+							const match = eventData.match(/([^/]+)\.\w+/);
+							if (match) {
+								titleState.videoTitle = match[1].replace(/_/g, " ");
+							}
+						}
+
+						if (titleState.videoTitle) {
+							const parsed = parseArtistAndTitle(titleState.videoTitle);
+							titleState.artist = parsed.artist;
+							titleState.trackTitle = parsed.title;
+
+							if (!titleState.artist && titleState.uploader) {
+								titleState.artist = sanitizeUploaderAsArtist(
+									titleState.uploader,
+								);
+							}
+
+							send({
+								type: "info",
+								title: titleState.videoTitle,
+								artist: titleState.artist,
+								track: titleState.trackTitle,
+							});
+						}
 					}
-				} else if (eventData.includes(".mp3") || eventData.includes(".webm")) {
-					const match = eventData.match(/([^/]+)\.\w+/);
-					if (match) {
-						titleState.videoTitle = match[1].replace(/_/g, " ");
-					}
+
+					send({ type: "event", eventType, eventData });
+				},
+			);
+
+			let errorMessage = "";
+			downloadProcess.stderr?.on("data", (data: Buffer) => {
+				const text = data.toString();
+				console.error("yt-dlp stderr:", text);
+				if (text.includes("ERROR:")) {
+					errorMessage += text;
 				}
-
-				if (titleState.videoTitle) {
-					const parsed = parseArtistAndTitle(titleState.videoTitle);
-					titleState.artist = parsed.artist;
-					titleState.trackTitle = parsed.title;
-
-					if (!titleState.artist && titleState.uploader) {
-						titleState.artist = sanitizeUploaderAsArtist(titleState.uploader);
-					}
-
-					send({
-						type: "info",
-						title: titleState.videoTitle,
-						artist: titleState.artist,
-						track: titleState.trackTitle,
+				// Warnings are deliberately not suppressed (`--no-warnings` is absent): a
+				// skipped-format warning is the only signal that YouTube withheld the
+				// audio-only streams and we fell through to a video format.
+				for (const line of text.split("\n")) {
+					if (!line.includes("WARNING:")) continue;
+					console.warn("yt-dlp warning:", line);
+					Sentry.addBreadcrumb({
+						category: "download",
+						level: "warning",
+						message: line.slice(0, 500),
 					});
 				}
-			}
-
-			send({ type: "event", eventType, eventData });
-		});
-
-		let errorMessage = "";
-		downloadProcess.stderr?.on("data", (data: Buffer) => {
-			const text = data.toString();
-			console.error("yt-dlp stderr:", text);
-			if (text.includes("ERROR:")) {
-				errorMessage += text;
-			}
-			// Warnings are deliberately not suppressed (`--no-warnings` is absent): a
-			// skipped-format warning is the only signal that YouTube withheld the
-			// audio-only streams and we fell through to a video format.
-			for (const line of text.split("\n")) {
-				if (!line.includes("WARNING:")) continue;
-				console.warn("yt-dlp warning:", line);
-				Sentry.addBreadcrumb({
-					category: "download",
-					level: "warning",
-					message: line.slice(0, 500),
-				});
-			}
-		});
-
-		// Only log here: the rejection below carries the failure to download-stream's
-		// catch, which is the single place that emits the user-facing error event.
-		downloadProcess.on("error", (error: Error) => {
-			console.error("Download process error:", error);
-		});
-
-		await new Promise<void>((resolve, reject) => {
-			downloadProcess.on("close", (code: number) => {
-				if (code === 0) {
-					resolve();
-				} else {
-					reject(new Error(errorMessage || `Process exited with code ${code}`));
-				}
 			});
-			downloadProcess.on("error", reject);
-		});
+
+			// Only log here: the rejection below carries the failure to download-stream's
+			// catch, which is the single place that emits the user-facing error event.
+			downloadProcess.on("error", (error: Error) => {
+				console.error("Download process error:", error);
+			});
+
+			await new Promise<void>((resolve, reject) => {
+				downloadProcess.on("close", (code: number) => {
+					if (code === 0) {
+						resolve();
+					} else {
+						reject(
+							new Error(errorMessage || `Process exited with code ${code}`),
+						);
+					}
+				});
+				downloadProcess.on("error", reject);
+			});
+		} finally {
+			// Each retry calls tryYtDlpDownload again with the same signal; leaving
+			// a stale listener registered here would accumulate one per attempt.
+			signal?.removeEventListener("abort", killOnAbort);
+		}
 	});
 }

@@ -4,14 +4,6 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 	buildJsRuntimeArgs: vi.fn(() => ["--js-runtimes", "node:/usr/bin/node"]),
 }));
 
-// The shared setup mock has no addBreadcrumb; warning handling needs one.
-vi.mock("@sentry/sveltekit", () => ({
-	addBreadcrumb: vi.fn(),
-	captureException: vi.fn(),
-	captureMessage: vi.fn(),
-	init: vi.fn(),
-}));
-
 import * as Sentry from "@sentry/sveltekit";
 import {
 	tryYtDlpDownload,

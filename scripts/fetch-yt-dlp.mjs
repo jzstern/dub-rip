@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import {
 	chmodSync,
 	mkdirSync,
@@ -9,6 +10,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	ASSET_SHA256,
 	BAKED_PLUGIN_DIR_NAME,
 	BAKED_YTDLP_NAME,
 	BGUTIL_PLUGIN_FILENAME,
@@ -21,15 +23,23 @@ import {
 } from "./yt-dlp-pin.mjs";
 
 const DOWNLOAD_TIMEOUT_MS = 120_000;
-const MIN_PLAUSIBLE_BINARY_BYTES = 1_000_000;
 
 /**
+ * Downloads an asset and refuses to install it unless it hashes to the pinned
+ * digest. A release tag can be re-pointed at different bytes, and this artifact
+ * is marked executable — so the digest, not the tag, is what is trusted.
+ *
  * @param {string} url
  * @param {string} destPath
- * @param {number} minBytes
+ * @param {string} assetName key into ASSET_SHA256
  * @returns {Promise<number>}
  */
-async function downloadTo(url, destPath, minBytes) {
+async function downloadTo(url, destPath, assetName) {
+	const expected = ASSET_SHA256[assetName];
+	if (!expected) {
+		throw new Error(`No pinned SHA-256 recorded for ${assetName}`);
+	}
+
 	const res = await fetch(url, {
 		signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
 	});
@@ -38,9 +48,10 @@ async function downloadTo(url, destPath, minBytes) {
 	}
 
 	const bytes = Buffer.from(await res.arrayBuffer());
-	if (bytes.byteLength < minBytes) {
+	const actual = createHash("sha256").update(bytes).digest("hex");
+	if (actual !== expected) {
 		throw new Error(
-			`GET ${url} returned ${bytes.byteLength} bytes, expected at least ${minBytes}`,
+			`Digest mismatch for ${assetName}: expected ${expected}, got ${actual} (${bytes.byteLength} bytes)`,
 		);
 	}
 
@@ -72,7 +83,7 @@ export async function fetchBakedArtifacts(repoRoot) {
 	const ytDlpBytes = await downloadTo(
 		getYtDlpDownloadUrl(),
 		ytDlpPath,
-		MIN_PLAUSIBLE_BINARY_BYTES,
+		getYtDlpAssetName(),
 	);
 	chmodSync(ytDlpPath, 0o755);
 	console.log(
@@ -83,7 +94,7 @@ export async function fetchBakedArtifacts(repoRoot) {
 	const pluginBytes = await downloadTo(
 		getBgutilPluginDownloadUrl(),
 		pluginPath,
-		1,
+		BGUTIL_PLUGIN_FILENAME,
 	);
 	console.log(
 		`[fetch-yt-dlp] bgutil plugin ${BGUTIL_PLUGIN_VERSION} → ${pluginPath} (${pluginBytes} bytes)`,

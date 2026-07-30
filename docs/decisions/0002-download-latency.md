@@ -42,7 +42,7 @@ The trigger is that audio-only DASH formats are intermittently absent from YouTu
 response. Removing `--no-warnings` immediately surfaced two distinct causes, which is the
 clearest argument for having removed it:
 
-```
+```text
 WARNING: [youtube] <id>: mweb client https formats require a GVS PO Token which was not
          provided. They will be skipped as they may yield HTTP Error 403.
 WARNING: [youtube] <id>: Some tv client https formats have been skipped as they are
@@ -54,10 +54,9 @@ The first is ours to fix and `bgutil-pot` already does in production. **The seco
 YouTube's SABR-only streaming experiment ([yt-dlp#12482](https://github.com/yt-dlp/yt-dlp/issues/12482))
 strips direct URLs from the `tv` client's formats — which, per the note below, is the only
 client in our set that offers audio-only DASH at all. When a session is bucketed into SABR
-there may be **no** audio-only format to select, so the bounded fallback is not merely
-insurance against a rare edge case; it is the live path for those sessions. That is why the
-fallback target matters so much: a 15–23 MB 360p progressive stream versus an 80 MB 1080p
-HLS one.
+there may be **no** audio-only format to select, and the fallback is then the only path.
+That is why the fallback *target* matters: a 15–23 MB 360p progressive stream versus an
+80 MB 1080p HLS one.
 
 **How often does this actually fire in production? Less than the local numbers suggest.** The
 9 probes above ran on a workstation with no `bgutil-pot`, so formats needing a GVS PO token
@@ -87,7 +86,7 @@ Two further things worth recording, both verified:
 wasted. `NodeID3.write` *replaces* the whole ID3 tag, so everything yt-dlp embedded was
 destroyed milliseconds later. Verified directly:
 
-```
+```text
 after simulated yt-dlp embed:  ["title","artist","comment","image","raw"]
 after app NodeID3.write:       {"hasImage": false, "raw": ["title","artist","album","raw"]}
 ```
@@ -111,7 +110,7 @@ and because it corroborates the cost of an extraction independently.
 
 Both Railway services have `Sleep when inactive: true`. Production deploy logs:
 
-```
+```text
 20:31:47.721  Starting Container
 20:31:48.378  Listening on http://0.0.0.0:8080
 20:31:48.378  Downloading yt-dlp binary...
@@ -121,6 +120,7 @@ Both Railway services have `Sleep when inactive: true`. Production deploy logs:
 `/tmp` is ephemeral, so a 40 MB fetch repeats on every container start. `hooks.server.ts`
 prewarms at boot, but on a sleeping low-traffic app most sessions are cold, and
 `/api/preview/details` awaits `ensureYtDlpBinary()` — so the preview stalls behind it.
+
 This measurement predates #102, which addressed the *long-lived instance* half of the problem:
 a stale binary is now refreshed in the background on a 24h TTL, deliberately still tracking
 `releases/latest` so upstream extraction fixes arrive as YouTube changes. That intent stands.
@@ -141,7 +141,7 @@ is most sessions.
    calling `refreshBinaryInBackground()` immediately. #102's freshness intent is preserved
    whole; this covers only the cold container its TTL cannot reach. Prewarm the `bgutil-pot`
    sidecar from `/api/preview` so its BotGuard bootstrap is off the download's critical path.
-6. **Stop shipping the MP3 as base64 over SSE.** The `complete` event now carries a single-use
+5. **Stop shipping the MP3 as base64 over SSE.** The `complete` event now carries a single-use
    token; the browser fetches the file from `/api/download-file`, which streams it and unlinks
    it. Removes 33% wire inflation (3,409,848 B → 4,546,464 chars measured) and the server-side
    double buffering.

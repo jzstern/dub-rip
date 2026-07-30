@@ -23,6 +23,28 @@ export const BAKED_YTDLP_NAME = "yt-dlp";
 export const BAKED_PLUGIN_DIR_NAME = "yt-dlp-plugins";
 export const BGUTIL_PLUGIN_FILENAME = "bgutil-ytdlp-pot-provider.zip";
 
+/**
+ * SHA-256 of each pinned asset, from the GitHub release.
+ *
+ * A version tag is not immutable — a release asset can be re-uploaded under the
+ * same tag — and this binary is fetched over the network and then executed. That
+ * is the same argument `railway.toml` already makes for pinning the bgutil-pot
+ * image by digest rather than tag alone; it applies at least as strongly to
+ * something we mark executable.
+ *
+ * Capture with:
+ *   gh release view <tag> --repo yt-dlp/yt-dlp --json assets \
+ *     --jq '.assets[] | select(.name|startswith("yt-dlp_")) | "\(.name) \(.digest)"'
+ */
+export const ASSET_SHA256 = {
+	"yt-dlp_linux":
+		"6bbb3d314cde4febe36e5fa1d55462e29c974f63444e707871834f6d8cc210ae",
+	"yt-dlp_macos":
+		"498bd0dae17855c599d371d68ec5bafc439a9d8640e838be25c765a9792f261b",
+	[BGUTIL_PLUGIN_FILENAME]:
+		"b8ceec7f76143da172aaf5ebeec0c2d218e5680c063b931586bca48567069b38",
+};
+
 /** @returns {string} */
 export function getYtDlpAssetName() {
 	return platform() === "darwin" ? "yt-dlp_macos" : "yt-dlp_linux";

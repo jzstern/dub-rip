@@ -220,7 +220,7 @@ Both services sleep when inactive, so most sessions on a low-traffic app start c
 
 **Verify a deploy actually got the baked binary.** The app logs its decision once at boot:
 
-```
+```text
 Using baked yt-dlp binary at /app/bin/yt-dlp
 ```
 

@@ -190,6 +190,77 @@ $effect(() => {
 	return () => clearTimeout(timeoutId);
 });
 
+async function saveDownload(
+	token: string,
+	filename: string,
+	downloadId: number,
+): Promise<void> {
+	let objectUrl: string | null = null;
+	try {
+		const response = await fetch(
+			`/api/download-file?token=${encodeURIComponent(token)}`,
+		);
+		if (!response.ok) {
+			recordClientBreadcrumb("Download file request rejected", {
+				status: response.status,
+			});
+			// A 404 means the prepared file is gone — its container was replaced
+			// between finishing and this fetch. The URL and preview are still on
+			// screen, so say the one thing that actually recovers it.
+			throw new ServerRejectionError(
+				response.status === 404
+					? "The prepared file expired before it reached you. Press Download to try again."
+					: "Download finished but the file could not be retrieved",
+			);
+		}
+
+		const blob = await response.blob();
+		if (downloadId !== currentDownloadId) return;
+
+		objectUrl = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = objectUrl;
+		a.download = filename;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+
+		progress = 100;
+		smoother.complete();
+		displayProgress = 100;
+		stopSmoothing();
+		status = "Downloaded!";
+		loading = false;
+		downloadComplete = true;
+		completedFilename = filename;
+		url = "";
+		preview = null;
+	} catch (err) {
+		if (downloadId !== currentDownloadId) return;
+		console.error("Failed to save file:", err);
+		// A non-OK response was already reported by /api/download-file, which is
+		// the only layer that knows *why* the token missed. Anything else here —
+		// a dropped connection, a blob that won't materialise — is visible
+		// nowhere but the browser.
+		if (!(err instanceof ServerRejectionError)) {
+			reportClientIssue(err, {
+				operation: "download-save-file",
+				extra: { filename },
+			});
+		}
+		error =
+			err instanceof ServerRejectionError
+				? err.message
+				: "Download finished but the file could not be retrieved";
+		errorUrl = url;
+		loading = false;
+		status = "";
+		stopSmoothing();
+	} finally {
+		if (objectUrl) URL.revokeObjectURL(objectUrl);
+	}
+}
+
 function handleDownload() {
 	if (!isValidUrl) {
 		error = "Please enter a valid YouTube URL";
@@ -243,38 +314,11 @@ function handleDownload() {
 					speed = "";
 					eta = "";
 
-					setTimeout(() => {
-						if (currentDownloadId !== thisDownloadId) return;
-						try {
-							const a = document.createElement("a");
-							a.href = `/api/download-file?token=${encodeURIComponent(data.token)}`;
-							a.download = data.filename;
-							document.body.appendChild(a);
-							a.click();
-							document.body.removeChild(a);
-
-							progress = 100;
-							smoother.complete();
-							displayProgress = 100;
-							stopSmoothing();
-							status = "Downloaded!";
-							loading = false;
-							downloadComplete = true;
-							completedFilename = data.filename;
-							url = "";
-							preview = null;
-						} catch (err) {
-							console.error("Failed to save file:", err);
-							reportClientIssue(err, {
-								operation: "download-save-file",
-								extra: { filename: data.filename, size: data.size },
-							});
-							error = "Failed to save file";
-							loading = false;
-							status = "";
-							stopSmoothing();
-						}
-					}, 0);
+					// Fetched rather than handed to an <a download>: a bare anchor click
+					// only *starts* the request, so an expired token or a missing file
+					// would 404 while the UI still reported success. Awaiting the
+					// response is what makes "Downloaded!" a claim we can actually back.
+					void saveDownload(data.token, data.filename, thisDownloadId);
 					break;
 				}
 

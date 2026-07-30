@@ -66,7 +66,6 @@ export const POST: RequestHandler = async ({ request }) => {
 			title: metadata.trackTitle,
 			thumbnail: metadata.thumbnailUrl,
 			artwork: artwork ?? undefined,
-			duration: null,
 		});
 	} catch (error) {
 		/**

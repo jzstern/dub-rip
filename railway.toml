@@ -1,3 +1,14 @@
+# The dub-rip app service itself isn't declared here (it deploys from the repo
+# root via Railway's default detection), so its healthcheck is set in the
+# Railway dashboard rather than this file. It must point at plain
+# `GET /api/health`, never `/api/health?probe=bgutil`. bgutil-pot below sleeps
+# when idle by design, and the `?probe=bgutil` form contacts it and returns
+# 503 while it's asleep — Railway would read that as the app itself being
+# down and restart-loop it for a sidecar that isn't actually broken. The deep
+# probe is opt-in for the same reason it must stay off any uptime monitor: see
+# docs/deployment-strategy.md and the "Railway Cost Practices" note in
+# .claude/CLAUDE.md.
+
 [services.bgutil-pot]
 [services.bgutil-pot.source]
 image = "brainicism/bgutil-ytdlp-pot-provider:1.3.1@sha256:1aaa43a0ca72dfca6a6d2129a0fb4a23465c25adb1b043f8aff829a20825646b"

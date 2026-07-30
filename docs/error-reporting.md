@@ -181,9 +181,12 @@ breadcrumbs.
 
 ## Deliberate exclusions
 
-- **`/api/health`** does not report. It actively probes bgutil-pot, and any
-  periodic pinger would file an event per poll. A real outage surfaces through
-  the download route instead.
+- **`/api/health`** does not report. The default request never touches
+  bgutil-pot at all — see the healthcheck note in
+  [`deployment-strategy.md`](./deployment-strategy.md) for why. Even the
+  opt-in deep probe (`?probe=bgutil`) doesn't report a failed probe: a
+  periodic pinger hitting that form would otherwise file an event per poll. A
+  real outage surfaces through the download route instead.
 - **Artwork lookup misses** (no iTunes/Deezer match) are expected and return
   `null` silently. Only a thrown failure — usually the ffmpeg crop — is
   reported.
@@ -199,6 +202,8 @@ breadcrumbs.
 
 ## PII
 
-`sendDefaultPii` is **on**, so events carry IP addresses, request headers, and
-cookies. That's a deliberate debuggability trade-off for a public app; turn it
-off in `buildSentryOptions` if the privacy cost outweighs it.
+`sendDefaultPii` is **off**. This app has no user accounts, so an IP address,
+request header, or cookie attached to an event would have nothing to
+correlate against — it's pure liability (and GDPR-relevant) with no
+debugging benefit. Revisit this in `buildSentryOptions` only alongside an
+actual accounts feature that would give the data somewhere to point.

@@ -33,11 +33,6 @@ export default defineConfig({
 		__RAILWAY_COMMIT_SHA__: JSON.stringify(commitSha),
 	},
 	ssr: {
-		external: [
-			"yt-dlp-wrap",
-			"@ffmpeg-installer/ffmpeg",
-			"node-id3",
-			"youtube-po-token-generator",
-		],
+		external: ["yt-dlp-wrap", "@ffmpeg-installer/ffmpeg", "node-id3"],
 	},
 });

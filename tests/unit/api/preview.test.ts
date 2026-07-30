@@ -130,7 +130,29 @@ describe("POST /api/preview", () => {
 			expect(data.thumbnail).toBe(
 				"https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			);
-			expect(data.duration).toBeNull();
+		});
+
+		it("omits duration entirely — the real value comes from /api/preview/details", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
+				artist: "Rick Astley",
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+			});
+
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+			});
+
+			// #when
+			const response = await POST(event);
+			const data = await response.json();
+
+			// #then
+			expect(data).not.toHaveProperty("duration");
 		});
 
 		it("uses artist from metadata (uploader fallback handled by utility)", async () => {

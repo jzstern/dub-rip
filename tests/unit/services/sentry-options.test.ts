@@ -220,4 +220,15 @@ describe("buildSentryOptions()", () => {
 		// #then
 		expect(result.tracesSampleRate).toBe(0);
 	});
+
+	it("disables sendDefaultPii, since there are no user accounts to correlate PII against", () => {
+		// #given
+		const context = { dsn: "https://key@o1.ingest.sentry.io/2" };
+
+		// #when
+		const result = buildSentryOptions(context);
+
+		// #then
+		expect(result.sendDefaultPii).toBe(false);
+	});
 });

@@ -107,6 +107,13 @@ export function buildSentryOptions({
 		release: resolveRelease(commitSha),
 		tracesSampleRate: resolveTracesSampleRate(environment),
 		enableLogs: true,
-		sendDefaultPii: true,
+		/**
+		 * This app has no user accounts, so there is nothing to correlate an IP
+		 * address, cookie, or request header against — attaching them would be
+		 * pure liability (and GDPR-relevant) with no debugging benefit. Leave
+		 * this false; only revisit it alongside an actual accounts feature that
+		 * would give the data somewhere to point.
+		 */
+		sendDefaultPii: false,
 	};
 }

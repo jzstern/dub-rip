@@ -76,7 +76,7 @@ PR environments — not production — are the dominant cost in this project (a 
 
 - **Keep PRs short-lived.** Every open PR holds a full environment (app + bgutil-pot). Close design-option/preview PRs once a direction is picked — branches survive, and reopening a PR redeploys its preview.
 - **Never leave a PR env alive across releases.** Envs deployed from builds older than #57 generate PO tokens in-process, which produces constant outbound traffic that defeats Railway app-sleep — one such env ran awake continuously for 6 months (`dub-rip-pr-44`, Jan 30 → Jul 17, 2026).
-- **Do not point an uptime monitor at `/api/health`.** It actively probes bgutil-pot, so any periodic pinger keeps both services awake 24/7. If external monitoring is ever needed, monitor a static asset or accept the sleep trade-off explicitly.
+- **Do not point an uptime monitor at `/api/health?probe=bgutil`.** That query form is the only one that actively probes bgutil-pot, and any periodic pinger against it keeps both services awake 24/7. Plain `GET /api/health` (no query params) is a cheap liveness check with no network probe, on purpose — it's also what the app service's own Railway healthcheck must use, since a probing default would return 503 whenever the sidecar is merely asleep (normal operation) and get the app restart-looped for it. If external monitoring is ever needed, hit plain `/api/health`, monitor a static asset, or accept the sleep trade-off explicitly — never the `?probe=bgutil` form.
 - **Workspace usage caps** (set 2026-07-17): soft $20 (email alert), hard $40 (Railway stops services). If a legitimate traffic spike hits the hard cap, raise it in workspace billing settings rather than removing it.
 
 ## yt-dlp Integration

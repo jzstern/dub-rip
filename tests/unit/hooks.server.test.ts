@@ -98,6 +98,94 @@ describe("registerProcessErrorHandlers()", () => {
 		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 
+	it("captures an unhandled rejection to Sentry at error level", async () => {
+		// #given
+		vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const err = new Error("dropped promise");
+		const handler = process.listeners("unhandledRejection")[0] as (
+			e: unknown,
+		) => void;
+
+		// #when
+		handler(err);
+
+		// #then
+		expect(captureExceptionMock).toHaveBeenCalledWith(
+			err,
+			expect.objectContaining({ level: "error" }),
+		);
+	});
+
+	it("does not exit the process for an unhandled rejection", async () => {
+		// #given
+		vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const exitSpy = vi
+			.spyOn(process, "exit")
+			.mockImplementation((() => undefined) as never);
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const handler = process.listeners("unhandledRejection")[0] as (
+			e: unknown,
+		) => void;
+
+		// #when
+		handler(new Error("dropped promise"));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		// #then
+		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	it("never flushes Sentry for an unhandled rejection, unlike the fatal path", async () => {
+		// #given
+		vi.spyOn(console, "error").mockImplementation(() => undefined);
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const handler = process.listeners("unhandledRejection")[0] as (
+			e: unknown,
+		) => void;
+
+		// #when
+		handler(new Error("dropped promise"));
+
+		// #then
+		expect(flushMock).not.toHaveBeenCalled();
+	});
+
+	it("logs an unhandled rejection to the console", async () => {
+		// #given
+		const consoleErrorSpy = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => undefined);
+		const { registerProcessErrorHandlers } = await import(
+			"../../src/hooks.server"
+		);
+		registerProcessErrorHandlers();
+
+		const err = new Error("dropped promise");
+		const handler = process.listeners("unhandledRejection")[0] as (
+			e: unknown,
+		) => void;
+
+		// #when
+		handler(err);
+
+		// #then
+		expect(consoleErrorSpy).toHaveBeenCalledWith("Unhandled rejection:", err);
+	});
+
 	it("is idempotent — calling twice does not stack handlers", async () => {
 		// #given
 		const { registerProcessErrorHandlers } = await import(

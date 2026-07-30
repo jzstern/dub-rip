@@ -56,6 +56,7 @@ The main web application that provides the user interface and orchestrates downl
 - Connect GitHub repository to Railway
 - Automatic deployment on push to main
 - `bun run build` runs `scripts/fetch-yt-dlp.mjs` first, which bakes a pinned yt-dlp and the bgutil plugin into `bin/` (see [yt-dlp version pinning and the baked binary](#yt-dlp-version-pinning-and-the-baked-binary))
+- Healthcheck (set in the Railway dashboard — this service isn't declared in `railway.toml`, only bgutil-pot is): plain `GET /api/health`, **never** `GET /api/health?probe=bgutil`. The `?probe=bgutil` form contacts the sidecar and returns 503 while it's asleep, which is normal, not an outage — pointed at a healthcheck, that would get the app itself restart-looped for a dependency that isn't actually down. See [Sidecar prewarm from the preview request](#sidecar-prewarm-from-the-preview-request) below for the other place this sleep behavior matters.
 
 **Environment Variables:**
 ```bash

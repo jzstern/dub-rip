@@ -35,20 +35,36 @@ export function registerProcessErrorHandlers(): void {
 	if (tagged[PROCESS_HANDLER_TAG]) return;
 	tagged[PROCESS_HANDLER_TAG] = true;
 
-	const handle = (err: unknown): void => {
-		const normalized =
-			err instanceof Error
-				? err
-				: new Error(`Non-error thrown: ${String(err)}`);
-		Sentry.captureException(normalized);
+	const normalizeError = (err: unknown): Error =>
+		err instanceof Error ? err : new Error(`Non-error thrown: ${String(err)}`);
+
+	const handleFatal = (err: unknown): void => {
+		Sentry.captureException(normalizeError(err));
 		Sentry.flush(2000).then(
 			() => process.exit(1),
 			() => process.exit(1),
 		);
 	};
 
-	process.on("uncaughtException", handle);
-	process.on("unhandledRejection", handle);
+	/**
+	 * An uncaught exception leaves the process in an unknown state — anything
+	 * could be half-mutated — so exiting is the only safe response. An
+	 * unhandled rejection is a narrower failure: it names one broken promise,
+	 * not a broken process. This server holds several concurrent SSE download
+	 * streams, and exiting here would kill every one of them for a single
+	 * rejection anywhere in the process. Report it and keep running instead.
+	 */
+	const handleRejection = (err: unknown): void => {
+		const normalized = normalizeError(err);
+		console.error("Unhandled rejection:", normalized);
+		Sentry.captureException(normalized, {
+			level: "error",
+			tags: { service: "hooks.server", operation: "unhandled-rejection" },
+		});
+	};
+
+	process.on("uncaughtException", handleFatal);
+	process.on("unhandledRejection", handleRejection);
 
 	process.on("warning", (warning) => {
 		if (REPORTED_WARNING_NAMES.has(warning.name)) {

@@ -301,11 +301,14 @@ export const GET: RequestHandler = async ({ url }) => {
 				closeStream();
 
 				try {
-					const possibleFiles = [
-						`${outputPath}.mp3`,
-						`${outputPath}.webm`,
-						`${outputPath}.m4a`,
-					];
+					// `.mp4` covers the bounded video fallback in the format selector,
+					// and `.part` the retry that gave up mid-transfer — both are
+					// reachable now in a way they weren't when this list was written.
+					const extensions = ["mp3", "webm", "m4a", "mp4"];
+					const possibleFiles = extensions.flatMap((ext) => [
+						`${outputPath}.${ext}`,
+						`${outputPath}.${ext}.part`,
+					]);
 					for (const file of possibleFiles) {
 						if (existsSync(file)) {
 							unlinkSync(file);

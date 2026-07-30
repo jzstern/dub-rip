@@ -35,6 +35,14 @@ export const BGUTIL_PLUGIN_FILENAME = "bgutil-ytdlp-pot-provider.zip";
  * Capture with:
  *   gh release view <tag> --repo yt-dlp/yt-dlp --json assets \
  *     --jq '.assets[] | select(.name|startswith("yt-dlp_")) | "\(.name) \(.digest)"'
+ *
+ * Typed as a plain string-keyed map, not the literal-key object TS would
+ * otherwise infer, because callers look assets up dynamically by name (see
+ * `downloadTo` in fetch-yt-dlp.mjs) — an unknown key is a runtime concern
+ * ("no pinned digest for this asset"), not something the type system can
+ * reject at the call site.
+ *
+ * @type {Record<string, string>}
  */
 export const ASSET_SHA256 = {
 	"yt-dlp_linux":

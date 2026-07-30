@@ -286,6 +286,14 @@ export const GET: RequestHandler = async ({ url }) => {
 				send({ type: "progress", percent: METADATA_PROCESSING_PERCENT });
 				send({ type: "status", message: "Processing metadata..." });
 
+				if (abortController.signal.aborted) {
+					// yt-dlp can finish (or get killed and still report a clean close —
+					// see try-yt-dlp.ts) after the client has already disconnected. A
+					// bare `return` here would skip the catch block's temp-file cleanup
+					// below and strand the finished .mp3; throwing routes through it.
+					throw abortController.signal.reason ?? new Error("Download aborted");
+				}
+
 				const result = await finalizeMp3({
 					filePath: actualFilePath,
 					videoTitle: titleState.videoTitle,
@@ -296,6 +304,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					detailsPromise,
 					thumbnailPromise,
 					send,
+					signal: abortController.signal,
 				});
 
 				// The file is deliberately left on disk: the browser fetches it from

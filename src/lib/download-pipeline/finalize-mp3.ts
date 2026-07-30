@@ -26,6 +26,7 @@ export interface FinalizeMp3Input {
 	detailsPromise: Promise<VideoDetails | null>;
 	thumbnailPromise: Promise<ThumbnailImage | null>;
 	send: (data: Record<string, unknown>) => void;
+	signal?: AbortSignal;
 }
 
 export interface FinalizeMp3Result {
@@ -94,6 +95,7 @@ export async function finalizeMp3({
 	detailsPromise,
 	thumbnailPromise,
 	send,
+	signal,
 }: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
 
@@ -155,6 +157,15 @@ export async function finalizeMp3({
 
 	const { size } = await stat(filePath);
 	const filename = buildDownloadFilename({ artist, trackTitle, videoTitle });
+
+	if (signal?.aborted) {
+		// The artwork/ID3 work above this line is wasted if the client is gone,
+		// but that's cheap to accept. Registering a token — and pinning this
+		// file in /tmp for the full TTL — for a client that is provably never
+		// coming back is the leak this check exists to prevent.
+		throw signal.reason ?? new Error("Download aborted");
+	}
+
 	const token = registerDownload({ filePath, filename, size });
 
 	console.log("Final filename:", filename);

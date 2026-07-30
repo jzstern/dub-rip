@@ -45,6 +45,38 @@ vi.mock("$lib/download-pipeline/try-yt-dlp", () => ({
 }));
 
 /**
+ * Real `node:fs/promises` and a real download-token registry would need a
+ * real file at the route's randomly-generated outputPath to exercise the
+ * post-download, pre-finalize window below. Mocking `access`/`unlink` lets
+ * tests simulate "the .mp3 exists" without knowing that path in advance, and
+ * mocking `registerDownload` turns "was a token issued" into something a
+ * test can assert on directly — which is the actual leak this guards.
+ */
+const { accessMock, unlinkMock, registerDownloadMock } = vi.hoisted(() => ({
+	accessMock: vi.fn<(path: string) => Promise<void>>(() =>
+		Promise.reject(new Error("ENOENT")),
+	),
+	unlinkMock: vi.fn<(path: string) => Promise<void>>(() => Promise.resolve()),
+	registerDownloadMock: vi.fn(() => "fake-token"),
+}));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs/promises")>();
+	const merged = { ...actual, access: accessMock, unlink: unlinkMock };
+	return { ...merged, default: merged };
+});
+
+vi.mock("$lib/download-pipeline/download-tokens", () => ({
+	registerDownload: registerDownloadMock,
+}));
+
+beforeEach(() => {
+	accessMock.mockImplementation(() => Promise.reject(new Error("ENOENT")));
+	unlinkMock.mockImplementation(() => Promise.resolve(undefined));
+	registerDownloadMock.mockClear();
+});
+
+/**
  * `afterEach` below calls `vi.resetModules()`, so a `YtDlpQueueFullError`
  * built from a top-level static import would predate the reset and be a
  * different class object than the one +server.ts's fresh dynamic import
@@ -354,5 +386,41 @@ describe("GET /api/download-stream - cancellation", () => {
 				message: expect.stringContaining("aborted"),
 			}),
 		);
+	});
+
+	it("does not register a download token when the client disconnects between download-complete and finalize", async () => {
+		// #given — yt-dlp's in-flight call only settles after the test has had a
+		// chance to cancel, mirroring a client that disconnects while the
+		// already-running download is finishing up on its own
+		let resolveDownload: () => void = () => {};
+		tryYtDlpDownloadMock.mockImplementation(
+			() =>
+				new Promise<void>((resolve) => {
+					resolveDownload = resolve;
+				}),
+		);
+		accessMock.mockImplementation((path: string) =>
+			path.endsWith(".mp3")
+				? Promise.resolve()
+				: Promise.reject(new Error("ENOENT")),
+		);
+		const { GET } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+		const url = new URL("http://localhost/api/download-stream");
+		url.searchParams.set("url", "https://youtube.com/watch?v=dQw4w9WgXcQ");
+		const response = await GET({ url } as unknown as Parameters<typeof GET>[0]);
+		await vi.waitFor(() => expect(tryYtDlpDownloadMock).toHaveBeenCalled());
+
+		// #when — the client disconnects, then the already-in-flight yt-dlp call
+		// resolves successfully anyway
+		await response.body?.cancel();
+		resolveDownload();
+		await vi.waitFor(() => expect(unlinkMock).toHaveBeenCalled());
+
+		// #then — no token for a client that is provably gone, and the finished
+		// file is cleaned up rather than left pinned in /tmp for the full TTL
+		expect(registerDownloadMock).not.toHaveBeenCalled();
+		expect(unlinkMock).toHaveBeenCalledWith(expect.stringContaining(".mp3"));
 	});
 });

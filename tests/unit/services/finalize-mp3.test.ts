@@ -1,8 +1,42 @@
-import { describe, expect, it } from "vitest";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+/**
+ * finalizeMp3's own network/subprocess dependencies (artwork lookups,
+ * NodeID3.write) are mocked out so the cancellation tests below control
+ * exactly when the signal aborts relative to them, rather than racing real
+ * iTunes/Deezer calls or an ffmpeg crop.
+ */
+const { resolveAlbumArtImageMock, registerDownloadMock } = vi.hoisted(() => ({
+	resolveAlbumArtImageMock: vi.fn(() => Promise.resolve(null)),
+	registerDownloadMock: vi.fn(() => "fake-token"),
+}));
+
+vi.mock("node-id3", () => ({
+	write: vi.fn(() => true),
+}));
+
+vi.mock("$lib/artwork", () => ({
+	resolveAlbumArtImage: resolveAlbumArtImageMock,
+}));
+
+vi.mock("$lib/video-metadata", () => ({
+	buildID3Tags: vi.fn(() => ({})),
+}));
+
+vi.mock("$lib/download-pipeline/download-tokens", () => ({
+	registerDownload: registerDownloadMock,
+}));
+
 import {
 	buildDownloadFilename,
+	type FinalizeMp3Input,
+	finalizeMp3,
 	sanitizeFilenameSegment,
 } from "$lib/download-pipeline/finalize-mp3";
+import { YT_DLP_METHOD } from "$lib/types";
 
 describe("sanitizeFilenameSegment()", () => {
 	it("strips characters that are unsafe in a filesystem path", () => {
@@ -168,5 +202,99 @@ describe("buildDownloadFilename()", () => {
 
 		// #then
 		expect(result).toBe("Video Title.mp3");
+	});
+});
+
+async function createTempMp3(): Promise<string> {
+	const dir = await mkdtemp(join(tmpdir(), "dub-rip-finalize-"));
+	const filePath = join(dir, "track.mp3");
+	await writeFile(filePath, "fake mp3 bytes");
+	return filePath;
+}
+
+function finalizeInputFor(
+	filePath: string,
+	signal?: AbortSignal,
+): FinalizeMp3Input {
+	return {
+		filePath,
+		videoTitle: "Test Video",
+		artist: "Test Artist",
+		trackTitle: "Test Track",
+		downloadMethod: YT_DLP_METHOD,
+		videoId: "dQw4w9WgXcQ",
+		detailsPromise: Promise.resolve(null),
+		thumbnailPromise: Promise.resolve(null),
+		send: () => {},
+		signal,
+	};
+}
+
+describe("finalizeMp3() cancellation", () => {
+	beforeEach(() => {
+		registerDownloadMock.mockClear();
+		resolveAlbumArtImageMock.mockReset().mockResolvedValue(null);
+	});
+
+	it("does not register a download token when the signal is already aborted", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		const controller = new AbortController();
+		controller.abort();
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath, controller.signal)).catch(
+			() => {},
+		);
+
+		// #then
+		expect(registerDownloadMock).not.toHaveBeenCalled();
+	});
+
+	it("does not register a download token when the signal aborts during the artwork/ID3 phase", async () => {
+		// #given — resolveAlbumArtImage is the multi-second window (iTunes,
+		// Deezer, thumbnail fetch, an ffmpeg crop) this check exists to cover;
+		// aborting as a side effect of it settling simulates a disconnect
+		// landing mid-phase without needing real timers
+		const filePath = await createTempMp3();
+		const controller = new AbortController();
+		resolveAlbumArtImageMock.mockImplementation(() => {
+			controller.abort();
+			return Promise.resolve(null);
+		});
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath, controller.signal)).catch(
+			() => {},
+		);
+
+		// #then
+		expect(registerDownloadMock).not.toHaveBeenCalled();
+	});
+
+	it("still registers a download token on the ordinary, uncancelled path", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		const controller = new AbortController();
+
+		// #when
+		const result = await finalizeMp3(
+			finalizeInputFor(filePath, controller.signal),
+		);
+
+		// #then — the new check doesn't fire when nothing aborted
+		expect(registerDownloadMock).toHaveBeenCalledOnce();
+		expect(result.token).toBe("fake-token");
+	});
+
+	it("still registers a download token when no signal is passed at all", async () => {
+		// #given
+		const filePath = await createTempMp3();
+
+		// #when
+		const result = await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then — signal stays optional for any caller that doesn't have one
+		expect(result.token).toBe("fake-token");
 	});
 });

@@ -4,6 +4,10 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	plugins: [sveltekit(), svelteTesting()],
+	define: {
+		__RAILWAY_ENVIRONMENT_NAME__: JSON.stringify(""),
+		__RAILWAY_COMMIT_SHA__: JSON.stringify(""),
+	},
 	test: {
 		include: ["tests/unit/**/*.{test,spec}.ts"],
 		environment: "jsdom",

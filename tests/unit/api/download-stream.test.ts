@@ -187,7 +187,6 @@ describe("parseYtDlpError", () => {
 
 	it("falls through to the generic message when nothing matches", async () => {
 		// #given
-		vi.mocked(Sentry.captureMessage).mockClear();
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
 
 		// #when
@@ -195,10 +194,18 @@ describe("parseYtDlpError", () => {
 
 		// #then
 		expect(result).toBe("Download failed. Please try a different video.");
-		expect(Sentry.captureMessage).toHaveBeenCalledWith(
-			expect.stringContaining("Unmatched yt-dlp error: ERROR: network blip"),
-			expect.objectContaining({ level: "warning" }),
-		);
+	});
+
+	it("stays pure so the download route is the only place a failure is reported", async () => {
+		// #given
+		vi.mocked(Sentry.captureMessage).mockClear();
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
+
+		// #when
+		parseYtDlpError("ERROR: network blip");
+
+		// #then
+		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 });
 

@@ -24,10 +24,48 @@ import {
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
 import { ensureBgutilPlugin, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
-import { isRetryableYtDlpError, parseYtDlpError } from "$lib/yt-dlp-errors";
+import {
+	type ClassifiedYtDlpError,
+	classifyYtDlpError,
+	isRetryableYtDlpError,
+} from "$lib/yt-dlp-errors";
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
+
+/**
+ * Videos that can never be downloaded (private, age-restricted, copyright)
+ * are normal operation, not defects, so they stay breadcrumbs — reporting
+ * them buried the real failures and burned quota. Transient infrastructure
+ * failures have already exhausted every retry by the time they land here, so
+ * they're worth a warning; anything unclassified is how new yt-dlp/YouTube
+ * breakages announce themselves and gets full error level.
+ */
+function reportDownloadFailure(
+	error: Error,
+	classified: ClassifiedYtDlpError,
+	videoId: string,
+): void {
+	if (classified.category === "user") {
+		Sentry.addBreadcrumb({
+			category: "download",
+			level: "info",
+			message: `Download rejected: ${classified.message}`,
+			data: { videoId },
+		});
+		return;
+	}
+
+	Sentry.captureException(error, {
+		level: classified.category === "transient" ? "warning" : "error",
+		tags: {
+			service: "download-stream",
+			operation: "download",
+			category: classified.category,
+		},
+		extra: { videoId },
+	});
+}
 
 let ytDlpWrap: YtDlpInstance | null = null;
 let ytDlpPromise: Promise<YtDlpInstance> | null = null;
@@ -252,15 +290,12 @@ export const GET: RequestHandler = async ({ url }) => {
 					error instanceof Error
 						? error
 						: new Error(`Unknown download error: ${String(error)}`);
-				Sentry.captureException(normalizedError, {
-					tags: { service: "download-stream", operation: "download" },
-					extra: { videoId },
-				});
 				const rawMessage =
 					error instanceof Error ? error.message : "Unknown error";
-				const message = parseYtDlpError(rawMessage);
+				const classified = classifyYtDlpError(rawMessage);
+				reportDownloadFailure(normalizedError, classified, videoId);
 				try {
-					send({ type: "error", message });
+					send({ type: "error", message: classified.message });
 				} catch (sendErr) {
 					console.error("Failed to send final error SSE event:", sendErr);
 				}

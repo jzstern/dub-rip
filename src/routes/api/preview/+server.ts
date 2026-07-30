@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
 import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
@@ -40,6 +41,16 @@ export const POST: RequestHandler = async ({ request }) => {
 			duration: null,
 		});
 	} catch (error) {
+		/**
+		 * `fetchYouTubeMetadata` decides what to report for every
+		 * `YouTubeMetadataError` — an unavailable video deliberately stays
+		 * unreported, a 5xx or timeout is already a warning. Capturing again
+		 * here filed a second issue for one incident.
+		 *
+		 * Anything else reaching this catch is unexpected (a malformed body,
+		 * an artwork bug) and would otherwise be invisible, since this route
+		 * catches everything and SvelteKit's `handleError` never sees it.
+		 */
 		if (error instanceof YouTubeMetadataError) {
 			console.error("Preview error:", error.message);
 			if (error.isUnavailable) {
@@ -51,6 +62,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		} else {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			console.error("Preview error:", message);
+			Sentry.captureException(
+				error instanceof Error ? error : new Error(message),
+				{ tags: { service: "preview", operation: "load-preview" } },
+			);
 		}
 
 		return json({ error: "Failed to load preview" }, { status: 500 });

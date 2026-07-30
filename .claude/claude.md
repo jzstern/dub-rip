@@ -47,6 +47,18 @@ Required environment variables for production:
 
 Optional:
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking. Deploys work without them; errors just go to logs only.
+- `SENTRY_AUTH_TOKEN` - **Consumed at build time.** Without it the build still succeeds but uploads no source maps, so every browser stack trace in Sentry stays minified. Use an *organization* auth token from `https://jzs-yw.sentry.io/settings/auth-tokens/`; those carry the release/source-map scopes already.
+
+### Error Reporting
+See [`docs/error-reporting.md`](../docs/error-reporting.md) for the full policy. The rules that bite if forgotten:
+
+- **A caught error is an invisible error.** Every route here catches its own failures and returns a friendly message, so SvelteKit's `handleError` never fires. Any new `catch` that swallows a failure must call `Sentry.captureException` itself, or the failure will not exist as far as Sentry is concerned.
+- **Report an incident once.** The server reports its own failures, so the browser only leaves a breadcrumb for anything the server already answered for (`ServerRejectionError` in `+page.svelte`, SSE `error` events). Capturing on both sides files two issues for one incident.
+- **Expected failures are not issues.** A private/age-restricted/copyright-blocked video is normal operation — `classifyYtDlpError` marks these `category: "user"` and they get a breadcrumb, never an event. Only `transient` (warning) and `unknown` (error) reach Sentry.
+- **`parseYtDlpError` is pure — keep it that way.** Retry logic calls it once per attempt, so reporting from inside it multiplied one failure into several events.
+- **One DSN, one project — environments are separated by the `environment` tag.** Resolution order is explicit override (`SENTRY_ENVIRONMENT` / `PUBLIC_SENTRY_ENVIRONMENT`) → Railway inference (`RAILWAY_ENVIRONMENT_NAME`: `production` vs everything-else-is-`preview`) → `development`. PR envs inherit production's variables, so without this tag their errors are indistinguishable from real ones. `RAILWAY_GIT_COMMIT_SHA` becomes the release; the browser can't read Railway vars at runtime, so `vite.config.ts` inlines them via `define`.
+- **`GET /api/health` reports what an instance actually resolved** (`.sentry`). If `serverEnvironment` and `browserEnvironment` disagree, client and server events are landing in different Sentry environments — set `PUBLIC_SENTRY_ENVIRONMENT`, which is read at runtime.
+- **Traces are sampled in production only** (`resolveTracesSampleRate`), for the same cost reasons as the Railway practices below.
 
 **Image version pin:** the `bgutil-pot` Railway service must use a specific image tag + digest, never `:latest`. Railway caches whatever digest `:latest` resolved to at first deploy, so `:latest` gives the illusion of freshness without the freshness. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#image-version-pinning).
 

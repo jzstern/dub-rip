@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import * as Sentry from "@sentry/sveltekit";
 
 const require = createRequire(import.meta.url);
 const execFilePromise = promisify(execFile);
@@ -220,6 +221,11 @@ export async function resolveAlbumArtImage({
 		return fallback ?? null;
 	} catch (err) {
 		console.error("[artwork] Cover art resolution failed:", err);
+		Sentry.captureException(err, {
+			level: "warning",
+			tags: { service: "artwork", operation: "resolve-album-art" },
+			extra: { artist, title, videoId },
+		});
 		return fallback ?? null;
 	}
 }
@@ -251,7 +257,17 @@ export async function resolveCoverArt({
 
 		const cropped = await squareCropToBuffer(thumbnail);
 		return { imageBuffer: cropped, source: "thumbnail" };
-	} catch {
+	} catch (err) {
+		/**
+		 * A missing artwork match is normal and returns null without throwing;
+		 * reaching here means something actually broke (usually the ffmpeg
+		 * crop), which used to vanish silently and ship a track with no cover.
+		 */
+		Sentry.captureException(err, {
+			level: "warning",
+			tags: { service: "artwork", operation: "resolve-cover-art" },
+			extra: { artist, title },
+		});
 		return null;
 	}
 }

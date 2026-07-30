@@ -264,7 +264,7 @@ YouTube ships changes to its BotGuard implementation periodically. The `bgutil-y
 
 2. **Check the upstream tracker.** Open [Brainicism/bgutil-ytdlp-pot-provider issues](https://github.com/Brainicism/bgutil-ytdlp-pot-provider/issues) and [LuanRT/BgUtils issues](https://github.com/LuanRT/BgUtils/issues). A recent "BotGuard broken after YouTube update" issue means you're in a known window.
 
-3. **Check Sentry for the pattern.** The `Unmatched yt-dlp error` warnings (added by the parseYtDlpError breadcrumb improvement) will surface unusual yt-dlp error shapes. A flood of these starting around the same wall-clock time strongly suggests a YouTube-side change.
+3. **Check Sentry for the pattern.** Filter the `dub-rip` project to `environment:production` and the `download-stream` service. Two tags matter here: `category:unknown` is an error shape our classifier has never seen, and `category:transient` is a bot-check or 403 that survived every retry. A flood of either starting around the same wall-clock time strongly suggests a YouTube-side change. Note that expected failures (private, age-restricted, copyright) never appear as issues by design — see [`error-reporting.md`](./error-reporting.md).
 
 **Fix:**
 

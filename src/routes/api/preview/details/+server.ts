@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
 import { getVideoDetails } from "$lib/video-details-cache";
 import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
@@ -24,8 +25,30 @@ export const POST: RequestHandler = async ({ request }) => {
 			timeout: DURATION_EXTRACTION_TIMEOUT_MS,
 		});
 
-		if (!details || typeof details.duration !== "number") {
-			throw new Error("Could not parse duration from yt-dlp output");
+		/**
+		 * A null result means the extraction itself failed, and
+		 * `fetchVideoDetails` already reported that underlying error — capturing
+		 * again here would file a second issue for one incident.
+		 */
+		if (!details) {
+			Sentry.addBreadcrumb({
+				category: "preview-details",
+				level: "warning",
+				message: "Video details extraction returned no result",
+				data: { videoId },
+			});
+			return json({ error: "Failed to load details" }, { status: 500 });
+		}
+
+		if (typeof details.duration !== "number") {
+			Sentry.captureException(
+				new Error("yt-dlp returned video details without a duration"),
+				{
+					tags: { service: "preview-details", operation: "parse-duration" },
+					extra: { videoId },
+				},
+			);
+			return json({ error: "Failed to load details" }, { status: 500 });
 		}
 
 		return json({
@@ -35,6 +58,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch (error: unknown) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error("Preview details error:", message);
+
+		Sentry.captureException(
+			error instanceof Error ? error : new Error(message),
+			{ tags: { service: "preview-details", operation: "load-details" } },
+		);
 
 		return json(
 			{

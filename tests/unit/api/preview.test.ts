@@ -21,6 +21,7 @@ vi.mock("$lib/artwork", () => ({
 	resolveArtworkUrl: vi.fn(),
 }));
 
+import * as Sentry from "@sentry/sveltekit";
 import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
@@ -284,6 +285,80 @@ describe("POST /api/preview", () => {
 			// #then
 			expect(response.status).toBe(500);
 			expect(data.error).toBe("Failed to load preview");
+		});
+	});
+
+	describe("error reporting", () => {
+		it("reports an unexpected failure that would otherwise only be a 500", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("networkError1");
+			const failure = new Error("Network error");
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(failure);
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=networkError1",
+			});
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(Sentry.captureException).toHaveBeenCalledWith(
+				failure,
+				expect.objectContaining({
+					tags: { service: "preview", operation: "load-preview" },
+				}),
+			);
+		});
+
+		it("does not re-report a non-unavailable metadata failure already reported downstream", async () => {
+			// #given — fetchYouTubeMetadata reports 5xx and timeouts itself
+			vi.mocked(extractVideoId).mockReturnValue("serverError1");
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("oEmbed request failed: 500", false),
+			);
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=serverError1",
+			});
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(Sentry.captureException).not.toHaveBeenCalled();
+		});
+
+		it("still returns 500 for that already-reported failure", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("serverError1");
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("oEmbed request failed: 500", false),
+			);
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=serverError1",
+			});
+
+			// #when
+			const response = await POST(event);
+
+			// #then
+			expect(response.status).toBe(500);
+		});
+
+		it("does not report an unavailable video, which is normal operation", async () => {
+			// #given
+			vi.mocked(extractVideoId).mockReturnValue("privateVideo1");
+			vi.mocked(fetchYouTubeMetadata).mockRejectedValue(
+				new YouTubeMetadataError("Video is unavailable or private", true),
+			);
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=privateVideo1",
+			});
+
+			// #when
+			await POST(event);
+
+			// #then
+			expect(Sentry.captureException).not.toHaveBeenCalled();
 		});
 	});
 

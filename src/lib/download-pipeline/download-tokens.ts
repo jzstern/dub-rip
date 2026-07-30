@@ -4,6 +4,17 @@ import { unlink } from "node:fs/promises";
 const TOKEN_TTL_MS = 5 * 60 * 1000;
 const TOKEN_BYTES = 32;
 
+/**
+ * Hard ceiling on pending entries, independent of the TTL sweep below. Each
+ * entry pins a finished MP3 (a few MB, up to ~23MB on the video-fallback
+ * path) in the container's ephemeral /tmp for the full 5-minute TTL, and
+ * sweepExpired() only runs on access — an instance nobody polls reaps
+ * nothing on its own. Evicting the oldest entry once the cap is hit bounds
+ * disk usage even under a sustained burst of registrations with no matching
+ * resolves.
+ */
+export const MAX_PENDING_DOWNLOADS = 50;
+
 export interface PendingDownload {
 	filePath: string;
 	filename: string;
@@ -35,8 +46,23 @@ function sweepExpired(): void {
 	}
 }
 
+/**
+ * Every entry shares the same TTL, so insertion order is expiry order —
+ * the first key in the map is always the one that will expire soonest.
+ */
+function evictOldest(): void {
+	const oldest = pending.keys().next().value;
+	if (oldest === undefined) return;
+	const entry = pending.get(oldest);
+	pending.delete(oldest);
+	if (entry) void unlink(entry.filePath).catch(() => {});
+}
+
 export function registerDownload(download: PendingDownload): string {
 	sweepExpired();
+	while (pending.size >= MAX_PENDING_DOWNLOADS) {
+		evictOldest();
+	}
 	const token = randomBytes(TOKEN_BYTES).toString("hex");
 	pending.set(token, { ...download, expiresAt: Date.now() + TOKEN_TTL_MS });
 	return token;

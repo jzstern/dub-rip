@@ -44,6 +44,19 @@ vi.mock("$lib/download-pipeline/try-yt-dlp", () => ({
 	tryYtDlpDownload: tryYtDlpDownloadMock,
 }));
 
+/**
+ * `afterEach` below calls `vi.resetModules()`, so a `YtDlpQueueFullError`
+ * built from a top-level static import would predate the reset and be a
+ * different class object than the one +server.ts's fresh dynamic import
+ * checks against — `instanceof` would silently fail. Importing fresh here,
+ * in the same module-registry epoch as the `+server` import below, keeps
+ * them identical.
+ */
+async function createQueueFullError(): Promise<Error> {
+	const { YtDlpQueueFullError } = await import("$lib/yt-dlp-concurrency");
+	return new YtDlpQueueFullError();
+}
+
 async function runDownloadUntilError(failure: Error): Promise<string> {
 	tryYtDlpDownloadMock.mockRejectedValue(failure);
 
@@ -179,5 +192,167 @@ describe("GET /api/download-stream - failure reporting policy", () => {
 		} finally {
 			vi.useRealTimers();
 		}
+	});
+});
+
+describe("GET /api/download-stream - queue-full handling", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.resetModules();
+	});
+
+	it("does not file an issue when the downloader's queue is full", async () => {
+		// #given
+		const failure = await createQueueFullError();
+
+		// #when
+		await runDownloadUntilError(failure);
+
+		// #then
+		expect(Sentry.captureException).not.toHaveBeenCalled();
+	});
+
+	it("leaves a breadcrumb for a full queue instead", async () => {
+		// #given
+		const failure = await createQueueFullError();
+
+		// #when
+		await runDownloadUntilError(failure);
+
+		// #then
+		expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+			expect.objectContaining({
+				category: "download",
+				message: expect.stringContaining("queue is full"),
+			}),
+		);
+	});
+
+	it("tells the user the downloader is busy rather than showing a generic failure", async () => {
+		// #given
+		const failure = await createQueueFullError();
+
+		// #when
+		const buffer = await runDownloadUntilError(failure);
+
+		// #then
+		expect(buffer).toContain(
+			"The downloader is busy right now. Please try again in a moment.",
+		);
+	});
+});
+
+describe("GET /api/download-stream - missing output file", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.resetModules();
+	});
+
+	it("reports yt-dlp exiting 0 with no output file, since that's otherwise invisible", async () => {
+		// #given — tryYtDlpDownload "succeeds" but never produces a file at outputPath
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+		const { GET } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+		const url = new URL("http://localhost/api/download-stream");
+		url.searchParams.set("url", "https://youtube.com/watch?v=dQw4w9WgXcQ");
+
+		// #when
+		const response = await GET({ url } as unknown as Parameters<typeof GET>[0]);
+		const reader = response.body?.getReader();
+		const decoder = new TextDecoder();
+		let buffer = "";
+		let done = false;
+		while (!done) {
+			const chunk = await reader?.read();
+			if (!chunk || chunk.done) {
+				done = true;
+				break;
+			}
+			buffer += decoder.decode(chunk.value);
+		}
+
+		// #then
+		expect(buffer).toContain("Download completed but file not found");
+		expect(Sentry.captureException).toHaveBeenCalledWith(
+			expect.any(Error),
+			expect.objectContaining({
+				tags: expect.objectContaining({
+					service: "download-stream",
+					operation: "missing-output-file",
+				}),
+				extra: expect.objectContaining({ videoId: "dQw4w9WgXcQ" }),
+			}),
+		);
+	});
+});
+
+describe("GET /api/download-stream - cancellation", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.resetModules();
+	});
+
+	it("aborts the signal passed to tryYtDlpDownload when the stream is canceled", async () => {
+		// #given — an in-flight download that never resolves on its own
+		let receivedSignal: AbortSignal | undefined;
+		tryYtDlpDownloadMock.mockImplementation(
+			({ signal }: { signal?: AbortSignal }) => {
+				receivedSignal = signal;
+				return new Promise(() => {});
+			},
+		);
+		const { GET } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+		const url = new URL("http://localhost/api/download-stream");
+		url.searchParams.set("url", "https://youtube.com/watch?v=dQw4w9WgXcQ");
+		const response = await GET({ url } as unknown as Parameters<typeof GET>[0]);
+		await vi.waitFor(() => expect(receivedSignal).toBeDefined());
+
+		// #when
+		await response.body?.cancel();
+
+		// #then
+		expect(receivedSignal?.aborted).toBe(true);
+	});
+
+	it("reports an aborted download as a breadcrumb, never an exception", async () => {
+		// #given — tryYtDlpDownload rejects once its signal aborts, mirroring what
+		// killing the real child process would do
+		tryYtDlpDownloadMock.mockImplementation(
+			({ signal }: { signal?: AbortSignal }) =>
+				new Promise((_resolve, reject) => {
+					signal?.addEventListener("abort", () => reject(new Error("killed")));
+				}),
+		);
+		const { GET } = await import(
+			"../../../src/routes/api/download-stream/+server"
+		);
+		const url = new URL("http://localhost/api/download-stream");
+		url.searchParams.set("url", "https://youtube.com/watch?v=dQw4w9WgXcQ");
+		const response = await GET({ url } as unknown as Parameters<typeof GET>[0]);
+
+		// #when
+		await response.body?.cancel();
+		await vi.waitFor(() => expect(Sentry.addBreadcrumb).toHaveBeenCalled());
+
+		// #then
+		expect(Sentry.captureException).not.toHaveBeenCalled();
+		expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+			expect.objectContaining({
+				category: "download",
+				message: expect.stringContaining("aborted"),
+			}),
+		);
 	});
 });

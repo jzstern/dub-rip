@@ -20,6 +20,7 @@ class FakeProcess {
 			this.stderrHandlers.push(callback);
 		},
 	};
+	ytDlpProcess = { kill: vi.fn().mockReturnValue(true) };
 
 	on(event: string, callback: Handler) {
 		this.handlers[event] ??= [];
@@ -304,5 +305,89 @@ describe("tryYtDlpDownload() concurrency limiting", () => {
 		await flushMicrotasks();
 		processes[3].emit("close", 0);
 		await Promise.all(promises);
+	});
+});
+
+describe("tryYtDlpDownload() cancellation", () => {
+	function runWithSignal(process: FakeProcess, signal: AbortSignal) {
+		const ytDlp: YtDlpInstance = {
+			exec: () => process as unknown as ReturnType<YtDlpInstance["exec"]>,
+		} as YtDlpInstance;
+
+		return tryYtDlpDownload({
+			videoUrl: "https://www.youtube.com/watch?v=q9lZ4p5YRkY",
+			outputPath: "/tmp/out",
+			bgutilPotUrl: "http://bgutil-pot.railway.internal:4416",
+			ffmpegPath: "/usr/bin/ffmpeg",
+			pluginDir: "/tmp/yt-dlp-plugins",
+			debugMode: false,
+			ytDlp,
+			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
+			send: () => {},
+			signal,
+		});
+	}
+
+	it("kills the child process when the signal aborts mid-download", async () => {
+		// #given
+		const proc = new FakeProcess();
+		const controller = new AbortController();
+		const promise = runWithSignal(proc, controller.signal);
+
+		// #when
+		controller.abort();
+
+		// #then
+		expect(proc.ytDlpProcess.kill).toHaveBeenCalledWith("SIGTERM");
+
+		// #cleanup
+		proc.emit("close", null);
+		await promise.catch(() => {});
+	});
+
+	it("never spawns a process when the signal is already aborted", async () => {
+		// #given
+		const proc = new FakeProcess();
+		const controller = new AbortController();
+		controller.abort();
+		let spawned = false;
+		const ytDlp: YtDlpInstance = {
+			exec: () => {
+				spawned = true;
+				return proc as unknown as ReturnType<YtDlpInstance["exec"]>;
+			},
+		} as YtDlpInstance;
+
+		// #when
+		await tryYtDlpDownload({
+			videoUrl: "https://www.youtube.com/watch?v=q9lZ4p5YRkY",
+			outputPath: "/tmp/out",
+			bgutilPotUrl: "http://bgutil-pot.railway.internal:4416",
+			ffmpegPath: "/usr/bin/ffmpeg",
+			pluginDir: "/tmp/yt-dlp-plugins",
+			debugMode: false,
+			ytDlp,
+			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
+			send: () => {},
+			signal: controller.signal,
+		}).catch(() => {});
+
+		// #then
+		expect(spawned).toBe(false);
+	});
+
+	it("removes its abort listener once the download settles, so retries don't leak listeners", async () => {
+		// #given
+		const proc = new FakeProcess();
+		const controller = new AbortController();
+		const promise = runWithSignal(proc, controller.signal);
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+		controller.abort();
+
+		// #then
+		expect(proc.ytDlpProcess.kill).not.toHaveBeenCalled();
 	});
 });

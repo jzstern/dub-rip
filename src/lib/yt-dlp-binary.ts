@@ -389,6 +389,33 @@ export function buildJsRuntimeArgs(): string[] {
 }
 
 /**
+ * The `youtube:` extractor args every yt-dlp invocation here must carry.
+ *
+ * Shared rather than written out per call site because the two halves only work
+ * together, and a call site that drifts on either one fails in a way that looks
+ * like YouTube being flaky rather than like a bug.
+ *
+ * `player_client` is restricted to WebPO-capable clients on purpose. bgutil-pot
+ * mints *WebPO* tokens, which only the web-family clients can use. yt-dlp's
+ * `default` chain leads with `android_vr`, which takes a different token type
+ * bgutil cannot produce, yet its audio formats often win `bestaudio` and their
+ * media URLs then 403 from a datacenter IP.
+ *
+ * `fetch_pot=always` is what actually gets a token minted. Under yt-dlp's
+ * default `auto` policy a PO token is fetched only when the client's policy
+ * marks it required or recommended — and for all three clients above, the
+ * *player* policy is `PlayerPoTokenPolicy(required=False)`. So the innertube
+ * player request went out unauthenticated, and from a datacenter IP YouTube
+ * answered it with "Sign in to confirm you're not a bot" while bgutil-pot sat
+ * there healthy and never asked for anything. `always` overrides the policy and
+ * fetches for the player context too. If the sidecar is unreachable yt-dlp
+ * warns and continues token-less, so this stays a strict improvement over
+ * `auto` rather than a new hard dependency.
+ */
+export const YOUTUBE_EXTRACTOR_ARG =
+	"youtube:player_client=web_safari,mweb,tv;fetch_pot=always";
+
+/**
  * Builds the bgutil-pot PO-token yt-dlp args when BGUTIL_POT_URL is configured.
  *
  * YouTube's bot-check blocks many videos requested from datacenter IPs unless a
@@ -405,7 +432,7 @@ export async function buildBgutilPotArgs(): Promise<string[]> {
 			"--plugin-dirs",
 			pluginDir,
 			"--extractor-args",
-			"youtube:player_client=web_safari,mweb,tv",
+			YOUTUBE_EXTRACTOR_ARG,
 			"--extractor-args",
 			`youtubepot-bgutilhttp:base_url=${env.BGUTIL_POT_URL}`,
 		];

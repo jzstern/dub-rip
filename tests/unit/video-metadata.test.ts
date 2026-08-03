@@ -168,6 +168,30 @@ describe("fetchVideoDetails", () => {
 		expect(passedArgs).toContain("--plugin-dirs");
 	});
 
+	it("keeps yt-dlp warnings, the only place a missing PO token is reported", async () => {
+		// #given
+		mockExecFileJson({ upload_date: "20200101" });
+
+		// #when
+		await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		const passedArgs = execFileMock.mock.calls[0][1] as string[];
+		expect(passedArgs).not.toContain("--no-warnings");
+	});
+
+	it("suppresses the version-age notice, which is expected against a pinned binary", async () => {
+		// #given
+		mockExecFileJson({ upload_date: "20200101" });
+
+		// #when
+		await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		const passedArgs = execFileMock.mock.calls[0][1] as string[];
+		expect(passedArgs).toContain("--no-update");
+	});
+
 	it("extracts and rounds duration from dump-json output", async () => {
 		// #given
 		mockExecFileJson({ duration: 245.4 });

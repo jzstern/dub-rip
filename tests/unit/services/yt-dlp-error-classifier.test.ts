@@ -18,6 +18,21 @@ describe("isRetryableYtDlpError()", () => {
 		expect(result).toBe(true);
 	});
 
+	it("treats a bot-check error as retryable when yt-dlp uses a typographic apostrophe", () => {
+		// #given
+		// This is the exact wording yt-dlp emits (U+2019, not ASCII "'"), with the
+		// "--cookies" remediation hint stripped so the match has to come from the
+		// sentence itself rather than from the hint.
+		const message =
+			"ERROR: [youtube] abc: Sign in to confirm you’re not a bot.";
+
+		// #when
+		const result = isRetryableYtDlpError(message);
+
+		// #then
+		expect(result).toBe(true);
+	});
+
 	it("treats an HTTP 403 error as retryable", () => {
 		// #given
 		const message = "unable to download video data: HTTP Error 403: Forbidden";

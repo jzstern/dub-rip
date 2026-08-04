@@ -25,6 +25,8 @@ jobs:
       - name: Label PRs that change UI meaningfully
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This job never checks out, so gh has no remote to infer the repo from.
+          GH_REPO: ${{ github.repository }}
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           UI_LINE_THRESHOLD: "20"
@@ -57,10 +59,13 @@ jobs:
             exit 0
           fi
 
-          gh label create rams \
-            --color 0E8A16 \
-            --description "Request a Rams design review" \
-            --force >/dev/null
+          # Create only when absent — --force would silently revert any colour or
+          # description the repo has since set on a shared label.
+          if ! gh label list --limit 100 --json name --jq '.[].name' | grep -qxF rams; then
+            gh label create rams \
+              --color 0E8A16 \
+              --description "Request a Rams design review"
+          fi
 
           # Re-adding a label GitHub already has is a no-op that fires no `labeled`
           # webhook, so pushes to an already-labelled PR cannot burn extra quota.

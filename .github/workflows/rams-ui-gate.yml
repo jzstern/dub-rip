@@ -1,0 +1,68 @@
+name: Rams UI Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: rams-ui-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  # Labels are an issues resource — creating one needs more than pull-requests: write.
+  issues: write
+
+jobs:
+  label-ui-changes:
+    # Fork PRs get a read-only token, so labelling would fail.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label PRs that change UI meaningfully
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          UI_LINE_THRESHOLD: "20"
+        run: |
+          set -euo pipefail
+
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate)
+
+          ui=$(jq -c '
+            [ .[]
+              | select(.filename | test("\\.svelte$|\\.css$|^src/app\\.html$|^tailwind\\.config\\.[cm]?[jt]s$"))
+              | select(.filename | test("(^|/)(tests?|e2e)/|\\.(test|spec)\\.") | not)
+            ]' <<<"$files")
+
+          new_components=$(jq '[.[] | select(.status == "added" and (.filename | endswith(".svelte")))] | length' <<<"$ui")
+          ui_lines=$(jq '[.[].changes] | add // 0' <<<"$ui")
+
+          {
+            echo "### Rams UI gate"
+            echo
+            echo "| Signal | Value |"
+            echo "| --- | --- |"
+            echo "| UI files touched | $(jq 'length' <<<"$ui") |"
+            echo "| Changed lines in UI files | $ui_lines (threshold $UI_LINE_THRESHOLD) |"
+            echo "| New .svelte components | $new_components |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$new_components" -eq 0 ] && [ "$ui_lines" -lt "$UI_LINE_THRESHOLD" ]; then
+            echo "Not a significant UI change — leaving the PR unlabelled." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          gh label create rams \
+            --color 0E8A16 \
+            --description "Request a Rams design review" \
+            --force >/dev/null
+
+          # Re-adding a label GitHub already has is a no-op that fires no `labeled`
+          # webhook, so pushes to an already-labelled PR cannot burn extra quota.
+          gh pr edit "$PR" --add-label rams
+          echo "Labelled \`rams\` — Rams will review this PR." | tee -a "$GITHUB_STEP_SUMMARY"

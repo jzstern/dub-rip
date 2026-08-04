@@ -29,7 +29,13 @@ const BOT_CHECK_MESSAGE =
 
 const ERROR_RULES: ErrorRule[] = [
 	{
-		pattern: /sign in to confirm you're not a bot|cookies/,
+		// yt-dlp writes the message with a typographic apostrophe (U+2019), so an
+		// ASCII-only `you're` never matched it. Until now the rule still fired,
+		// but only via the `cookies` alternation further down the same pattern —
+		// i.e. on the remediation hint rather than on the error itself. Were that
+		// hint ever reworded, a bot-check would fall through to the generic rule
+		// and become non-retryable and `unknown`-category. Match both forms.
+		pattern: /sign in to confirm you['’]re not a bot|cookies/,
 		message: BOT_CHECK_MESSAGE,
 		retryable: true,
 		category: "transient",

@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$lib/yt-dlp-binary", () => ({
+// Only the runtime probe is stubbed — it reads process.execPath, which differs
+// between a dev box and CI. YOUTUBE_EXTRACTOR_ARG deliberately comes from the
+// real module: asserting against a copy of the string would pass no matter what
+// production actually sends to yt-dlp.
+vi.mock("$lib/yt-dlp-binary", async (importOriginal) => ({
+	...(await importOriginal<typeof import("$lib/yt-dlp-binary")>()),
 	buildJsRuntimeArgs: vi.fn(() => ["--js-runtimes", "node:/usr/bin/node"]),
 }));
 
@@ -106,7 +111,24 @@ describe("tryYtDlpDownload()", () => {
 		const clientArg = execArgs.find((arg) =>
 			arg.startsWith("youtube:player_client="),
 		);
-		expect(clientArg).toBe("youtube:player_client=web_safari,mweb,tv");
+		expect(clientArg).toBe(
+			"youtube:player_client=web_safari,mweb,tv;fetch_pot=always",
+		);
+	});
+
+	it("forces PO token fetching, which none of those clients request on their own", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		const clientArg = execArgs.find((arg) =>
+			arg.startsWith("youtube:player_client="),
+		);
+		expect(clientArg).toMatch(/(^|;)fetch_pot=always(;|$)/);
 	});
 
 	it("never falls back to yt-dlp's default chain, whose visionos/android_vr formats 403", async () => {

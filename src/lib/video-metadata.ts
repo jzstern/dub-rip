@@ -87,9 +87,18 @@ async function fetchVideoDetailsOnce(
 	}
 	const args = [
 		"--dump-json",
-		"--no-warnings",
 		"--no-playlist",
 		"--skip-download",
+		// `--no-warnings` used to sit here and cost us a diagnosis: when a PO
+		// token isn't minted, yt-dlp says so *only* as a warning, and the ERROR
+		// line that survived into Sentry was the downstream bot-check with no
+		// hint as to why. execFile discards stderr on success and folds it into
+		// the rejection on failure, so keeping warnings is free until something
+		// breaks and self-documenting when it does. `--no-update` then drops the
+		// one warning that is never actionable here — the binary is pinned, so
+		// "your version is older than 90 days" is expected, and the download path
+		// suppresses it for the same reason.
+		"--no-update",
 		...buildJsRuntimeArgs(),
 		...(await buildBgutilPotArgs()),
 		videoUrl,

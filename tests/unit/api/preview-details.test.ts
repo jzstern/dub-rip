@@ -161,7 +161,7 @@ describe("POST /api/preview/details - duration extraction", () => {
 			"--plugin-dirs",
 			"/tmp/yt-dlp-plugins",
 			"--extractor-args",
-			"youtube:player_client=web_safari,mweb,tv",
+			"youtube:player_client=web_safari,mweb,tv;fetch_pot=always",
 			"--extractor-args",
 			"youtubepot-bgutilhttp:base_url=http://pot.internal:4416",
 		];

@@ -7,7 +7,7 @@ import {
 	parseArtistAndTitle,
 	sanitizeUploaderAsArtist,
 } from "$lib/video-utils";
-import { buildJsRuntimeArgs } from "$lib/yt-dlp-binary";
+import { buildJsRuntimeArgs, YOUTUBE_EXTRACTOR_ARG } from "$lib/yt-dlp-binary";
 import { withYtDlpConcurrencyLimit } from "$lib/yt-dlp-concurrency";
 
 interface YtDlpProcess {
@@ -96,15 +96,10 @@ export async function tryYtDlpDownload({
 		...buildJsRuntimeArgs(),
 		"--plugin-dirs",
 		pluginDir,
-		// Restricted to WebPO-capable clients on purpose. bgutil-pot mints *WebPO*
-		// tokens, which only the web-family clients can use. yt-dlp's `default`
-		// chain is ('visionos', 'android_vr', 'web') — the first two take a
-		// different token type bgutil cannot produce, yet their audio formats often
-		// win `bestaudio`, and their media URLs then 403 from a datacenter IP
-		// ("unable to download video data: HTTP Error 403"). Naming the web clients
-		// explicitly keeps every candidate format one bgutil can authorize.
+		// Shared with the metadata path — see YOUTUBE_EXTRACTOR_ARG for why both
+		// the client restriction and `fetch_pot=always` are load-bearing.
 		"--extractor-args",
-		"youtube:player_client=web_safari,mweb,tv",
+		YOUTUBE_EXTRACTOR_ARG,
 		"--extractor-args",
 		`youtubepot-bgutilhttp:base_url=${bgutilPotUrl}`,
 		"-o",

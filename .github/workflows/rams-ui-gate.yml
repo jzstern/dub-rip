@@ -30,8 +30,27 @@ jobs:
           REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
           UI_LINE_THRESHOLD: "20"
+          # Optional. Without it the quota check is skipped and the gate labels as before.
+          RAMS_API_KEY: ${{ secrets.RAMS_API_KEY }}
         run: |
           set -euo pipefail
+
+          # Echoes the remaining review count, or nothing if it cannot be determined.
+          # Paid plans report no "N left" at all, so callers must treat an empty
+          # result as "quota is fine" rather than as zero.
+          rams_reviews_left() {
+            local raw payload text
+            raw=$(curl -sS --max-time 20 -X POST https://worker.rams.ai/mcp \
+              -H "Authorization: Bearer ${RAMS_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json, text/event-stream" \
+              -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"usage","arguments":{}}}' \
+              2>/dev/null) || return 0
+            payload=$(sed -n 's/^data: //p' <<<"$raw")
+            [ -z "$payload" ] && payload="$raw"
+            text=$(jq -r '.result.content[0].text // empty' <<<"$payload" 2>/dev/null) || return 0
+            grep -oE '[0-9]+ left' <<<"$text" | grep -oE '^[0-9]+' | head -1 || true
+          }
 
           files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate)
 
@@ -57,6 +76,24 @@ jobs:
           if [ "$new_components" -eq 0 ] && [ "$ui_lines" -lt "$UI_LINE_THRESHOLD" ]; then
             echo "Not a significant UI change — leaving the PR unlabelled." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+
+          # Labelling at zero quota is worse than not labelling: Rams answers
+          # "limit reached", the label stays, and the `labeled` webhook never
+          # fires again — so the PR would go unreviewed even after quota resets.
+          if [ -n "${RAMS_API_KEY:-}" ]; then
+            reviews_left=$(rams_reviews_left)
+            if [ "${reviews_left:-}" = "0" ]; then
+              {
+                echo "| Rams reviews left | 0 |"
+                echo
+                echo "Quota exhausted — leaving the PR unlabelled so its review is not"
+                echo "spent on a refusal. Push again after the quota resets, or add the"
+                echo "\`rams\` label by hand."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "| Rams reviews left | ${reviews_left:-not reported (proceeding)} |" >> "$GITHUB_STEP_SUMMARY"
           fi
 
           # Create only when absent — --force would silently revert any colour or

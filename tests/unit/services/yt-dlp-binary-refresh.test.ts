@@ -2,12 +2,15 @@
 // NOT bleed into adjacent test files. Vitest's worker-level isolation
 // handles the boundary, but if you ever change vitest config or worker
 // pool settings, re-run that command to confirm.
+import { createRequire } from "node:module";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
 const existsSyncMock = vi.hoisted(() => vi.fn());
+const accessSyncMock = vi.hoisted(() => vi.fn());
 const statSyncMock = vi.hoisted(() => vi.fn());
 const writeFileSyncMock = vi.hoisted(() => vi.fn());
 const chmodSyncMock = vi.hoisted(() => vi.fn());
@@ -15,10 +18,15 @@ const renameSyncMock = vi.hoisted(() => vi.fn());
 const unlinkSyncMock = vi.hoisted(() => vi.fn());
 const mkdirSyncMock = vi.hoisted(() => vi.fn());
 
-vi.mock("node:fs", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("node:fs")>();
+vi.mock("node:fs", async () => {
+	// As in baked-binaries.test.ts: `importOriginal()` hands back an empty
+	// namespace for node builtins under this Vite config, so `fs.constants`
+	// would be undefined and the baked branch's executable check would fail
+	// for the wrong reason. CommonJS resolution returns the genuine module.
+	const realFs = createRequire(import.meta.url)("node:fs");
 	const overrides = {
 		existsSync: existsSyncMock,
+		accessSync: accessSyncMock,
 		statSync: statSyncMock,
 		writeFileSync: writeFileSyncMock,
 		chmodSync: chmodSyncMock,
@@ -26,14 +34,11 @@ vi.mock("node:fs", async (importOriginal) => {
 		unlinkSync: unlinkSyncMock,
 		mkdirSync: mkdirSyncMock,
 	};
-	return {
-		...actual,
-		default: { ...actual, ...overrides },
-		...overrides,
-	};
+	return { ...realFs, ...overrides, default: { ...realFs, ...overrides } };
 });
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const BAKED_BINARY = join(process.cwd(), "bin", "yt-dlp");
 
 function mockReleaseAndBinaryFetch() {
 	fetchMock
@@ -64,6 +69,7 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 		vi.resetModules();
 		fetchMock.mockReset();
 		existsSyncMock.mockReset();
+		accessSyncMock.mockReset();
 		statSyncMock.mockReset();
 		writeFileSyncMock.mockReset();
 		chmodSyncMock.mockReset();
@@ -160,6 +166,27 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 
 		// #then — no new refresh is started
 		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("refreshes a baked binary only once it has aged past the TTL", async () => {
+		// #given a container whose only binary is the one baked into its image
+		existsSyncMock.mockImplementation((p: string) => p === BAKED_BINARY);
+		statSyncMock.mockReturnValue({ mtimeMs: Date.now() });
+		mockReleaseAndBinaryFetch();
+		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
+
+		// #when the image is newer than the TTL
+		await ensureYtDlpBinary();
+
+		// #then the bake is trusted, exactly as a fresh /tmp binary would be
+		expect(fetchMock).not.toHaveBeenCalled();
+
+		// #when the same instance stays up until the bake ages past the TTL
+		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
+		await ensureYtDlpBinary();
+
+		// #then it picks up upstream extraction fixes like any stale binary
+		await vi.waitFor(() => expect(renameSyncMock).toHaveBeenCalled());
 	});
 
 	it("propagates the error when there is no cached binary to fall back to", async () => {

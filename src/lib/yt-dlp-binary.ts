@@ -274,15 +274,22 @@ export async function ensureYtDlpBinary(): Promise<string> {
 		return YTDLP_BINARY_PATH;
 	}
 
-	// A cold container has an empty /tmp, so without this the very first
-	// download blocks on a ~40MB fetch — and with `Sleep when inactive` most
-	// sessions are cold. The baked binary is a pinned floor, never a ceiling:
-	// it only serves the window before the background refresh lands, after
-	// which /tmp wins above and the TTL behaviour is exactly as it was.
+	// A container with an empty /tmp would otherwise block its very first
+	// download on a ~40MB fetch. In practice /tmp survives app-sleep wakes, so
+	// this branch runs on the first start of each deployment rather than every
+	// cold start — still in front of that deployment's first user.
+	//
+	// The baked binary is a pinned floor, never a ceiling: its mtime is the
+	// bake time, so the same TTL that governs /tmp reads as "how old is this
+	// image" here, and an aged image still refreshes into /tmp, after which
+	// /tmp wins above. Refreshing unconditionally instead spent that first
+	// request on re-fetching bytes identical to the pin already on disk.
 	const bakedBinary = resolveBakedPath(BAKED_YTDLP_NAME);
 	if (bakedBinary && isExecutable(bakedBinary)) {
 		logBakedLookupOnce(`Using baked yt-dlp binary at ${bakedBinary}`);
-		refreshBinaryInBackground();
+		if (isBinaryStale(bakedBinary)) {
+			refreshBinaryInBackground();
+		}
 		return bakedBinary;
 	}
 	logBakedLookupOnce(

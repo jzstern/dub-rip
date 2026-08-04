@@ -213,7 +213,9 @@ So the pin needs to be a version known to work, not necessarily the newest. Upst
 
 Both services sleep when inactive, so most sessions on a low-traffic app start cold. The yt-dlp binary is ~40 MB and `/tmp` is ephemeral, so every container start used to re-download it (measured at 7.8s on a fast connection) — and `/api/preview/details` awaits `ensureYtDlpBinary()`, putting that fetch in front of the user's first preview.
 
-`scripts/fetch-yt-dlp.mjs` now downloads it at build time into `bin/`, which the deploy image carries. When `/tmp` is empty, `ensureYtDlpBinary()` returns `bin/yt-dlp` without waiting on anything and kicks off the normal background refresh, so the caller is never blocked and freshness still arrives. A baked binary missing its executable bit is ignored, since the `/tmp` fallback would otherwise already have been skipped. `ensureBgutilPlugin()` does the same with `bin/yt-dlp-plugins/` — that one is pinned end to end, because the plugin and the sidecar speak a versioned protocol.
+`scripts/fetch-yt-dlp.mjs` now downloads it at build time into `bin/`, which the deploy image carries. When `/tmp` is empty, `ensureYtDlpBinary()` returns `bin/yt-dlp` without waiting on anything, and starts the background refresh only once that binary is past the same 24h TTL the `/tmp` cache uses. The baked binary's mtime is when its bytes were fetched, so the TTL reads as "how old is this image" — a container running a week-old build still refreshes, while a freshly built one skips a GitHub API call and a 40 MB download it would almost certainly answer with the bytes already baked in. A baked binary missing its executable bit is ignored, since the `/tmp` fallback would otherwise already have been skipped.
+
+**How often this branch actually runs.** Less often than "every cold start" suggests: `/tmp` survives app-sleep wake cycles within a deployment, so only the *first* container start after a deploy finds it empty. Production deployment `073ed0f` logged `Using baked yt-dlp binary at /app/bin/yt-dlp` once, two minutes after it went live, and not again across roughly thirty restarts over the following five days — every one of those took the `/tmp` branch. So the baked path is a per-deployment cost, not a per-wake one. It still sits in front of that deployment's first user, and preview environments redeploy on every push, which is where it adds up. `ensureBgutilPlugin()` does the same with `bin/yt-dlp-plugins/` — that one is pinned end to end, because the plugin and the sidecar speak a versioned protocol.
 
 **The `/tmp` download path is still there and must stay.** It is the safety net for when the bake doesn't reach the deploy image. Same reason the fetch script exits 0 on failure: an unreachable GitHub at build time costs startup latency, not a broken deploy.
 
@@ -226,6 +228,8 @@ Using baked yt-dlp binary at /app/bin/yt-dlp
 ```
 
 If you instead see `No baked yt-dlp binary found; falling back to runtime download` followed by `Downloading yt-dlp binary...`, the bake did not survive into the deploy image. Downloads still work; they're just slow again. Check that Railpack ran the build script and preserved `bin/`.
+
+On a *freshly deployed* instance that line should stand alone. `Refreshing yt-dlp binary in the background...` immediately after it means the baked binary is reading as older than the TTL — either the image genuinely is (fine, that's the refresh doing its job) or the builder normalized file mtimes in the image layer, which would make every cold start refresh again. Check the deploy's age before assuming the latter.
 
 ### Sidecar prewarm from the preview request
 

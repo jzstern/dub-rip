@@ -10,6 +10,7 @@ vi.stubGlobal("fetch", fetchMock);
 
 const existsSyncMock = vi.hoisted(() => vi.fn());
 const accessSyncMock = vi.hoisted(() => vi.fn());
+const statSyncMock = vi.hoisted(() => vi.fn());
 const writeFileSyncMock = vi.hoisted(() => vi.fn());
 const chmodSyncMock = vi.hoisted(() => vi.fn());
 const renameSyncMock = vi.hoisted(() => vi.fn());
@@ -25,6 +26,7 @@ vi.mock("node:fs", async () => {
 	const overrides = {
 		existsSync: existsSyncMock,
 		accessSync: accessSyncMock,
+		statSync: statSyncMock,
 		writeFileSync: writeFileSyncMock,
 		chmodSync: chmodSyncMock,
 		renameSync: renameSyncMock,
@@ -35,6 +37,7 @@ vi.mock("node:fs", async () => {
 });
 
 const PINNED_BGUTIL_VERSION = "1.3.1";
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const BAKED_BINARY = join(process.cwd(), "bin", "yt-dlp");
 const BAKED_PLUGIN_DIR = join(process.cwd(), "bin", "yt-dlp-plugins");
 const BAKED_PLUGIN_ZIP = join(
@@ -85,6 +88,7 @@ function resetMocks(): void {
 	fetchMock.mockReset();
 	existsSyncMock.mockReset().mockReturnValue(false);
 	accessSyncMock.mockReset();
+	statSyncMock.mockReset().mockReturnValue({ mtimeMs: Date.now() });
 	writeFileSyncMock.mockReset();
 	chmodSyncMock.mockReset();
 	renameSyncMock.mockReset();
@@ -112,8 +116,9 @@ describe("ensureYtDlpBinary()", () => {
 	});
 
 	it("returns the baked binary without awaiting any download", async () => {
-		// #given a baked binary and a download that never settles
+		// #given a stale baked binary and a download that never settles
 		existsSyncMock.mockImplementation((p: string) => p === BAKED_BINARY);
+		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
 		fetchMock.mockReturnValue(new Promise(() => {}));
 
 		// #when
@@ -124,21 +129,36 @@ describe("ensureYtDlpBinary()", () => {
 		expect(path).toBe(BAKED_BINARY);
 	});
 
-	it("still kicks off a background refresh so the pin is a floor, not a ceiling", async () => {
-		// #given
+	it("still kicks off a background refresh once the baked binary ages past the TTL, so the pin is a floor and not a ceiling", async () => {
+		// #given an image older than the refresh TTL
 		existsSyncMock.mockImplementation((p: string) => p === BAKED_BINARY);
-		fetchMock.mockResolvedValue(releasesApiResponse());
+		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
+		mockLatestReleaseDownload();
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
 		await ensureYtDlpBinary();
-		await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+		await vi.waitFor(() => expect(renameSyncMock).toHaveBeenCalled());
 
 		// #then
 		expect(fetchMock).toHaveBeenCalledWith(
 			expect.stringContaining("api.github.com"),
 			expect.anything(),
 		);
+	});
+
+	it("does not refresh a baked binary that is still within the TTL", async () => {
+		// #given the common cold start: a container running a freshly built image
+		existsSyncMock.mockImplementation((p: string) => p === BAKED_BINARY);
+		statSyncMock.mockReturnValue({ mtimeMs: Date.now() });
+		mockLatestReleaseDownload();
+
+		// #when
+		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
+		await ensureYtDlpBinary();
+
+		// #then no GitHub API call and no ~40MB download on every cold start
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
 	it("ignores a baked binary that is not executable", async () => {

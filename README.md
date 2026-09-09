@@ -60,7 +60,7 @@ This project is configured to deploy on Railway. Downloads run through yt-dlp, w
 ### Services Required
 
 1. **dub-rip** - This app (SvelteKit + Node.js)
-2. **bgutil-pot** - PO token sidecar for yt-dlp (`brainicism/bgutil-ytdlp-pot-provider:1.3.1`)
+2. **bgutil-pot** - PO token sidecar for yt-dlp (`brainicism/bgutil-ytdlp-pot-provider:2.0.0`)
 
 > A self-hosted Cobalt instance used to sit in front of yt-dlp. It was removed in July 2026 — see [ADR 0001 — Remove Cobalt](docs/decisions/0001-remove-cobalt.md).
 

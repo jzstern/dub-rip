@@ -56,7 +56,7 @@ describe("ensureBgutilPlugin()", () => {
 		expect(dir).toMatch(/yt-dlp-plugins$/);
 		expect(fetchMock).toHaveBeenCalledWith(
 			expect.stringContaining(
-				"github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/1.3.1/bgutil-ytdlp-pot-provider.zip",
+				"github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/2.0.0/bgutil-ytdlp-pot-provider.zip",
 			),
 			expect.any(Object),
 		);

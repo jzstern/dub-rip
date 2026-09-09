@@ -77,7 +77,7 @@ Sidecar HTTP server that generates the YouTube PO tokens yt-dlp binds at extract
 
 **Why a separate service:** BotGuard requires loading and evaluating ~2.3 MB of YouTube's `base.js` in a JS runtime. Running this in-process inside the SvelteKit container allocated ~1 GB and SIGABRTed the entire web process mid-request. Isolating it in its own container caps the blast radius and lets the heavy runtime stay warm across requests.
 
-**Docker Image:** `brainicism/bgutil-ytdlp-pot-provider:1.3.1@sha256:1aaa43a0ca72dfca6a6d2129a0fb4a23465c25adb1b043f8aff829a20825646b` — pinned by both tag and digest (see [Image version pinning](#image-version-pinning); the BgUtils → BotGuard binding breaks when YouTube updates the player). Do NOT use `:latest`.
+**Docker Image:** `brainicism/bgutil-ytdlp-pot-provider:2.0.0@sha256:ed86b6fdd5e430ddd7c8ce1adb55e1ab54db7c7dbc1bcbf3a82454a85b971164` — pinned by both tag and digest (see [Image version pinning](#image-version-pinning); the BgUtils → BotGuard binding breaks when YouTube updates the player). Do NOT use `:latest`.
 
 **Railway Service Name:** `bgutil-pot`
 
@@ -93,7 +93,7 @@ Sidecar HTTP server that generates the YouTube PO tokens yt-dlp binds at extract
 **Local development:** `BGUTIL_POT_URL` is unset by default, and downloads fail fast with an explicit configuration error in that case — there is no second path. Run the bgutil-pot Docker image locally to exercise downloads:
 
 ```bash
-docker run --rm -d --init -p 4416:4416 --name bgutil brainicism/bgutil-ytdlp-pot-provider:1.3.1
+docker run --rm -d --init -p 127.0.0.1:4416:4416 --name bgutil brainicism/bgutil-ytdlp-pot-provider:2.0.0
 # add BGUTIL_POT_URL=http://127.0.0.1:4416 to your dev Doppler config
 doppler run -- bun run dev
 ```
@@ -114,7 +114,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
 > **`railway.toml` handles this.** The `bgutil-pot` service is now declared in `railway.toml` with a digest-pinned image. For a clean install, Railway will provision it automatically — no manual dashboard step required. The steps below remain for reference or when re-provisioning into an existing project.
 
 1. Add a new service → Docker Image
-2. Image: `brainicism/bgutil-ytdlp-pot-provider:1.3.1@sha256:1aaa43a0ca72dfca6a6d2129a0fb4a23465c25adb1b043f8aff829a20825646b` — pinned by tag and digest (see [Image version pinning](#image-version-pinning))
+2. Image: `brainicism/bgutil-ytdlp-pot-provider:2.0.0@sha256:ed86b6fdd5e430ddd7c8ce1adb55e1ab54db7c7dbc1bcbf3a82454a85b971164` — pinned by tag and digest (see [Image version pinning](#image-version-pinning))
 3. Service name: `bgutil-pot`
 4. No environment variables required
 5. **Keep bgutil-pot internal-only** (no public networking needed)

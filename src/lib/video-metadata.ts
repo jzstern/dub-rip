@@ -8,7 +8,7 @@ import {
 	ensureYtDlpBinary,
 } from "./yt-dlp-binary";
 import { withYtDlpConcurrencyLimit } from "./yt-dlp-concurrency";
-import { isRetryableYtDlpError } from "./yt-dlp-errors";
+import { classifyYtDlpError, isRetryableYtDlpError } from "./yt-dlp-errors";
 
 const execFilePromise = promisify(execFile);
 
@@ -127,6 +127,45 @@ async function fetchVideoDetailsOnce(
 	};
 }
 
+/**
+ * Applies the same reporting policy as the download route's
+ * `reportDownloadFailure`, because this function fails on exactly the same
+ * yt-dlp errors and was reporting all of them as uncategorized `error`s.
+ *
+ * Two consequences, both seen in production. A private or age-restricted video
+ * — normal operation — filed a full issue from the preview path. And a download
+ * calls this through `getVideoDetails` before running yt-dlp itself, so one
+ * bot-check surfaced twice: an `error` here and a `warning` from the route,
+ * as two separate Sentry issues for a single incident.
+ */
+function reportDetailsFailure(
+	error: Error,
+	message: string,
+	videoUrl: string,
+): void {
+	const classified = classifyYtDlpError(message);
+
+	if (classified.category === "user") {
+		Sentry.addBreadcrumb({
+			category: "video-metadata",
+			level: "info",
+			message: `Details extraction rejected: ${classified.message}`,
+			data: { videoUrl },
+		});
+		return;
+	}
+
+	Sentry.captureException(error, {
+		level: classified.category === "transient" ? "warning" : "error",
+		tags: {
+			service: "video-metadata",
+			operation: "fetchVideoDetails",
+			category: classified.category,
+		},
+		extra: { videoUrl },
+	});
+}
+
 export async function fetchVideoDetails(
 	videoUrl: string,
 	timeout: number = DETAILS_TIMEOUT,
@@ -144,12 +183,10 @@ export async function fetchVideoDetails(
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.warn("[video-metadata] fetchVideoDetails failed:", message);
-		Sentry.captureException(
+		reportDetailsFailure(
 			error instanceof Error ? error : new Error(message),
-			{
-				tags: { service: "video-metadata", operation: "fetchVideoDetails" },
-				extra: { videoUrl },
-			},
+			message,
+			videoUrl,
 		);
 		return null;
 	}

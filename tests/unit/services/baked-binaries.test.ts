@@ -36,7 +36,7 @@ vi.mock("node:fs", async () => {
 	return { ...realFs, ...overrides, default: { ...realFs, ...overrides } };
 });
 
-const PINNED_BGUTIL_VERSION = "1.3.1";
+const PINNED_BGUTIL_VERSION = "2.0.0";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const BAKED_BINARY = join(process.cwd(), "bin", "yt-dlp");
 const BAKED_PLUGIN_DIR = join(process.cwd(), "bin", "yt-dlp-plugins");

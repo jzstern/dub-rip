@@ -16,7 +16,7 @@ export const YTDLP_VERSION = "2026.07.04";
  * Keep in step with the `bgutil-pot` image tag in `railway.toml` — the plugin
  * and the sidecar speak a versioned protocol.
  */
-export const BGUTIL_PLUGIN_VERSION = "1.3.1";
+export const BGUTIL_PLUGIN_VERSION = "2.0.0";
 
 export const BIN_DIR_NAME = "bin";
 export const BAKED_YTDLP_NAME = "yt-dlp";
@@ -50,7 +50,7 @@ export const ASSET_SHA256 = {
 	"yt-dlp_macos":
 		"498bd0dae17855c599d371d68ec5bafc439a9d8640e838be25c765a9792f261b",
 	[BGUTIL_PLUGIN_FILENAME]:
-		"b8ceec7f76143da172aaf5ebeec0c2d218e5680c063b931586bca48567069b38",
+		"bce874dfa25896c2798e0f4f8147b7b22e785479eb1e459ab232bf2506c95016",
 };
 
 /** @returns {string} */

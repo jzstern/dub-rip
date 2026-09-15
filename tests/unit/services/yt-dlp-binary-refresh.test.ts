@@ -2,9 +2,10 @@
 // NOT bleed into adjacent test files. Vitest's worker-level isolation
 // handles the boundary, but if you ever change vitest config or worker
 // pool settings, re-run that command to confirm.
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fsModuleWith } from "./fs-module-mock";
+import { assetResponse, releaseResponse } from "./github-release-fixture";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -18,13 +19,8 @@ const renameSyncMock = vi.hoisted(() => vi.fn());
 const unlinkSyncMock = vi.hoisted(() => vi.fn());
 const mkdirSyncMock = vi.hoisted(() => vi.fn());
 
-vi.mock("node:fs", async () => {
-	// As in baked-binaries.test.ts: `importOriginal()` hands back an empty
-	// namespace for node builtins under this Vite config, so `fs.constants`
-	// would be undefined and the baked branch's executable check would fail
-	// for the wrong reason. CommonJS resolution returns the genuine module.
-	const realFs = createRequire(import.meta.url)("node:fs");
-	const overrides = {
+vi.mock("node:fs", () =>
+	fsModuleWith({
 		existsSync: existsSyncMock,
 		accessSync: accessSyncMock,
 		statSync: statSyncMock,
@@ -33,35 +29,16 @@ vi.mock("node:fs", async () => {
 		renameSync: renameSyncMock,
 		unlinkSync: unlinkSyncMock,
 		mkdirSync: mkdirSyncMock,
-	};
-	return { ...realFs, ...overrides, default: { ...realFs, ...overrides } };
-});
+	}),
+);
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const BAKED_BINARY = join(process.cwd(), "bin", "yt-dlp");
 
 function mockReleaseAndBinaryFetch() {
 	fetchMock
-		.mockResolvedValueOnce({
-			ok: true,
-			json: () =>
-				Promise.resolve({
-					assets: [
-						{
-							name: "yt-dlp_macos",
-							browser_download_url: "https://example.com/yt-dlp_macos",
-						},
-						{
-							name: "yt-dlp_linux",
-							browser_download_url: "https://example.com/yt-dlp_linux",
-						},
-					],
-				}),
-		})
-		.mockResolvedValueOnce({
-			ok: true,
-			arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
-		});
+		.mockResolvedValueOnce(releaseResponse())
+		.mockResolvedValueOnce(assetResponse());
 }
 
 describe("ensureYtDlpBinary() refresh behavior", () => {
@@ -214,31 +191,13 @@ describe("ensureYtDlpBinary() refresh behavior", () => {
 				resolveRelease = resolve;
 			}),
 		);
-		fetchMock.mockResolvedValueOnce({
-			ok: true,
-			arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
-		});
+		fetchMock.mockResolvedValueOnce(assetResponse());
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
 		const first = ensureYtDlpBinary();
 		const second = ensureYtDlpBinary();
-		resolveRelease({
-			ok: true,
-			json: () =>
-				Promise.resolve({
-					assets: [
-						{
-							name: "yt-dlp_macos",
-							browser_download_url: "https://example.com/yt-dlp_macos",
-						},
-						{
-							name: "yt-dlp_linux",
-							browser_download_url: "https://example.com/yt-dlp_linux",
-						},
-					],
-				}),
-		});
+		resolveRelease(releaseResponse());
 		await Promise.all([first, second]);
 
 		// #then — one shared background refresh, not one per caller

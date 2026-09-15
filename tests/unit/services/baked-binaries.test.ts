@@ -1,9 +1,15 @@
 // Like bgutil-plugin.test.ts, this file mocks "node:fs" wholesale. Vitest's
 // worker-level isolation keeps that from bleeding into adjacent files; re-run
 // `vitest --no-isolate` to re-confirm if the worker pool config ever changes.
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fsModuleWith } from "./fs-module-mock";
+import {
+	assetResponse,
+	mockLatestRelease,
+	PLUGIN_CONTENT,
+	PLUGIN_DIGEST,
+} from "./github-release-fixture";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -16,15 +22,12 @@ const chmodSyncMock = vi.hoisted(() => vi.fn());
 const renameSyncMock = vi.hoisted(() => vi.fn());
 const unlinkSyncMock = vi.hoisted(() => vi.fn());
 const mkdirSyncMock = vi.hoisted(() => vi.fn());
+const readFileSyncMock = vi.hoisted(() => vi.fn());
 
-vi.mock("node:fs", async () => {
-	// `importOriginal()` hands back an empty namespace for node builtins under
-	// this Vite config, which would leave `fs.constants` undefined and make the
-	// executable check under test silently fail. CommonJS resolution sidesteps
-	// the module graph and returns the genuine module.
-	const realFs = createRequire(import.meta.url)("node:fs");
-	const overrides = {
+vi.mock("node:fs", () =>
+	fsModuleWith({
 		existsSync: existsSyncMock,
+		readFileSync: readFileSyncMock,
 		accessSync: accessSyncMock,
 		statSync: statSyncMock,
 		writeFileSync: writeFileSyncMock,
@@ -32,8 +35,23 @@ vi.mock("node:fs", async () => {
 		renameSync: renameSyncMock,
 		unlinkSync: unlinkSyncMock,
 		mkdirSync: mkdirSyncMock,
+	}),
+);
+
+// `ensureBgutilPlugin` now holds the zip to `ASSET_SHA256[BGUTIL_PLUGIN_FILENAME]`,
+// and bytes hashing to the real pin cannot be reproduced without the original
+// zip — so, as in fetch-yt-dlp.test.ts, swap in a synthetic entry the test
+// controls and leave every other export untouched.
+vi.mock("../../../scripts/yt-dlp-pin.mjs", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("../../../scripts/yt-dlp-pin.mjs")>();
+	return {
+		...actual,
+		ASSET_SHA256: {
+			...actual.ASSET_SHA256,
+			[actual.BGUTIL_PLUGIN_FILENAME]: PLUGIN_DIGEST,
+		},
 	};
-	return { ...realFs, ...overrides, default: { ...realFs, ...overrides } };
 });
 
 const PINNED_BGUTIL_VERSION = "2.0.0";
@@ -44,44 +62,6 @@ const BAKED_PLUGIN_ZIP = join(
 	BAKED_PLUGIN_DIR,
 	"bgutil-ytdlp-pot-provider.zip",
 );
-
-function binaryResponse() {
-	return {
-		ok: true,
-		arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
-	};
-}
-
-/**
- * The /tmp fallback still resolves `releases/latest` — that freshness is
- * deliberate (see the binary-refresh tests). The bake is a floor beneath it,
- * so these tests assert the fallback keeps working, not that it was replaced.
- */
-function releasesApiResponse() {
-	return {
-		ok: true,
-		json: () =>
-			Promise.resolve({
-				assets: [
-					{
-						name:
-							process.platform === "darwin" ? "yt-dlp_macos" : "yt-dlp_linux",
-						browser_download_url: "https://example.test/yt-dlp",
-					},
-				],
-			}),
-	};
-}
-
-function mockLatestReleaseDownload(): void {
-	fetchMock.mockImplementation((url: string) =>
-		Promise.resolve(
-			String(url).includes("api.github.com")
-				? releasesApiResponse()
-				: binaryResponse(),
-		),
-	);
-}
 
 function resetMocks(): void {
 	vi.resetModules();
@@ -94,8 +74,14 @@ function resetMocks(): void {
 	renameSyncMock.mockReset();
 	unlinkSyncMock.mockReset();
 	mkdirSyncMock.mockReset();
+	readFileSyncMock.mockReset().mockReturnValue(Buffer.from(PLUGIN_CONTENT));
 }
 
+/**
+ * The /tmp fallback still resolves `releases/latest` — that freshness is
+ * deliberate (see the binary-refresh tests). The bake is a floor beneath it,
+ * so these tests assert the fallback keeps working, not that it was replaced.
+ */
 describe("ensureYtDlpBinary()", () => {
 	beforeEach(resetMocks);
 
@@ -133,7 +119,7 @@ describe("ensureYtDlpBinary()", () => {
 		// #given an image older than the refresh TTL
 		existsSyncMock.mockImplementation((p: string) => p === BAKED_BINARY);
 		statSyncMock.mockReturnValue({ mtimeMs: Date.now() - ONE_DAY_MS - 1000 });
-		mockLatestReleaseDownload();
+		mockLatestRelease(fetchMock);
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
@@ -151,7 +137,7 @@ describe("ensureYtDlpBinary()", () => {
 		// #given the common cold start: a container running a freshly built image
 		existsSyncMock.mockImplementation((p: string) => p === BAKED_BINARY);
 		statSyncMock.mockReturnValue({ mtimeMs: Date.now() });
-		mockLatestReleaseDownload();
+		mockLatestRelease(fetchMock);
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
@@ -167,7 +153,7 @@ describe("ensureYtDlpBinary()", () => {
 		accessSyncMock.mockImplementation(() => {
 			throw new Error("EACCES");
 		});
-		mockLatestReleaseDownload();
+		mockLatestRelease(fetchMock);
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
@@ -179,7 +165,7 @@ describe("ensureYtDlpBinary()", () => {
 
 	it("falls back to downloading when nothing was baked", async () => {
 		// #given
-		mockLatestReleaseDownload();
+		mockLatestRelease(fetchMock);
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
@@ -194,7 +180,7 @@ describe("ensureYtDlpBinary()", () => {
 
 	it("marks the downloaded fallback binary executable", async () => {
 		// #given
-		mockLatestReleaseDownload();
+		mockLatestRelease(fetchMock);
 
 		// #when
 		const { ensureYtDlpBinary } = await import("$lib/yt-dlp-binary");
@@ -238,10 +224,7 @@ describe("ensureBgutilPlugin()", () => {
 
 	it("falls back to downloading the pinned zip when nothing was baked", async () => {
 		// #given
-		fetchMock.mockResolvedValue({
-			ok: true,
-			arrayBuffer: () => Promise.resolve(new ArrayBuffer(8067)),
-		});
+		fetchMock.mockResolvedValue(assetResponse(PLUGIN_CONTENT));
 
 		// #when
 		const { ensureBgutilPlugin } = await import("$lib/yt-dlp-binary");

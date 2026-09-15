@@ -2,8 +2,8 @@
 // worker-level isolation keeps that from bleeding into adjacent test files;
 // re-run `vitest --no-isolate` to re-confirm if the worker pool config ever
 // changes.
-import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { assetResponse, digestOf } from "./github-release-fixture";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -29,11 +29,7 @@ vi.mock("node:fs", async (importOriginal) => {
 const TEST_ASSET_NAME = "test-fixture-asset";
 const PINNED_CONTENT = "pinned fixture bytes for fetch-yt-dlp test";
 const PINNED_BYTES = Buffer.from(PINNED_CONTENT, "utf-8");
-const PINNED_DIGEST = createHash("sha256").update(PINNED_BYTES).digest("hex");
-
-function arrayBufferFor(content: string): ArrayBuffer {
-	return new TextEncoder().encode(content).buffer as ArrayBuffer;
-}
+const PINNED_DIGEST = digestOf(PINNED_CONTENT);
 
 // downloadTo() looks up the expected digest via `ASSET_SHA256[assetName]`.
 // The real map only has entries for the actual pinned yt-dlp/plugin assets,
@@ -88,10 +84,7 @@ describe("downloadTo() cache reuse", () => {
 		// #given — a stale or corrupted cache entry: present, but wrong bytes
 		existsSyncMock.mockReturnValue(true);
 		readFileSyncMock.mockReturnValue(Buffer.from("stale cached bytes"));
-		fetchMock.mockResolvedValueOnce({
-			ok: true,
-			arrayBuffer: () => Promise.resolve(arrayBufferFor(PINNED_CONTENT)),
-		});
+		fetchMock.mockResolvedValueOnce(assetResponse(PINNED_CONTENT));
 
 		// #when
 		const { downloadTo } = await import("../../../scripts/fetch-yt-dlp.mjs");
@@ -117,10 +110,7 @@ describe("downloadTo() cache reuse", () => {
 	it("refetches without ever reading the file when nothing exists at the destination", async () => {
 		// #given
 		existsSyncMock.mockReturnValue(false);
-		fetchMock.mockResolvedValueOnce({
-			ok: true,
-			arrayBuffer: () => Promise.resolve(arrayBufferFor(PINNED_CONTENT)),
-		});
+		fetchMock.mockResolvedValueOnce(assetResponse(PINNED_CONTENT));
 
 		// #when
 		const { downloadTo } = await import("../../../scripts/fetch-yt-dlp.mjs");
@@ -139,11 +129,7 @@ describe("downloadTo() cache reuse", () => {
 	it("throws instead of installing a fresh download that does not hash to the pin", async () => {
 		// #given
 		existsSyncMock.mockReturnValue(false);
-		fetchMock.mockResolvedValueOnce({
-			ok: true,
-			arrayBuffer: () =>
-				Promise.resolve(arrayBufferFor("not the pinned content")),
-		});
+		fetchMock.mockResolvedValueOnce(assetResponse("not the pinned content"));
 
 		// #when / #then
 		const { downloadTo } = await import("../../../scripts/fetch-yt-dlp.mjs");
@@ -155,5 +141,81 @@ describe("downloadTo() cache reuse", () => {
 			),
 		).rejects.toThrow(/Digest mismatch/);
 		expect(writeFileSyncMock).not.toHaveBeenCalled();
+	});
+});
+
+/**
+ * The CLI wrapper decides whether to fail the build by testing the error's
+ * type, so these pin the type rather than the message. Message text is one
+ * reword away from silently flipping a digest mismatch back to a warning.
+ */
+describe("downloadTo() error classification", () => {
+	beforeEach(() => {
+		vi.resetModules();
+		fetchMock.mockReset();
+		existsSyncMock.mockReset().mockReturnValue(false);
+		readFileSyncMock.mockReset();
+		writeFileSyncMock.mockReset();
+		renameSyncMock.mockReset();
+		rmSyncMock.mockReset();
+	});
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("raises an integrity error when the bytes do not match the pin", async () => {
+		// #given
+		fetchMock.mockResolvedValueOnce(assetResponse("tampered bytes"));
+
+		// #when / #then
+		const { downloadTo, AssetIntegrityError } = await import(
+			"../../../scripts/fetch-yt-dlp.mjs"
+		);
+		await expect(
+			downloadTo("https://example.test/asset", "/fake/dest", TEST_ASSET_NAME),
+		).rejects.toBeInstanceOf(AssetIntegrityError);
+	});
+
+	it("raises an integrity error when no digest was ever recorded for the asset", async () => {
+		// #when / #then
+		const { downloadTo, AssetIntegrityError } = await import(
+			"../../../scripts/fetch-yt-dlp.mjs"
+		);
+		await expect(
+			downloadTo("https://example.test/asset", "/fake/dest", "unpinned-asset"),
+		).rejects.toBeInstanceOf(AssetIntegrityError);
+	});
+
+	it("does not raise an integrity error when GitHub is unreachable", async () => {
+		// #given
+		fetchMock.mockRejectedValueOnce(
+			new Error("getaddrinfo ENOTFOUND github.com"),
+		);
+
+		// #when / #then — an outage must stay fail-open at the CLI boundary
+		const { downloadTo, AssetIntegrityError } = await import(
+			"../../../scripts/fetch-yt-dlp.mjs"
+		);
+		await expect(
+			downloadTo("https://example.test/asset", "/fake/dest", TEST_ASSET_NAME),
+		).rejects.not.toBeInstanceOf(AssetIntegrityError);
+	});
+
+	it("does not raise an integrity error when the asset request fails", async () => {
+		// #given
+		fetchMock.mockResolvedValueOnce({
+			ok: false,
+			status: 503,
+			statusText: "Service Unavailable",
+		});
+
+		// #when / #then
+		const { downloadTo, AssetIntegrityError } = await import(
+			"../../../scripts/fetch-yt-dlp.mjs"
+		);
+		await expect(
+			downloadTo("https://example.test/asset", "/fake/dest", TEST_ASSET_NAME),
+		).rejects.not.toBeInstanceOf(AssetIntegrityError);
 	});
 });

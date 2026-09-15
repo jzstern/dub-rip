@@ -274,7 +274,7 @@ env PATH=/usr/bin:/bin /tmp/yt-dlp -v --simulate -f bestaudio \
 
 Extraction succeeds and bgutil mints a token, but the media fetch 403s.
 
-This means yt-dlp selected a format from a client bgutil **cannot** authorize. bgutil-pot issues *WebPO* tokens, usable only by the web-family clients. yt-dlp's `default` chain leads with a non-web client — `_DEFAULT_CLIENTS` is `('android_vr', 'web_safari')` as of the pinned 2026.07.04, and has previously included `visionos` — which needs a different token type, yet its audio formats routinely win `-f bestaudio`, so the chosen URL goes out unauthorized. Re-check `_DEFAULT_CLIENTS` in `yt_dlp/extractor/youtube/_video.py` when bumping the pin rather than trusting this list.
+This means yt-dlp selected a format from a client bgutil **cannot** authorize. bgutil-pot issues *WebPO* tokens, usable only by the web-family clients. yt-dlp's `default` chain leads with a non-web client — `_DEFAULT_CLIENTS` is `('visionos', 'web')` as of the pinned 2026.08.19, and was `('android_vr', 'web_safari')` on the previous 2026.07.04 pin — which needs a different token type, yet its audio formats routinely win `-f bestaudio`, so the chosen URL goes out unauthorized. Re-check `_DEFAULT_CLIENTS` in `yt_dlp/extractor/youtube/_video.py` when bumping the pin rather than trusting this list.
 
 Confirm by grepping deploy logs for which client bgutil was asked about:
 

@@ -139,6 +139,23 @@ describe("ensureBgutilPlugin()", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
+	it("re-downloads a cached zip that no longer matches the pin instead of serving it", async () => {
+		// #given a successful download, then the /tmp copy goes bad
+		existsSyncMock.mockReturnValue(false);
+		fetchMock.mockResolvedValue(assetResponse(PLUGIN_CONTENT));
+		const { ensureBgutilPlugin } = await import("$lib/yt-dlp-binary");
+		await ensureBgutilPlugin();
+		existsSyncMock.mockReturnValue(true);
+		readFileSyncMock.mockReturnValue(Buffer.from("corrupted on disk"));
+
+		// #when
+		await ensureBgutilPlugin();
+
+		// #then the failed check has to force a refetch — answering from the
+		// settled in-flight promise would hand back the corrupted copy
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
 	it("refuses a zip that does not hash to the pinned digest", async () => {
 		// #given
 		existsSyncMock.mockReturnValue(false);

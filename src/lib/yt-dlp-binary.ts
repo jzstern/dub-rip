@@ -496,6 +496,9 @@ export async function ensureBgutilPlugin(): Promise<string> {
 		);
 	}
 
+	const url = getBgutilPluginDownloadUrl();
+	assertGitHubReleaseUrl(url, BGUTIL_PLUGIN_REPO, BGUTIL_PLUGIN_FILENAME);
+
 	if (
 		existsSync(BGUTIL_PLUGIN_PATH) &&
 		pluginZipMatchesPin(BGUTIL_PLUGIN_PATH, expectedDigest)
@@ -518,8 +521,6 @@ export async function ensureBgutilPlugin(): Promise<string> {
 			if (env.GITHUB_TOKEN) {
 				headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
 			}
-			const url = getBgutilPluginDownloadUrl();
-			assertGitHubReleaseUrl(url, BGUTIL_PLUGIN_REPO, BGUTIL_PLUGIN_FILENAME);
 			const res = await fetch(url, {
 				headers,
 				signal: AbortSignal.timeout(BINARY_DOWNLOAD_TIMEOUT_MS),
@@ -546,7 +547,6 @@ export async function ensureBgutilPlugin(): Promise<string> {
 			}
 			return BGUTIL_PLUGIN_DIR;
 		} catch (err) {
-			bgutilPluginPromise = null;
 			Sentry.captureException(err, {
 				tags: {
 					service: "yt-dlp-binary",
@@ -554,6 +554,14 @@ export async function ensureBgutilPlugin(): Promise<string> {
 				},
 			});
 			throw err;
+		} finally {
+			// Cleared on success as well as failure: this is an in-flight dedup
+			// handle, never a memo. Leaving a settled promise here would let a
+			// later call be answered from it — handing back a /tmp copy that had
+			// just failed the digest check above, which is the one case that
+			// check exists for. What a later call may skip the download on is
+			// `pluginZipMatchesPin`, which re-reads the bytes.
+			bgutilPluginPromise = null;
 		}
 	})();
 	return bgutilPluginPromise;

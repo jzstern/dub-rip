@@ -58,7 +58,12 @@ export function getYtDlpAssetName() {
 	return platform() === "darwin" ? "yt-dlp_macos" : "yt-dlp_linux";
 }
 
-export const GITHUB_RELEASE_HOST = "github.com";
+/**
+ * Deliberately not exported: `getReleaseAssetPrefix` is the only correct way to
+ * ask "may we fetch this?". A caller holding the bare host would naturally
+ * write a host-only check, which is exactly the insufficient one — see below.
+ */
+const GITHUB_RELEASE_HOST = "github.com";
 
 export const YTDLP_REPO = "yt-dlp/yt-dlp";
 export const BGUTIL_PLUGIN_REPO = "Brainicism/bgutil-ytdlp-pot-provider";

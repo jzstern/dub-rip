@@ -1,16 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PLUGIN_CONTENT, PLUGIN_DIGEST } from "./github-release-fixture";
 
 const mockEnv: Record<string, string | undefined> = {};
 vi.mock("$env/dynamic/private", () => ({ env: mockEnv }));
 
 const existsSyncMock = vi.hoisted(() => vi.fn());
+const readFileSyncMock = vi.hoisted(() => vi.fn());
 
 vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
+	const overrides = {
+		existsSync: existsSyncMock,
+		readFileSync: readFileSyncMock,
+	};
+	return { ...actual, default: { ...actual, ...overrides }, ...overrides };
+});
+
+// ensureBgutilPlugin now holds the cached zip to the pinned digest, and bytes
+// hashing to the real pin cannot be reproduced without the original zip — so
+// swap in a synthetic entry the test controls, as fetch-yt-dlp.test.ts does.
+vi.mock("../../../scripts/yt-dlp-pin.mjs", async (importOriginal) => {
+	const actual =
+		await importOriginal<typeof import("../../../scripts/yt-dlp-pin.mjs")>();
 	return {
 		...actual,
-		default: { ...actual, existsSync: existsSyncMock },
-		existsSync: existsSyncMock,
+		ASSET_SHA256: {
+			...actual.ASSET_SHA256,
+			[actual.BGUTIL_PLUGIN_FILENAME]: PLUGIN_DIGEST,
+		},
 	};
 });
 
@@ -23,9 +40,11 @@ describe("buildBgutilPotArgs()", () => {
 	beforeEach(() => {
 		vi.resetModules();
 		existsSyncMock.mockReset();
-		// The plugin zip is already on disk, so ensureBgutilPlugin short-circuits
-		// instead of reaching for the network.
+		readFileSyncMock.mockReset();
+		// The plugin zip is already on disk and matches the pin, so
+		// ensureBgutilPlugin short-circuits instead of reaching for the network.
 		existsSyncMock.mockReturnValue(true);
+		readFileSyncMock.mockReturnValue(Buffer.from(PLUGIN_CONTENT));
 		mockEnv.BGUTIL_POT_URL = "http://bgutil-pot.railway.internal:4416";
 	});
 

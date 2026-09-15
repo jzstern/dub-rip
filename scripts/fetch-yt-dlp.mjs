@@ -27,6 +27,25 @@ import {
 const DOWNLOAD_TIMEOUT_MS = 120_000;
 
 /**
+ * Raised when an asset cannot be shown to be the pinned bytes — either it
+ * hashes to something else, or no digest was ever recorded for it.
+ *
+ * It exists as a type rather than a message prefix because the CLI wrapper
+ * below has to tell this apart from an unreachable GitHub, and those two
+ * outcomes deserve opposite answers: a network failure costs startup latency
+ * and must not break the deploy, while bytes that do not match the pin are the
+ * exact event the pin was added to catch. Matching on the message text would
+ * put that distinction one reworded `throw` away from silently inverting.
+ */
+export class AssetIntegrityError extends Error {
+	/** @param {string} message */
+	constructor(message) {
+		super(message);
+		this.name = "AssetIntegrityError";
+	}
+}
+
+/**
  * Returns the bytes already at `path` if they hash to `expectedDigest`,
  * otherwise `null`.
  *
@@ -69,7 +88,9 @@ function readIfDigestMatches(path, expectedDigest) {
 export async function downloadTo(url, destPath, assetName) {
 	const expected = ASSET_SHA256[assetName];
 	if (!expected) {
-		throw new Error(`No pinned SHA-256 recorded for ${assetName}`);
+		throw new AssetIntegrityError(
+			`No pinned SHA-256 recorded for ${assetName}`,
+		);
 	}
 
 	const cached = readIfDigestMatches(destPath, expected);
@@ -87,7 +108,7 @@ export async function downloadTo(url, destPath, assetName) {
 	const bytes = Buffer.from(await res.arrayBuffer());
 	const actual = createHash("sha256").update(bytes).digest("hex");
 	if (actual !== expected) {
-		throw new Error(
+		throw new AssetIntegrityError(
 			`Digest mismatch for ${assetName}: expected ${expected}, got ${actual} (${bytes.byteLength} bytes)`,
 		);
 	}
@@ -153,12 +174,25 @@ if (runFromCli) {
 	try {
 		await fetchBakedArtifacts(resolve(dirname(modulePath), ".."));
 	} catch (err) {
-		// Never fail the build on this. The server still downloads yt-dlp to
-		// /tmp on first use, so an unreachable GitHub costs startup latency,
-		// not a broken deploy.
-		console.warn(
-			`[fetch-yt-dlp] Could not bake binaries: ${err instanceof Error ? err.message : String(err)}`,
-		);
+		const message = err instanceof Error ? err.message : String(err);
+
+		// An asset that does not match the pin is a finding, not an outage.
+		// Exiting 0 here would hand CI a green build with no `bin/`, and the
+		// runtime would then quietly fall back to downloading the binary
+		// itself — turning the one signal that the bytes changed into a
+		// slightly slower deploy nobody looks at.
+		if (err instanceof AssetIntegrityError) {
+			console.error(`[fetch-yt-dlp] Refusing to bake binaries: ${message}`);
+			console.error(
+				"[fetch-yt-dlp] Update the digests in scripts/yt-dlp-pin.mjs if this release was re-published on purpose.",
+			);
+			process.exit(1);
+		}
+
+		// Everything else — an unreachable GitHub, a timeout, a 5xx — still
+		// must not break the deploy. The server downloads yt-dlp to /tmp on
+		// first use, so this costs startup latency rather than availability.
+		console.warn(`[fetch-yt-dlp] Could not bake binaries: ${message}`);
 		console.warn(
 			"[fetch-yt-dlp] Falling back to runtime download on first request.",
 		);

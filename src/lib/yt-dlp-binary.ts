@@ -1,16 +1,17 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
 	accessSync,
 	chmodSync,
 	constants,
 	existsSync,
 	mkdirSync,
+	readFileSync,
 	renameSync,
 	statSync,
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
-import { platform, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as Sentry from "@sentry/sveltekit";
@@ -23,11 +24,17 @@ import { env } from "$env/dynamic/private";
  * CLI entrypoint into the server bundle.
  */
 import {
+	ASSET_SHA256,
 	BAKED_PLUGIN_DIR_NAME,
 	BAKED_YTDLP_NAME,
 	BGUTIL_PLUGIN_FILENAME,
-	BGUTIL_PLUGIN_VERSION,
+	BGUTIL_PLUGIN_REPO,
 	BIN_DIR_NAME,
+	getBgutilPluginDownloadUrl,
+	getReleaseAssetPrefix,
+	getYtDlpAssetName,
+	YTDLP_REPO,
+	YTDLP_VERSION,
 } from "../../scripts/yt-dlp-pin.mjs";
 
 /**
@@ -53,7 +60,6 @@ let lastRefreshAttemptAt = 0;
 
 const BGUTIL_PLUGIN_DIR = join(tmpdir(), BAKED_PLUGIN_DIR_NAME);
 const BGUTIL_PLUGIN_PATH = join(BGUTIL_PLUGIN_DIR, BGUTIL_PLUGIN_FILENAME);
-const BGUTIL_PLUGIN_URL = `https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_PLUGIN_VERSION}/${BGUTIL_PLUGIN_FILENAME}`;
 
 const MAX_ROOT_WALK_DEPTH = 6;
 
@@ -116,12 +122,6 @@ function isExecutable(path: string): boolean {
 	}
 }
 
-function getYtDlpBinaryName(): string {
-	const os = platform();
-	if (os === "darwin") return "yt-dlp_macos";
-	return "yt-dlp_linux";
-}
-
 function getGitHubHeaders(): HeadersInit {
 	const headers: HeadersInit = { Accept: "application/vnd.github.v3+json" };
 	if (env.GITHUB_TOKEN) {
@@ -130,8 +130,131 @@ function getGitHubHeaders(): HeadersInit {
 	return headers;
 }
 
+/**
+ * Records an integrity failure and returns the error to throw.
+ *
+ * These are reported here rather than only from the caller's handler because
+ * the two call paths report differently: a background refresh wraps its own
+ * failures, but the cold-start download propagates straight out of
+ * `ensureYtDlpBinary` to the request. Tagging them at the point of rejection
+ * also keeps "the bytes were wrong" distinguishable from "GitHub was down",
+ * which is the whole distinction these checks exist to draw.
+ */
+function integrityError(
+	message: string,
+	extra: Record<string, unknown>,
+): Error {
+	const error = new Error(message);
+	Sentry.captureException(error, {
+		tags: { service: "yt-dlp-binary", operation: "verify-download" },
+		extra,
+	});
+	return error;
+}
+
+/**
+ * Rejects a download URL that is not a release asset of `repo`.
+ *
+ * The URL this guards comes out of the releases JSON, so it is only as
+ * trustworthy as that response — and it is about to be fetched, written and
+ * marked executable.
+ *
+ * The repository is checked, not merely the host, because on the common path
+ * the digest the bytes are held to comes out of that same response (see
+ * `resolveExpectedDigest`). A response naming some other account's asset
+ * together with that asset's true digest would satisfy a host-only check and
+ * then verify against itself. Requiring the path as well means the bytes have
+ * to be published under this project's own releases.
+ *
+ * Comparing the parsed `pathname` rather than the raw string is what makes the
+ * prefix test safe: the WHATWG parser has already resolved `..` segments and
+ * percent-encoded traversal by that point.
+ */
+function assertGitHubReleaseUrl(
+	url: string,
+	repo: string,
+	assetName: string,
+): void {
+	const prefix = getReleaseAssetPrefix(repo);
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw integrityError(
+			`Refusing to download ${assetName}: ${url} is not a valid URL`,
+			{ assetName, url },
+		);
+	}
+	const normalized = `${parsed.origin}${parsed.pathname}`;
+	if (parsed.protocol !== "https:" || !normalized.startsWith(prefix)) {
+		throw integrityError(
+			`Refusing to download ${assetName} from ${normalized}: expected an asset under ${prefix}`,
+			{ assetName, url, normalized, prefix },
+		);
+	}
+}
+
+/** GitHub reports release asset digests as `sha256:<64 hex chars>`. */
+function parseGitHubAssetDigest(digest: unknown): string | null {
+	if (typeof digest !== "string") return null;
+	const match = digest.match(/^sha256:([0-9a-f]{64})$/);
+	return match ? match[1] : null;
+}
+
+/**
+ * The digest the fetched bytes must hash to.
+ *
+ * `releases/latest` is a moving target on purpose (see `ensureYtDlpBinary`), so
+ * most of the time there is no in-repo digest for whatever it resolves to
+ * today — `ASSET_SHA256` can only speak for the pinned tag. GitHub's own
+ * `digest` field covers the rest: it arrives over TLS from api.github.com in
+ * the same response as the download URL, so holding the bytes to it is what
+ * makes following that URL safe.
+ *
+ * When `latest` has caught up to the pin both are available, and they have to
+ * agree. A release tag can be re-pointed at different bytes after the fact, and
+ * this comparison is the only place in the system where that would ever show.
+ */
+function resolveExpectedDigest(
+	assetName: string,
+	tagName: unknown,
+	reportedDigest: string | null,
+): string {
+	const pinned =
+		tagName === YTDLP_VERSION ? ASSET_SHA256[assetName] : undefined;
+
+	if (pinned && reportedDigest && pinned !== reportedDigest) {
+		throw integrityError(
+			`GitHub reports a different ${assetName} for ${YTDLP_VERSION} than the digest pinned in scripts/yt-dlp-pin.mjs`,
+			{ assetName, tagName, pinned, reportedDigest },
+		);
+	}
+
+	const expected = pinned ?? reportedDigest;
+	if (!expected) {
+		throw integrityError(
+			`No digest available to verify ${assetName}; refusing to install an unverified binary`,
+			{ assetName, tagName },
+		);
+	}
+	return expected;
+}
+
+function assertDigestMatches(
+	bytes: Buffer,
+	expected: string,
+	assetName: string,
+): void {
+	const actual = createHash("sha256").update(bytes).digest("hex");
+	if (actual === expected) return;
+	throw integrityError(
+		`Digest mismatch for ${assetName}: expected ${expected}, got ${actual} (${bytes.byteLength} bytes)`,
+		{ assetName, expected, actual, byteLength: bytes.byteLength },
+	);
+}
+
 export async function downloadYtDlpBinary(destPath: string): Promise<void> {
-	const binaryName = getYtDlpBinaryName();
+	const binaryName = getYtDlpAssetName();
 	const releaseUrl =
 		"https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest";
 
@@ -153,7 +276,12 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 	}
 
 	const release = (await releaseRes.json()) as {
-		assets: Array<{ name: string; browser_download_url: string }>;
+		tag_name?: string;
+		assets: Array<{
+			name: string;
+			browser_download_url: string;
+			digest?: string | null;
+		}>;
 	};
 
 	const asset = release.assets.find((a) => a.name === binaryName);
@@ -167,6 +295,15 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 		});
 		throw error;
 	}
+
+	// Both checks run before the fetch: a binary we could not verify is one we
+	// should not spend 40MB discovering we have to throw away.
+	assertGitHubReleaseUrl(asset.browser_download_url, YTDLP_REPO, binaryName);
+	const expectedDigest = resolveExpectedDigest(
+		binaryName,
+		release.tag_name,
+		parseGitHubAssetDigest(asset.digest),
+	);
 
 	console.log(`Downloading ${binaryName} from ${asset.browser_download_url}`);
 
@@ -187,6 +324,7 @@ export async function downloadYtDlpBinary(destPath: string): Promise<void> {
 	}
 
 	const buffer = Buffer.from(await binaryRes.arrayBuffer());
+	assertDigestMatches(buffer, expectedDigest, binaryName);
 	writeFileSync(destPath, buffer);
 	chmodSync(destPath, 0o755);
 }
@@ -324,18 +462,54 @@ export function getYtDlpBinaryPath(): string {
 	return YTDLP_BINARY_PATH;
 }
 
+/**
+ * Whether the plugin zip at `path` is the pinned artifact.
+ *
+ * Existence cannot stand in for this, for the reason `readIfDigestMatches`
+ * gives on the build side: a file sitting at the expected path is not evidence
+ * it holds the expected bytes. Unlike the binary — whose expected digest
+ * depends on whichever release `latest` resolves to — the plugin has one fixed
+ * expected digest that covers every source of it, and the zip is ~8KB, so
+ * re-hashing what is already on disk costs nothing next to handing yt-dlp a
+ * plugin nobody checked.
+ */
+function pluginZipMatchesPin(path: string, expectedDigest: string): boolean {
+	try {
+		const actual = createHash("sha256")
+			.update(readFileSync(path))
+			.digest("hex");
+		return actual === expectedDigest;
+	} catch {
+		return false;
+	}
+}
+
 export async function ensureBgutilPlugin(): Promise<string> {
-	if (existsSync(BGUTIL_PLUGIN_PATH)) {
+	// This asset's version never moves at runtime — the plugin and the
+	// bgutil-pot sidecar speak a versioned protocol — so one pinned digest is
+	// the right expectation for every copy of it, downloaded or baked.
+	const expectedDigest = ASSET_SHA256[BGUTIL_PLUGIN_FILENAME];
+	if (!expectedDigest) {
+		throw integrityError(
+			`No pinned SHA-256 recorded for ${BGUTIL_PLUGIN_FILENAME}; bump ASSET_SHA256 alongside BGUTIL_PLUGIN_VERSION`,
+			{ assetName: BGUTIL_PLUGIN_FILENAME },
+		);
+	}
+
+	const url = getBgutilPluginDownloadUrl();
+	assertGitHubReleaseUrl(url, BGUTIL_PLUGIN_REPO, BGUTIL_PLUGIN_FILENAME);
+
+	if (
+		existsSync(BGUTIL_PLUGIN_PATH) &&
+		pluginZipMatchesPin(BGUTIL_PLUGIN_PATH, expectedDigest)
+	) {
 		return BGUTIL_PLUGIN_DIR;
 	}
-	// Unlike the binary, this one is pinned everywhere: the plugin and the
-	// bgutil-pot sidecar speak a versioned protocol, so a baked copy at the
-	// pinned version is the same artifact the runtime would fetch.
 	const bakedPlugin = resolveBakedPath(
 		BAKED_PLUGIN_DIR_NAME,
 		BGUTIL_PLUGIN_FILENAME,
 	);
-	if (bakedPlugin) {
+	if (bakedPlugin && pluginZipMatchesPin(bakedPlugin, expectedDigest)) {
 		return dirname(bakedPlugin);
 	}
 	if (bgutilPluginPromise) {
@@ -347,7 +521,7 @@ export async function ensureBgutilPlugin(): Promise<string> {
 			if (env.GITHUB_TOKEN) {
 				headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
 			}
-			const res = await fetch(BGUTIL_PLUGIN_URL, {
+			const res = await fetch(url, {
 				headers,
 				signal: AbortSignal.timeout(BINARY_DOWNLOAD_TIMEOUT_MS),
 			});
@@ -357,11 +531,22 @@ export async function ensureBgutilPlugin(): Promise<string> {
 				);
 			}
 			const buf = Buffer.from(await res.arrayBuffer());
+			assertDigestMatches(buf, expectedDigest, BGUTIL_PLUGIN_FILENAME);
+
+			// Write-then-rename so a partial zip is never visible at the final
+			// path: yt-dlp reads this directory directly, and a truncated plugin
+			// fails in ways that look like the sidecar misbehaving.
 			mkdirSync(BGUTIL_PLUGIN_DIR, { recursive: true });
-			writeFileSync(BGUTIL_PLUGIN_PATH, buf);
+			const tempPath = `${BGUTIL_PLUGIN_PATH}.${randomBytes(8).toString("hex")}.tmp`;
+			try {
+				writeFileSync(tempPath, buf);
+				renameSync(tempPath, BGUTIL_PLUGIN_PATH);
+			} catch (err) {
+				if (existsSync(tempPath)) unlinkSync(tempPath);
+				throw err;
+			}
 			return BGUTIL_PLUGIN_DIR;
 		} catch (err) {
-			bgutilPluginPromise = null;
 			Sentry.captureException(err, {
 				tags: {
 					service: "yt-dlp-binary",
@@ -369,6 +554,14 @@ export async function ensureBgutilPlugin(): Promise<string> {
 				},
 			});
 			throw err;
+		} finally {
+			// Cleared on success as well as failure: this is an in-flight dedup
+			// handle, never a memo. Leaving a settled promise here would let a
+			// later call be answered from it — handing back a /tmp copy that had
+			// just failed the digest check above, which is the one case that
+			// check exists for. What a later call may skip the download on is
+			// `pluginZipMatchesPin`, which re-reads the bytes.
+			bgutilPluginPromise = null;
 		}
 	})();
 	return bgutilPluginPromise;

@@ -58,12 +58,45 @@ export function getYtDlpAssetName() {
 	return platform() === "darwin" ? "yt-dlp_macos" : "yt-dlp_linux";
 }
 
+/**
+ * Deliberately not exported: `getReleaseAssetPrefix` is the only correct way to
+ * ask "may we fetch this?". A caller holding the bare host would naturally
+ * write a host-only check, which is exactly the insufficient one — see below.
+ */
+const GITHUB_RELEASE_HOST = "github.com";
+
+export const YTDLP_REPO = "yt-dlp/yt-dlp";
+export const BGUTIL_PLUGIN_REPO = "Brainicism/bgutil-ytdlp-pot-provider";
+
+/**
+ * The URL prefix every release asset of `repo` must sit under.
+ *
+ * Shared with the runtime rather than written out per URL, because the runtime
+ * refresh takes its download URL straight from the GitHub releases JSON — an
+ * attacker-controlled string if that response is ever tampered with or spoofed.
+ *
+ * The repository has to be part of the check, not just the host. github.com
+ * serves release assets for *every* account, so "it is on github.com" is not a
+ * trust boundary on its own: a response pointing at some other account's asset
+ * would pass a host-only check, and in the common case (`releases/latest` has
+ * moved past the pin) the digest that asset is held to comes out of that very
+ * same response — so the verification would be satisfied by construction.
+ * Pinning the path means the bytes must at least be published under this
+ * project's own releases.
+ *
+ * @param {string} repo
+ * @returns {string}
+ */
+export function getReleaseAssetPrefix(repo) {
+	return `https://${GITHUB_RELEASE_HOST}/${repo}/releases/download/`;
+}
+
 /** @returns {string} */
 export function getYtDlpDownloadUrl() {
-	return `https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/${getYtDlpAssetName()}`;
+	return `${getReleaseAssetPrefix(YTDLP_REPO)}${YTDLP_VERSION}/${getYtDlpAssetName()}`;
 }
 
 /** @returns {string} */
 export function getBgutilPluginDownloadUrl() {
-	return `https://github.com/Brainicism/bgutil-ytdlp-pot-provider/releases/download/${BGUTIL_PLUGIN_VERSION}/${BGUTIL_PLUGIN_FILENAME}`;
+	return `${getReleaseAssetPrefix(BGUTIL_PLUGIN_REPO)}${BGUTIL_PLUGIN_VERSION}/${BGUTIL_PLUGIN_FILENAME}`;
 }

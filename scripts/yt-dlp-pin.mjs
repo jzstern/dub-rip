@@ -10,7 +10,7 @@ import { platform } from "node:os";
  * side effects — no fs, no network, no top-level await — is what stops the
  * build script from being pulled into the server bundle.
  */
-export const YTDLP_VERSION = "2026.07.04";
+export const YTDLP_VERSION = "2026.08.19";
 
 /**
  * Keep in step with the `bgutil-pot` image tag in `railway.toml` — the plugin
@@ -46,9 +46,9 @@ export const BGUTIL_PLUGIN_FILENAME = "bgutil-ytdlp-pot-provider.zip";
  */
 export const ASSET_SHA256 = {
 	"yt-dlp_linux":
-		"6bbb3d314cde4febe36e5fa1d55462e29c974f63444e707871834f6d8cc210ae",
+		"58162f9bfdc27458ea47bfcb311cf47028f17d8154a8bf7d689861d46399230a",
 	"yt-dlp_macos":
-		"498bd0dae17855c599d371d68ec5bafc439a9d8640e838be25c765a9792f261b",
+		"0f192b7ec147ab6288885d6351d9ab67367640029b4377576ef46dd79cf7b202",
 	[BGUTIL_PLUGIN_FILENAME]:
 		"bce874dfa25896c2798e0f4f8147b7b22e785479eb1e459ab232bf2506c95016",
 };

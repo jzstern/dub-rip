@@ -595,25 +595,29 @@ export function buildJsRuntimeArgs(): string[] {
  * together, and a call site that drifts on either one fails in a way that looks
  * like YouTube being flaky rather than like a bug.
  *
- * `player_client` is restricted to WebPO-capable clients on purpose. bgutil-pot
- * mints *WebPO* tokens, which only the web-family clients can use. yt-dlp's
- * `default` chain leads with `android_vr`, which takes a different token type
- * bgutil cannot produce, yet its audio formats often win `bestaudio` and their
- * media URLs then 403 from a datacenter IP.
+ * `player_client` follows yt-dlp's own defaults (`visionos,web` at the
+ * 2026.08.19 pin) rather than pinning an explicit WebPO-only list. It used to
+ * pin `web_safari,mweb,tv`, because the chain then led with `android_vr`, whose
+ * formats win `bestaudio` while taking a token type bgutil cannot mint. On
+ * 2026-09-14 YouTube started bot-checking all three of those clients from this
+ * deployment — every player response came back titleless and refused, on a
+ * release that had been unchanged for 41 days. The explicit list had turned
+ * into the liability it was written to prevent.
  *
- * `fetch_pot=always` is what actually gets a token minted. Under yt-dlp's
- * default `auto` policy a PO token is fetched only when the client's policy
- * marks it required or recommended — and for all three clients above, the
- * *player* policy is `PlayerPoTokenPolicy(required=False)`. So the innertube
- * player request went out unauthenticated, and from a datacenter IP YouTube
- * answered it with "Sign in to confirm you're not a bot" while bgutil-pot sat
- * there healthy and never asked for anything. `always` overrides the policy and
- * fetches for the player context too. If the sidecar is unreachable yt-dlp
- * warns and continues token-less, so this stays a strict improvement over
- * `auto` rather than a new hard dependency.
+ * `fetch_pot=always` stays, and is neither redundant nor a tuning knob. Under
+ * `auto` a token is minted only when the client's own policy demands one, and
+ * `WEB` declares the *player* token optional — so the innertube player request
+ * goes out bare, YouTube bot-checks it from a datacenter IP, and bgutil-pot sits
+ * healthy having never been asked for anything. It is simply inert for
+ * `visionos`: `VISIONOS` is absent from `WEBPO_CLIENTS` in
+ * `youtube/pot/utils.py`, so no WebPO token is fetched for it either way.
+ *
+ * If `visionos` formats start winning `bestaudio` and 403ing on the media fetch
+ * — the hazard the old pin guarded against — drop that one client with
+ * `player_client=default,-visionos` rather than restoring the burned list.
  */
 export const YOUTUBE_EXTRACTOR_ARG =
-	"youtube:player_client=web_safari,mweb,tv;fetch_pot=always";
+	"youtube:player_client=default;fetch_pot=always";
 
 /**
  * Builds the bgutil-pot PO-token yt-dlp args when BGUTIL_POT_URL is configured.

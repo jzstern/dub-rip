@@ -99,7 +99,7 @@ describe("tryYtDlpDownload()", () => {
 		);
 	});
 
-	it("selects formats only from clients bgutil can mint a WebPO token for", async () => {
+	it("passes yt-dlp's default player_client chain with fetch_pot=always", async () => {
 		// #given
 		const promise = run();
 

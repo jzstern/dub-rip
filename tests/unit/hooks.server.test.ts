@@ -16,6 +16,17 @@ vi.mock("@sentry/sveltekit", () => ({
 	handleErrorWithSentry: () => () => {},
 }));
 
+/**
+ * Importing hooks.server runs its top-level prewarm, which fetches the yt-dlp
+ * binary and the bgutil plugin from GitHub. Every test below re-imports the
+ * module after `vi.resetModules()`, so leaving this unmocked put real release
+ * downloads in the middle of an offline unit suite.
+ */
+vi.mock("$lib/yt-dlp-binary", () => ({
+	ensureYtDlpBinary: async () => "/tmp/yt-dlp",
+	ensureBgutilPlugin: async () => "/tmp/yt-dlp-plugins",
+}));
+
 const HANDLER_TAG = Symbol.for("dub-rip.process-error-handlers");
 
 describe("registerProcessErrorHandlers()", () => {

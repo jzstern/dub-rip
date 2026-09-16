@@ -1,6 +1,56 @@
 import * as Sentry from "@sentry/sveltekit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+/**
+ * Constructing the SSE stream starts the whole download pipeline, so every
+ * test below that reaches the route used to make real outbound calls: a
+ * yt-dlp `--dump-json` extraction against YouTube, an oEmbed lookup, a
+ * thumbnail fetch, and — with no `bin/` baked, which is how CI runs — a ~40MB
+ * binary download from GitHub. None of it is what these tests assert on, and
+ * `.claude/CLAUDE.md` is explicit that bursts of yt-dlp calls get the source
+ * IP bot-checked. Each mock below stands in for one of those calls.
+ *
+ * They are plain functions rather than `vi.fn()` spies because nothing here
+ * asserts on them, and the first block's `vi.resetAllMocks()` would strip a
+ * spy's implementation out from under the later blocks.
+ */
+vi.mock("node:child_process", () => {
+	const execFile = (
+		_binary: string,
+		_args: string[],
+		_options: unknown,
+		callback: (error: Error) => void,
+	) => {
+		// Non-retryable, so fetchVideoDetails settles on the first attempt
+		// rather than sitting through the backoff schedule.
+		callback(new Error("ERROR: This video is private"));
+	};
+	return { default: { execFile }, execFile };
+});
+
+vi.mock("$lib/yt-dlp-binary", async (importOriginal) => ({
+	...(await importOriginal<typeof import("$lib/yt-dlp-binary")>()),
+	ensureYtDlpBinary: async () => "/tmp/yt-dlp",
+	ensureBgutilPlugin: async () => "/tmp/yt-dlp-plugins",
+	buildBgutilPotArgs: async () => [],
+}));
+
+vi.mock("$lib/video-metadata", async (importOriginal) => ({
+	...(await importOriginal<typeof import("$lib/video-metadata")>()),
+	fetchThumbnailBuffer: async () => null,
+}));
+
+vi.mock("$lib/youtube-metadata", async (importOriginal) => ({
+	...(await importOriginal<typeof import("$lib/youtube-metadata")>()),
+	fetchYouTubeMetadata: async () => ({
+		videoTitle: "Test Artist - Test Title",
+		artist: "Test Artist",
+		trackTitle: "Test Title",
+		uploader: "Test Uploader",
+		thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+	}),
+}));
+
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
 	buildWatchUrl: vi.fn((id: string) => `https://www.youtube.com/watch?v=${id}`),

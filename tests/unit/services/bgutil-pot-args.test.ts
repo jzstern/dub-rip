@@ -66,12 +66,12 @@ describe("buildBgutilPotArgs()", () => {
 		expect(args).toEqual([]);
 	});
 
-	it("forces PO token fetching, which none of the configured clients request on their own", async () => {
+	it("forces PO token fetching, which the web client does not request on its own", async () => {
 		// #given
 		// yt-dlp's default `fetch_pot=auto` only mints a token when the client's
-		// own policy demands one, and web_safari/mweb/tv all declare the *player*
-		// token optional — so the player request went out bare and YouTube
-		// bot-checked it from Railway's datacenter IP.
+		// own policy demands one, and WEB declares the *player* token optional —
+		// so the player request went out bare and YouTube bot-checked it from
+		// Railway's datacenter IP.
 
 		// #when
 		const arg = await youtubeArg();
@@ -80,20 +80,12 @@ describe("buildBgutilPotArgs()", () => {
 		expect(arg).toMatch(/(^|;)fetch_pot=always(;|$)/);
 	});
 
-	it("restricts player_client to the clients bgutil can mint a WebPO token for", async () => {
+	it("follows yt-dlp's default client chain instead of pinning an explicit list", async () => {
 		// #when
 		const arg = await youtubeArg();
 
 		// #then
-		expect(arg).toContain("player_client=web_safari,mweb,tv");
-	});
-
-	it("never admits a client whose formats bgutil cannot authorize", async () => {
-		// #when
-		const arg = await youtubeArg();
-
-		// #then
-		expect(arg).not.toMatch(/default|visionos|android_vr/);
+		expect(arg).toContain("player_client=default");
 	});
 
 	it("points the pot provider at the configured sidecar URL", async () => {

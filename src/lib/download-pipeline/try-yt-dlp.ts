@@ -97,7 +97,7 @@ export async function tryYtDlpDownload({
 		"--plugin-dirs",
 		pluginDir,
 		// Shared with the metadata path — see YOUTUBE_EXTRACTOR_ARG for why both
-		// the client restriction and `fetch_pot=always` are load-bearing.
+		// the client choice and `fetch_pot=always` are load-bearing.
 		"--extractor-args",
 		YOUTUBE_EXTRACTOR_ARG,
 		"--extractor-args",

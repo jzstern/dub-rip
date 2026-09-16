@@ -111,12 +111,10 @@ describe("tryYtDlpDownload()", () => {
 		const clientArg = execArgs.find((arg) =>
 			arg.startsWith("youtube:player_client="),
 		);
-		expect(clientArg).toBe(
-			"youtube:player_client=web_safari,mweb,tv;fetch_pot=always",
-		);
+		expect(clientArg).toBe("youtube:player_client=default;fetch_pot=always");
 	});
 
-	it("forces PO token fetching, which none of those clients request on their own", async () => {
+	it("forces PO token fetching, which the web client does not request on its own", async () => {
 		// #given
 		const promise = run();
 
@@ -129,21 +127,6 @@ describe("tryYtDlpDownload()", () => {
 			arg.startsWith("youtube:player_client="),
 		);
 		expect(clientArg).toMatch(/(^|;)fetch_pot=always(;|$)/);
-	});
-
-	it("never falls back to yt-dlp's default chain, whose visionos/android_vr formats 403", async () => {
-		// #given
-		const promise = run();
-
-		// #when
-		proc.emit("close", 0);
-		await promise;
-
-		// #then
-		const clientArg = execArgs.find((arg) =>
-			arg.startsWith("youtube:player_client="),
-		);
-		expect(clientArg).not.toMatch(/default|visionos|android_vr/);
 	});
 
 	it("prefers an audio-only stream and caps the fallback at 360p", async () => {

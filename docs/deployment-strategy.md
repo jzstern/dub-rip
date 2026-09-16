@@ -272,30 +272,57 @@ env PATH=/usr/bin:/bin /tmp/yt-dlp -v --simulate -f bestaudio \
 
 ## Symptom: `unable to download video data: HTTP Error 403: Forbidden`
 
-Extraction succeeds and bgutil mints a token, but the media fetch 403s.
+Extraction succeeds, but the media fetch 403s.
 
-This means yt-dlp selected a format from a client bgutil **cannot** authorize. bgutil-pot issues *WebPO* tokens, usable only by the web-family clients. yt-dlp's `default` chain leads with a non-web client — `_DEFAULT_CLIENTS` is `('visionos', 'web')` as of the pinned 2026.08.19, and was `('android_vr', 'web_safari')` on the previous 2026.07.04 pin — which needs a different token type, yet its audio formats routinely win `-f bestaudio`, so the chosen URL goes out unauthorized. Re-check `_DEFAULT_CLIENTS` in `yt_dlp/extractor/youtube/_video.py` when bumping the pin rather than trusting this list.
+Most likely yt-dlp picked a format whose URL needed a token nobody attached. bgutil-pot issues *WebPO* tokens, usable only by clients in `WEBPO_CLIENTS` (`yt_dlp/extractor/youtube/pot/utils.py`). A client outside that set whose formats still need authorization can win `-f bestaudio` and fetch unauthorized. That client was `android_vr`, the lead of `_DEFAULT_CLIENTS` on the 2026.07.04 pin, and it is why `player_client` was once hand-pinned to `web_safari,mweb,tv`. The 2026.08.19 lead, `visionos`, needs no token, and its formats downloaded cleanly from a Railway PR env on 2026-09-16 — but re-check `_DEFAULT_CLIENTS` in `yt_dlp/extractor/youtube/_video.py` whenever the pin moves rather than trusting this paragraph.
 
-Confirm by grepping deploy logs for which client bgutil was asked about:
+Confirm which client served the format. The extraction log names each client that issued a player request, then the format it picked:
 
 ```
-[pot:bgutil:http] Generating a gvs PO Token for web_safari client via bgutil HTTP server
+[youtube] <id>: Downloading visionos player API JSON
+[info] <id>: Downloading 1 format(s): 251
 ```
 
-If the only client named there is not the one whose format got picked, that's the bug. **Fix:** keep `player_client` restricted to WebPO-capable clients (currently `web_safari,mweb,tv`) — never add `default`, `visionos`, or `android_vr` back.
+**Fix:** exclude only the offending client, e.g. `player_client=default,-visionos`. Do not go back to a hand-picked list — that list is exactly what YouTube bot-checked on 2026-09-14 (next section).
 
 ## Symptom: `Sign in to confirm you're not a bot` while bgutil-pot is healthy
 
 Every video fails. The sidecar is up, `/api/health?probe=bgutil` is green, `BGUTIL_POT_URL` is
-set, the plugin loads — and yt-dlp still gets bot-checked.
+set, the plugin loads — and yt-dlp still gets bot-checked. There are two different causes, and
+the extraction log tells them apart. Check which one you have before touching anything.
 
-The giveaway is a **negative**: no `Generating a … PO Token …` line anywhere in the extraction
-log. bgutil was never asked. yt-dlp's default `fetch_pot=auto` mints a token only when the
-client's own policy demands one, and `web_safari`, `mweb` and `tv` all declare the *player*
-token optional (`PlayerPoTokenPolicy(required=False)` in `yt_dlp/extractor/youtube/_base.py`).
-The innertube player request therefore goes out bare, and from a datacenter IP YouTube answers
-it with the bot check. A GVS token — the one clients *do* ask for — arrives too late, since it
-authorizes media URLs the player response never returned.
+### Tokens are being minted → the clients are burned
+
+Each attempt logs `Generating a player PO Token …`, bgutil-pot logs a fresh `poToken:` for the
+same video ID, and **every** attempt also logs:
+
+```
+WARNING: [youtube] No title found in player responses; falling back to title from initial data.
+```
+
+The token pipeline is working; YouTube has stopped serving those clients from this IP. This is
+what happened on 2026-09-14 to the hand-picked `web_safari,mweb,tv` list — onset on a release
+unchanged for 41 days, surviving restarts of both services and four deploys. Sentry showed zero
+events of this signature in the prior 90 days.
+
+**Fix:** follow yt-dlp's `default` chain (`YOUTUBE_EXTRACTOR_ARG` in `src/lib/yt-dlp-binary.ts`),
+which moves with upstream as YouTube shifts. Verify from a PR env, never locally — a residential
+IP hides this failure entirely. If the default clients are bot-checked from Railway too, the
+block is on the IP rather than the clients, and no client choice will fix it.
+
+### No token line at all → `fetch_pot` is not forcing one
+
+The giveaway is a **negative**: no `Generating a … PO Token …` line for a client that issued a
+player request. First rule out the normal case — `visionos` takes no PO token, so a download it
+served legitimately logs no token line. This cause only applies when the log shows
+`Downloading web player API JSON`.
+
+bgutil was never asked. yt-dlp's default `fetch_pot=auto` mints a token only when the client's
+own policy demands one, and `web` declares the *player* token optional
+(`PlayerPoTokenPolicy(required=False)` in the shared `WEB_PO_TOKEN_POLICIES`,
+`yt_dlp/extractor/youtube/_base.py`). The innertube player request therefore goes out bare, and
+from a datacenter IP YouTube answers it with the bot check. A GVS token — the one clients *do*
+ask for — arrives too late, since it authorizes media URLs the player response never returned.
 
 **Fix:** `fetch_pot=always`, which is part of `YOUTUBE_EXTRACTOR_ARG` in
 `src/lib/yt-dlp-binary.ts`. It overrides the per-client policy and covers the player context.
@@ -307,13 +334,13 @@ path a bot-checked webpage would have forced anyway, and the contrast is the who
 
 ```bash
 yt-dlp -v --dump-json --skip-download --plugin-dirs ./bin/yt-dlp-plugins \
-  --extractor-args "youtube:player_client=web_safari,mweb,tv;player_skip=webpage" \
+  --extractor-args "youtube:player_client=web;player_skip=webpage" \
   --extractor-args "youtubepot-bgutilhttp:base_url=http://127.0.0.1:4416" \
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ" 2>&1 | grep "PO Token for"
 ```
 
 Without `fetch_pot=always` that prints only a `gvs` token. With it appended to the first
-`--extractor-args`, `player` tokens appear for `web_safari` and `mweb`.
+`--extractor-args`, a `player` token appears for `web`.
 
 ## Symptom: yt-dlp fails on all videos with "Unmatched yt-dlp error" / "Requested format is not available"
 

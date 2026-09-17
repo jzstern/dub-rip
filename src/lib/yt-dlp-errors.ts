@@ -71,6 +71,15 @@ const ERROR_RULES: ErrorRule[] = [
 		category: "transient",
 	},
 	{
+		// The same refusal as the 403 rule above, surfacing differently: yt-dlp
+		// prints each refused HLS fragment's 403 to stdout and skips it, so a
+		// download whose every fragment was refused reaches stderr only as this.
+		pattern: /the downloaded file is empty/,
+		message: BOT_CHECK_MESSAGE,
+		retryable: true,
+		category: "transient",
+	},
+	{
 		pattern: /timed? ?out|etimedout/,
 		message: "The request to YouTube timed out. Please try again.",
 		retryable: true,

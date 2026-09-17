@@ -110,6 +110,17 @@ describe("isRetryableYtDlpError()", () => {
 		expect(result).toBe(false);
 	});
 
+	it("does not retry a download whose every fragment was refused, since each attempt re-requests them all", () => {
+		// #given
+		const message = "ERROR: The downloaded file is empty";
+
+		// #when
+		const result = isRetryableYtDlpError(message);
+
+		// #then
+		expect(result).toBe(false);
+	});
+
 	it("treats an unrecognized error as permanent by default", () => {
 		// #given
 		const message = "ERROR: something bizarre happened";

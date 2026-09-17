@@ -71,6 +71,18 @@ const ERROR_RULES: ErrorRule[] = [
 		category: "transient",
 	},
 	{
+		// yt-dlp's catch-all for a fragmented download in which every fragment
+		// failed. In production that was YouTube refusing all of them: each 403
+		// goes to stdout and the fragment is skipped, so stderr carries only this.
+		// Not retryable, unlike the single-request 403 above: every attempt
+		// re-requests every fragment, multiplying refused traffic against an egress
+		// IP that is likely already flagged, and retries never recovered it.
+		pattern: /the downloaded file is empty/,
+		message: BOT_CHECK_MESSAGE,
+		retryable: false,
+		category: "transient",
+	},
+	{
 		pattern: /timed? ?out|etimedout/,
 		message: "The request to YouTube timed out. Please try again.",
 		retryable: true,

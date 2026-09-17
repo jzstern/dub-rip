@@ -68,6 +68,20 @@ describe("classifyYtDlpError() reporting category", () => {
 		expect(result.category).toBe("transient");
 	});
 
+	it("categorizes a download whose every fragment was refused as transient infrastructure trouble", () => {
+		// #given
+		// yt-dlp prints each refused HLS fragment's 403 to stdout and skips it, so
+		// an all-refused download reaches stderr only as this line.
+		const message =
+			"Error code: 1\n\nStderr:\nERROR: The downloaded file is empty\n";
+
+		// #when
+		const result = classifyYtDlpError(message);
+
+		// #then
+		expect(result.category).toBe("transient");
+	});
+
 	it("categorizes a network drop as transient infrastructure trouble", () => {
 		// #given
 		const message = "connect ECONNRESET 1.2.3.4:443";
@@ -106,8 +120,10 @@ describe("classifyYtDlpError() reporting category", () => {
 		expect(results.every((result) => !result.retryable)).toBe(true);
 	});
 
-	it("keeps every transient-category failure retryable", () => {
+	it("keeps bot-check, 403, timeout, and network failures retryable", () => {
 		// #given
+		// An all-fragments-refused download is the deliberate exception: it is
+		// transient but not retryable, because each retry re-requests every fragment.
 		const transientFailures = [
 			"Sign in to confirm you're not a bot",
 			"HTTP Error 403: Forbidden",

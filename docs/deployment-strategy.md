@@ -283,7 +283,15 @@ yt-dlp picked a format whose URL YouTube refuses to serve to this requester. bgu
 
 It is also `visionos`, the 2026.08.19 lead. On 2026-09-16 its direct https audio (itag 251) downloaded cleanly from a Railway PR env, then 403d on every production attempt with the same code, video, and format (Sentry DUB-RIP-9, release `629b020`). The difference is the egress IP, which a PR env does not share — **a PR-env pass cannot rule this symptom out; verify on dub.rip.**
 
-**Mitigation:** the format selector in `src/lib/download-pipeline/try-yt-dlp.ts` tries HLS audio first (`bestaudio[protocol^=m3u8]`, itags 233/234 on `visionos`), which is served through a separate manifest-signed path. If production still 403s on HLS, the block is on the IP rather than the format, and the remaining options are egress-level: a different outbound IP or a residential proxy.
+**What did not fix it:** trying HLS audio first (`bestaudio[protocol^=m3u8]`, itags 233/234 on `visionos`). On 2026-09-17 production fetched the HLS manifest, then all 34 fragments were refused (403, escalating to 401) and skipped, and yt-dlp failed with `ERROR: The downloaded file is empty` — the same refusal, surfacing as an empty file because fragment errors go to stdout. Both DASH and HLS media were blocked; the block was on the IP, not the format.
+
+**What fixed it:** a different egress IP. Enabling Railway Static Outbound IPs on the `dub-rip` service and redeploying restored downloads immediately (2026-09-17). Check the current state with:
+
+```bash
+railway outbound-network status --service dub-rip --environment production --json
+```
+
+Railway does not guarantee static addresses are dedicated, and sustained traffic can get them flagged too. If this symptom returns on the static IPs, the durable option is routing yt-dlp through a residential proxy (`--proxy`).
 
 Do **not** exclude the client with `player_client=default,-visionos`: that leaves only `web`, which YouTube serves SABR-only at this pin (`YouTube is forcing SABR streaming for this client`), so the download fails with "Requested format is not available" instead. And do not go back to a hand-picked list — that list is what YouTube bot-checked on 2026-09-14 (next section).
 

@@ -235,6 +235,21 @@ describe("parseYtDlpError", () => {
 		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 
+	it("blames YouTube rather than the video when every fragment of a download was refused", async () => {
+		// #given
+		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");
+
+		// #when
+		const result = parseYtDlpError(
+			"Error code: 1\n\nStderr:\nERROR: The downloaded file is empty\n",
+		);
+
+		// #then
+		expect(result).toBe(
+			"Download service couldn't verify with YouTube. Please try again in a few minutes.",
+		);
+	});
+
 	it("falls through to the generic message when nothing matches", async () => {
 		// #given
 		const { parseYtDlpError } = await import("$lib/yt-dlp-errors");

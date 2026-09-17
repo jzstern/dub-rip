@@ -68,6 +68,12 @@ export async function tryYtDlpDownload({
 		"mp3",
 		"--audio-quality",
 		"128K",
+		// HLS audio goes first. From production's IP, `visionos`'s direct https
+		// audio (itag 251) extracts fine but 403s on the media fetch, while its HLS
+		// audio (233/234) is served through a separate manifest-signed path. `^=`
+		// matches both `m3u8` and `m3u8_native`. It is audio-only, so it does not
+		// reopen the video-bloat problem below.
+		//
 		// Audio-only DASH formats drop out of YouTube's response intermittently —
 		// they get skipped whenever a GVS PO token isn't minted for the client — and
 		// a bare `best` then lands on 1080p HLS: one measured run pulled 84MB over 39
@@ -75,7 +81,7 @@ export async function tryYtDlpDownload({
 		// itag 18 (360p progressive, ~15-23MB) bounds the worst case before `best`
 		// is ever reached.
 		"-f",
-		"bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
+		"bestaudio[protocol^=m3u8]/bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
 		// Only bites on the fragmented fallbacks above, which are otherwise serial.
 		"--concurrent-fragments",
 		"4",

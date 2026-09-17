@@ -612,9 +612,10 @@ export function buildJsRuntimeArgs(): string[] {
  * `visionos`: `VISIONOS` is absent from `WEBPO_CLIENTS` in
  * `youtube/pot/utils.py`, so no WebPO token is fetched for it either way.
  *
- * If `visionos` formats start winning `bestaudio` and 403ing on the media fetch
- * — the hazard the old pin guarded against — drop that one client with
- * `player_client=default,-visionos` rather than restoring the burned list.
+ * Do not answer a `visionos` media-fetch 403 with `player_client=default,-visionos`.
+ * That leaves only `web`, which YouTube serves SABR-only at this pin, so no
+ * downloadable audio remains ("Requested format is not available"). Media-fetch
+ * 403s are handled by the format selector in `try-yt-dlp.ts` instead.
  */
 export const YOUTUBE_EXTRACTOR_ARG =
 	"youtube:player_client=default;fetch_pot=always";

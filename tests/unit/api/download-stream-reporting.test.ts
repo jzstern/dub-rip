@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -47,22 +48,32 @@ vi.mock("$lib/download-pipeline/try-yt-dlp", () => ({
 /**
  * Real `node:fs/promises` and a real download-token registry would need a
  * real file at the route's randomly-generated outputPath to exercise the
- * post-download, pre-finalize window below. Mocking `access`/`unlink` lets
- * tests simulate "the .mp3 exists" without knowing that path in advance, and
- * mocking `registerDownload` turns "was a token issued" into something a
- * test can assert on directly — which is the actual leak this guards.
+ * post-download, pre-finalize window below. Mocking `access`/`readdir`/`unlink`
+ * lets tests simulate "the .mp3 exists" or "these temp files were left behind"
+ * without knowing that path in advance, and mocking `registerDownload` turns
+ * "was a token issued" into something a test can assert on directly — which
+ * is the actual leak this guards.
  */
-const { accessMock, unlinkMock, registerDownloadMock } = vi.hoisted(() => ({
-	accessMock: vi.fn<(path: string) => Promise<void>>(() =>
-		Promise.reject(new Error("ENOENT")),
-	),
-	unlinkMock: vi.fn<(path: string) => Promise<void>>(() => Promise.resolve()),
-	registerDownloadMock: vi.fn(() => "fake-token"),
-}));
+const { accessMock, readdirMock, unlinkMock, registerDownloadMock } =
+	vi.hoisted(() => ({
+		accessMock: vi.fn<(path: string) => Promise<void>>(() =>
+			Promise.reject(new Error("ENOENT")),
+		),
+		readdirMock: vi.fn<(path: string) => Promise<string[]>>(() =>
+			Promise.resolve([]),
+		),
+		unlinkMock: vi.fn<(path: string) => Promise<void>>(() => Promise.resolve()),
+		registerDownloadMock: vi.fn(() => "fake-token"),
+	}));
 
 vi.mock("node:fs/promises", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs/promises")>();
-	const merged = { ...actual, access: accessMock, unlink: unlinkMock };
+	const merged = {
+		...actual,
+		access: accessMock,
+		readdir: readdirMock,
+		unlink: unlinkMock,
+	};
 	return { ...merged, default: merged };
 });
 
@@ -72,6 +83,7 @@ vi.mock("$lib/download-pipeline/download-tokens", () => ({
 
 beforeEach(() => {
 	accessMock.mockImplementation(() => Promise.reject(new Error("ENOENT")));
+	readdirMock.mockImplementation(() => Promise.resolve([]));
 	unlinkMock.mockImplementation(() => Promise.resolve(undefined));
 	registerDownloadMock.mockClear();
 });
@@ -108,6 +120,11 @@ async function runDownloadUntilError(failure: Error): Promise<string> {
 		buffer += decoder.decode(chunk.value);
 	}
 	return buffer;
+}
+
+/** The route's random temp-file prefix, recovered from the path it gave yt-dlp. */
+function requestTempPrefix(): string {
+	return basename(tryYtDlpDownloadMock.mock.calls[0][0].outputPath);
 }
 
 describe("GET /api/download-stream - failure reporting policy", () => {
@@ -404,6 +421,9 @@ describe("GET /api/download-stream - cancellation", () => {
 				? Promise.resolve()
 				: Promise.reject(new Error("ENOENT")),
 		);
+		readdirMock.mockImplementation(() =>
+			Promise.resolve([`${requestTempPrefix()}.mp3`]),
+		);
 		const { GET } = await import(
 			"../../../src/routes/api/download-stream/+server"
 		);
@@ -422,5 +442,65 @@ describe("GET /api/download-stream - cancellation", () => {
 		// file is cleaned up rather than left pinned in /tmp for the full TTL
 		expect(registerDownloadMock).not.toHaveBeenCalled();
 		expect(unlinkMock).toHaveBeenCalledWith(expect.stringContaining(".mp3"));
+	});
+});
+
+describe("GET /api/download-stream - temp file cleanup", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.resetModules();
+	});
+
+	it("removes the fragment and resume-state files an interrupted HLS download leaves behind", async () => {
+		// #given — the leftovers a killed HLS download was observed to leave on disk
+		const leftovers = [
+			".mp4.part",
+			".mp4.part-Frag19",
+			".mp4.part-Frag20.part",
+			".mp4.ytdl",
+		];
+		readdirMock.mockImplementation(() =>
+			Promise.resolve(
+				leftovers.map((suffix) => `${requestTempPrefix()}${suffix}`),
+			),
+		);
+
+		// #when
+		await runDownloadUntilError(new Error("ERROR: This video is private"));
+		await vi.waitFor(() =>
+			expect(unlinkMock).toHaveBeenCalledTimes(leftovers.length),
+		);
+
+		// #then
+		const prefix = requestTempPrefix();
+		expect(
+			unlinkMock.mock.calls.map(([path]) =>
+				basename(path).slice(prefix.length),
+			),
+		).toEqual(leftovers);
+	});
+
+	it("leaves temp files that belong to other requests alone", async () => {
+		// #given
+		readdirMock.mockImplementation(() =>
+			Promise.resolve([
+				"0123456789abcdef0123456789abcdef.mp4.part-Frag1",
+				"unrelated.mp3",
+				`${requestTempPrefix()}.mp4.part-Frag1`,
+			]),
+		);
+
+		// #when
+		await runDownloadUntilError(new Error("ERROR: This video is private"));
+		await vi.waitFor(() => expect(unlinkMock).toHaveBeenCalled());
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		// #then
+		expect(unlinkMock.mock.calls.map(([path]) => basename(path))).toEqual([
+			`${requestTempPrefix()}.mp4.part-Frag1`,
+		]);
 	});
 });

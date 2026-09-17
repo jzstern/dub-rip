@@ -20,12 +20,14 @@ type Handler = (...args: unknown[]) => void;
 class FakeProcess {
 	handlers: Record<string, Handler[]> = {};
 	stderrHandlers: Handler[] = [];
-	stderr = {
-		on: (_event: string, callback: Handler) => {
-			this.stderrHandlers.push(callback);
+	ytDlpProcess = {
+		kill: vi.fn().mockReturnValue(true),
+		stderr: {
+			on: (_event: string, callback: Handler) => {
+				this.stderrHandlers.push(callback);
+			},
 		},
 	};
-	ytDlpProcess = { kill: vi.fn().mockReturnValue(true) };
 
 	on(event: string, callback: Handler) {
 		this.handlers[event] ??= [];

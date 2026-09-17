@@ -21,8 +21,10 @@ interface YtDlpProcess {
 	): void;
 	on(event: "error", callback: (error: Error) => void): void;
 	on(event: "close", callback: (code: number) => void): void;
-	stderr?: { on(event: string, callback: (data: Buffer) => void): void };
-	ytDlpProcess?: { kill(signal?: NodeJS.Signals): boolean };
+	ytDlpProcess?: {
+		kill(signal?: NodeJS.Signals): boolean;
+		stderr?: { on(event: string, callback: (data: Buffer) => void): void };
+	};
 }
 
 export interface YtDlpInstance {
@@ -200,7 +202,7 @@ export async function tryYtDlpDownload({
 			);
 
 			let errorMessage = "";
-			downloadProcess.stderr?.on("data", (data: Buffer) => {
+			downloadProcess.ytDlpProcess?.stderr?.on("data", (data: Buffer) => {
 				const text = data.toString();
 				console.error("yt-dlp stderr:", text);
 				if (text.includes("ERROR:")) {

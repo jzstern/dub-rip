@@ -62,6 +62,8 @@ See [`docs/error-reporting.md`](../docs/error-reporting.md) for the full policy.
 
 **Image version pin:** the `bgutil-pot` Railway service must use a specific image tag + digest, never `:latest`. Railway caches whatever digest `:latest` resolved to at first deploy, so `:latest` gives the illusion of freshness without the freshness. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#image-version-pinning).
 
+**Production egresses through Railway Static Outbound IPs (enabled 2026-09-17).** The previous egress IP was refused by YouTube for every media fetch — DASH formats 403'd, HLS fragments 403'd then 401'd — and no client or format change fixed it; switching IPs did, immediately. This is dashboard state with no trace in the repo, so check it with `railway outbound-network status --service dub-rip --environment production --json` rather than assuming. Railway does not guarantee the addresses are dedicated, and sustained traffic can get them flagged too; the durable fallback is a residential proxy. See [`docs/deployment-strategy.md`](../docs/deployment-strategy.md).
+
 **Cobalt was removed (2026-07).** It was the primary download path and silently returned empty bodies for most videos. Do not reintroduce it without reading [`docs/decisions/0001-remove-cobalt.md`](../docs/decisions/0001-remove-cobalt.md) first.
 
 ### PR Preview Environments

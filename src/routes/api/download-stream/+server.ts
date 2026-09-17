@@ -1,16 +1,15 @@
 import { randomBytes } from "node:crypto";
-import { access, readdir, unlink } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
+import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
+import { pathExists } from "$lib/download-pipeline/path-exists";
 import { METADATA_PROCESSING_PERCENT } from "$lib/download-pipeline/progress-stages";
-import {
-	tryYtDlpDownload,
-	type YtDlpInstance,
-} from "$lib/download-pipeline/try-yt-dlp";
+import { tryYtDlpDownload } from "$lib/download-pipeline/try-yt-dlp";
+import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
 import { retryWithBackoff } from "$lib/retry";
 import { YT_DLP_METHOD } from "$lib/types";
 import { getVideoDetails } from "$lib/video-details-cache";
@@ -24,7 +23,7 @@ import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
 } from "$lib/youtube-metadata";
-import { ensureBgutilPlugin, ensureYtDlpBinary } from "$lib/yt-dlp-binary";
+import { ensureBgutilPlugin } from "$lib/yt-dlp-binary";
 import { YtDlpQueueFullError } from "$lib/yt-dlp-concurrency";
 import {
 	type ClassifiedYtDlpError,
@@ -37,15 +36,6 @@ const require = createRequire(import.meta.url);
 
 const QUEUE_FULL_MESSAGE =
 	"The downloader is busy right now. Please try again in a moment.";
-
-async function pathExists(path: string): Promise<boolean> {
-	try {
-		await access(path);
-		return true;
-	} catch {
-		return false;
-	}
-}
 
 /**
  * Videos that can never be downloaded (private, age-restricted, copyright)
@@ -79,29 +69,6 @@ function reportDownloadFailure(
 		},
 		extra: { videoId },
 	});
-}
-
-let ytDlpWrap: YtDlpInstance | null = null;
-let ytDlpPromise: Promise<YtDlpInstance> | null = null;
-
-async function getYTDlp(): Promise<YtDlpInstance> {
-	if (ytDlpWrap) return ytDlpWrap;
-	if (ytDlpPromise) return ytDlpPromise;
-
-	ytDlpPromise = (async (): Promise<YtDlpInstance> => {
-		try {
-			const YTDlpWrapModule = require("yt-dlp-wrap");
-			const YTDlpWrap = YTDlpWrapModule.default || YTDlpWrapModule;
-			const binaryPath = await ensureYtDlpBinary();
-			ytDlpWrap = new YTDlpWrap(binaryPath) as YtDlpInstance;
-			return ytDlpWrap;
-		} catch (err) {
-			ytDlpPromise = null;
-			throw err;
-		}
-	})();
-
-	return ytDlpPromise;
 }
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -367,28 +334,12 @@ export const GET: RequestHandler = async ({ url }) => {
 					closeStream();
 				}
 
-				try {
-					// A prefix scan rather than a list of known names: an interrupted
-					// HLS download leaves numbered `.part-FragN` files and a `.ytdl`
-					// resume-state file that no fixed list can enumerate. The prefix is
-					// 128 random bits, so it cannot match another request's files.
-					const leftovers = (await readdir(tempDir)).filter((name) =>
-						name.startsWith(`${randomId}.`),
-					);
-					for (const name of leftovers) {
-						await unlink(join(tempDir, name));
-					}
-				} catch (cleanupError) {
-					// A file vanishing mid-cleanup is the outcome cleanup wants.
-					if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT") {
-						console.error("Temp file cleanup failed:", cleanupError);
-						Sentry.captureException(cleanupError, {
-							level: "warning",
-							tags: { service: "download-stream", operation: "temp-cleanup" },
-							extra: { videoId },
-						});
-					}
-				}
+				await cleanupTempFiles({
+					tempDir,
+					prefix: randomId,
+					tags: { service: "download-stream" },
+					extra: { videoId },
+				});
 			}
 		},
 		cancel() {

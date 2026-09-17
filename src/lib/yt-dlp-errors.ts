@@ -27,15 +27,28 @@ interface ErrorRule {
 const BOT_CHECK_MESSAGE =
 	"Download service couldn't verify with YouTube. Please try again in a few minutes.";
 
+/**
+ * yt-dlp writes the message with a typographic apostrophe (U+2019), so an
+ * ASCII-only `you're` never matches it. Exported so the production canary's
+ * stage classifier (`$lib/canary/classify-canary-run`) can recognize the same
+ * signature without re-deriving the regex.
+ */
+export const BOT_CHECK_PATTERN = /sign in to confirm you['’]re not a bot/;
+
+/** Exported for reuse by the canary's stage classifier. */
+export const HTTP_403_PATTERN = /http error 403|403 forbidden|status code 403/;
+
+/** Exported for reuse by the canary's stage classifier. */
+export const EMPTY_FILE_PATTERN = /the downloaded file is empty/;
+
 const ERROR_RULES: ErrorRule[] = [
 	{
-		// yt-dlp writes the message with a typographic apostrophe (U+2019), so an
-		// ASCII-only `you're` never matched it. Until now the rule still fired,
-		// but only via the `cookies` alternation further down the same pattern —
-		// i.e. on the remediation hint rather than on the error itself. Were that
-		// hint ever reworded, a bot-check would fall through to the generic rule
-		// and become non-retryable and `unknown`-category. Match both forms.
-		pattern: /sign in to confirm you['’]re not a bot|cookies/,
+		// `cookies` matches yt-dlp's remediation hint, not the error itself. Until
+		// BOT_CHECK_PATTERN learned the typographic apostrophe, that hint was the
+		// only thing that ever fired this rule — so were it reworded, a bot-check
+		// would fall through to the generic rule and become non-retryable and
+		// `unknown`-category. Keep both alternatives.
+		pattern: new RegExp(`${BOT_CHECK_PATTERN.source}|cookies`),
 		message: BOT_CHECK_MESSAGE,
 		retryable: true,
 		category: "transient",
@@ -65,7 +78,7 @@ const ERROR_RULES: ErrorRule[] = [
 		category: "user",
 	},
 	{
-		pattern: /http error 403|403 forbidden|status code 403/,
+		pattern: HTTP_403_PATTERN,
 		message: BOT_CHECK_MESSAGE,
 		retryable: true,
 		category: "transient",
@@ -77,7 +90,7 @@ const ERROR_RULES: ErrorRule[] = [
 		// Not retryable, unlike the single-request 403 above: every attempt
 		// re-requests every fragment, multiplying refused traffic against an egress
 		// IP that is likely already flagged, and retries never recovered it.
-		pattern: /the downloaded file is empty/,
+		pattern: EMPTY_FILE_PATTERN,
 		message: BOT_CHECK_MESSAGE,
 		retryable: false,
 		category: "transient",

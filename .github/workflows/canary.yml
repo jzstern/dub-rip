@@ -1,0 +1,38 @@
+name: Production Canary
+
+on:
+  schedule:
+    # Every 6 hours. GitHub may delay scheduled runs; Sentry's monitor margin
+    # (see src/lib/canary/report-canary-check-in.ts) tolerates that and alerts
+    # on a genuinely missed check-in instead.
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+# This workflow only calls the canary endpoint with a repo secret; it never
+# needs to read or write anything through GITHUB_TOKEN.
+permissions: {}
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the production canary
+        env:
+          CANARY_TOKEN: ${{ secrets.CANARY_TOKEN }}
+        run: |
+          status=$(curl -sS --max-time 300 \
+            -o response.json -w "%{http_code}" \
+            -X POST "https://dub.rip/api/canary" \
+            -H "Authorization: Bearer ${CANARY_TOKEN}")
+
+          echo "HTTP status: ${status}"
+          cat response.json
+
+          # This job only fails when the endpoint itself is unreachable or
+          # rejects the request (401/404/5xx). A classified canary failure
+          # still answers 200 by design — Sentry does that alerting, not this
+          # workflow, so it never doubles up.
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Canary endpoint returned ${status}" >&2
+            exit 1
+          fi

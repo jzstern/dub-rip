@@ -3,6 +3,7 @@ import { vi } from "vitest";
 
 vi.mock("@sentry/sveltekit", () => ({
 	addBreadcrumb: vi.fn(),
+	captureCheckIn: vi.fn(() => "fake-check-in-id"),
 	captureException: vi.fn(),
 	captureMessage: vi.fn(),
 	init: vi.fn(),

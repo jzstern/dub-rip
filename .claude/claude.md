@@ -81,6 +81,62 @@ PR environments — not production — are the dominant cost in this project (a 
 - **Do not point an uptime monitor at `/api/health?probe=bgutil`.** That query form is the only one that actively probes bgutil-pot, and any periodic pinger against it keeps both services awake 24/7. Plain `GET /api/health` (no query params) is a cheap liveness check with no network probe, on purpose — it's also what the app service's own Railway healthcheck must use, since a probing default would return 503 whenever the sidecar is merely asleep (normal operation) and get the app restart-looped for it. If external monitoring is ever needed, hit plain `/api/health`, monitor a static asset, or accept the sleep trade-off explicitly — never the `?probe=bgutil` form.
 - **Workspace usage caps** (set 2026-07-17): soft $20 (email alert), hard $40 (Railway stops services). If a legitimate traffic spike hits the hard cap, raise it in workspace billing settings rather than removing it.
 
+## Production Canary
+
+From 2026-09-14 05:05 UTC, every production download failed for ~2 days before
+anyone noticed: Sentry captured the errors, but traffic is too low for
+rate-based alerts to fire, and an earlier 15×403 warning (2026-08-30) was also
+missed. `POST /api/canary` exists to catch the next one within hours.
+
+- **It must run inside the `dub-rip` service — never a separate service, a
+  GitHub Action running yt-dlp itself, or a PR environment.** Railway Static
+  Outbound IPs are per-service, and YouTube's blocking follows the egress IP.
+  This already misled the 2026-09-14 incident once: a PR env download
+  succeeded on the exact code and video that 403'd in production, because the
+  PR env doesn't share production's IP. A canary anywhere else can pass while
+  production is silently broken. GitHub Actions (`.github/workflows/canary.yml`,
+  6-hourly cron + `workflow_dispatch`) only *triggers* the endpoint; it never
+  downloads anything itself.
+- **It reuses the exact production code path**, unmodified:
+  `tryYtDlpDownload` from `try-yt-dlp.ts` (same argv, format selector, extractor
+  args), and the shared `withYtDlpConcurrencyLimit` limiter (`yt-dlp-concurrency.ts`)
+  so it queues behind real users rather than starving them. A full queue is
+  recorded as a skip (`queue_full`), not a failure.
+  See `src/lib/canary/run-canary-download.ts`.
+- **It always answers 200** once authenticated (`Authorization: Bearer
+  <CANARY_TOKEN>`, constant-time compared, 404 if `CANARY_TOKEN` is unset, 401
+  on a bad token), even when the run fails — the GitHub workflow only fails on
+  401/404/5xx/unreachable, so alerting lives in exactly one place: Sentry.
+  Never log the token.
+- **It reports through a Sentry Cron Monitor** (`src/lib/canary/report-canary-check-in.ts`),
+  `in_progress` → `ok`/`error`, opening an issue only after 2 consecutive
+  failures and alerting on a missed check-in. Sentry's check-in payload has no
+  room for custom tags, so a single `captureMessage` tagged with `stage`
+  travels alongside every `error` check-in — same "classify, tag, report once"
+  shape as `reportDownloadFailure` in `download-stream/+server.ts`, not a
+  second independent report of the same failure.
+- **Runbook**, keyed off the `stage` a failed run reports
+  (`src/lib/canary/classify-canary-run.ts`):
+  | Stage | Likely cause | Fix |
+  | --- | --- | --- |
+  | `media_refused` / `fragments_refused` | The egress IP is blocked (media fetch or every HLS fragment 403s/401s) | Rotate the Railway Static Outbound IP, or move to a residential proxy — see [`docs/deployment-strategy.md`](../docs/deployment-strategy.md) |
+  | `player_bot_check` | YouTube is bot-checking the current client list before any format is even chosen | Check `_DEFAULT_CLIENTS` in yt-dlp's `_video.py` against `YOUTUBE_EXTRACTOR_ARG` — don't hand-pick a list (see the `player_client` history in `yt-dlp-binary.ts`) |
+  | `format_unavailable` | SABR-only response / no downloadable format for this client | Format selector or client-list problem, not an IP block — see `try-yt-dlp.ts`'s format selector comment |
+  | `unknown` | Nothing recognized | Treat like any `unknown`-category yt-dlp failure — new yt-dlp/YouTube breakage, read the Sentry event's `detail` |
+- **Cost**: one real yt-dlp invocation against production every 6 hours, from
+  the same egress IP and through the same concurrency limiter real users use.
+  It wakes the sleeping app and bgutil-pot sidecar on the same schedule (see
+  the Railway Cost Practices above) — this is expected, not a leak, and is why
+  the interval is 6h and not tighter. Never point anything at this endpoint on
+  a shorter interval or in a load test.
+- **Phase 2** (not built): a circuit breaker that reroutes real downloads
+  through a residential proxy after 2 consecutive `media_refused`/
+  `fragments_refused` canary checks, while the canary keeps probing the direct
+  egress so the breaker can close again. See the PR that introduced Phase 1
+  for the open design questions (state persistence across sleep/restart,
+  bgutil-pot's own IP-bound PO tokens, cost caps, keeping the proxy URL out of
+  logs/Sentry).
+
 ## yt-dlp Integration
 - yt-dlp is the **only** download path — there is no fallback. A failure is user-visible.
 - Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)

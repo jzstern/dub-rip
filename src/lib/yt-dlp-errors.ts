@@ -71,12 +71,15 @@ const ERROR_RULES: ErrorRule[] = [
 		category: "transient",
 	},
 	{
-		// The same refusal as the 403 rule above, surfacing differently: yt-dlp
-		// prints each refused HLS fragment's 403 to stdout and skips it, so a
-		// download whose every fragment was refused reaches stderr only as this.
+		// yt-dlp's catch-all for a fragmented download in which every fragment
+		// failed. In production that was YouTube refusing all of them: each 403
+		// goes to stdout and the fragment is skipped, so stderr carries only this.
+		// Not retryable, unlike the single-request 403 above: every attempt
+		// re-requests every fragment, multiplying refused traffic against an egress
+		// IP that is likely already flagged, and retries never recovered it.
 		pattern: /the downloaded file is empty/,
 		message: BOT_CHECK_MESSAGE,
-		retryable: true,
+		retryable: false,
 		category: "transient",
 	},
 	{

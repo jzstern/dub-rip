@@ -120,12 +120,13 @@ describe("classifyYtDlpError() reporting category", () => {
 		expect(results.every((result) => !result.retryable)).toBe(true);
 	});
 
-	it("keeps every transient-category failure retryable", () => {
+	it("keeps bot-check, 403, timeout, and network failures retryable", () => {
 		// #given
+		// An all-fragments-refused download is the deliberate exception: it is
+		// transient but not retryable, because each retry re-requests every fragment.
 		const transientFailures = [
 			"Sign in to confirm you're not a bot",
 			"HTTP Error 403: Forbidden",
-			"ERROR: The downloaded file is empty",
 			"Request timed out after 15000ms",
 			"connect ECONNRESET 1.2.3.4:443",
 		];

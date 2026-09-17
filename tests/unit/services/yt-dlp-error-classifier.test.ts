@@ -110,7 +110,7 @@ describe("isRetryableYtDlpError()", () => {
 		expect(result).toBe(false);
 	});
 
-	it("treats a download whose every fragment was refused as retryable, like the 403 it is", () => {
+	it("does not retry a download whose every fragment was refused, since each attempt re-requests them all", () => {
 		// #given
 		const message = "ERROR: The downloaded file is empty";
 
@@ -118,7 +118,7 @@ describe("isRetryableYtDlpError()", () => {
 		const result = isRetryableYtDlpError(message);
 
 		// #then
-		expect(result).toBe(true);
+		expect(result).toBe(false);
 	});
 
 	it("treats an unrecognized error as permanent by default", () => {

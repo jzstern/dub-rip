@@ -487,20 +487,62 @@ describe("GET /api/download-stream - temp file cleanup", () => {
 		// #given
 		readdirMock.mockImplementation(() =>
 			Promise.resolve([
+				`${requestTempPrefix()}.mp4.part-Frag1`,
 				"0123456789abcdef0123456789abcdef.mp4.part-Frag1",
 				"unrelated.mp3",
-				`${requestTempPrefix()}.mp4.part-Frag1`,
 			]),
 		);
 
 		// #when
 		await runDownloadUntilError(new Error("ERROR: This video is private"));
-		await vi.waitFor(() => expect(unlinkMock).toHaveBeenCalled());
-		await new Promise((resolve) => setTimeout(resolve, 0));
+		await vi.waitFor(() => expect(unlinkMock).toHaveBeenCalledTimes(1));
 
 		// #then
 		expect(unlinkMock.mock.calls.map(([path]) => basename(path))).toEqual([
 			`${requestTempPrefix()}.mp4.part-Frag1`,
 		]);
+	});
+
+	it("reports a cleanup failure other than a file already being gone", async () => {
+		// #given
+		readdirMock.mockImplementation(() =>
+			Promise.reject(
+				Object.assign(new Error("EACCES: permission denied"), {
+					code: "EACCES",
+				}),
+			),
+		);
+
+		// #when
+		await runDownloadUntilError(new Error("ERROR: This video is private"));
+
+		// #then
+		await vi.waitFor(() =>
+			expect(Sentry.captureException).toHaveBeenCalledWith(
+				expect.objectContaining({ code: "EACCES" }),
+				expect.objectContaining({
+					tags: expect.objectContaining({ operation: "temp-cleanup" }),
+				}),
+			),
+		);
+	});
+
+	it("does not report a temp file that was already gone", async () => {
+		// #given
+		readdirMock.mockImplementation(() =>
+			Promise.resolve([`${requestTempPrefix()}.mp4.part-Frag1`]),
+		);
+		unlinkMock.mockImplementation(() =>
+			Promise.reject(
+				Object.assign(new Error("ENOENT: no such file"), { code: "ENOENT" }),
+			),
+		);
+
+		// #when
+		await runDownloadUntilError(new Error("ERROR: This video is private"));
+		await vi.waitFor(() => expect(unlinkMock).toHaveBeenCalledTimes(1));
+
+		// #then
+		expect(Sentry.captureException).not.toHaveBeenCalled();
 	});
 });

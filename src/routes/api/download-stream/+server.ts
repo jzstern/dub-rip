@@ -378,7 +378,17 @@ export const GET: RequestHandler = async ({ url }) => {
 					for (const name of leftovers) {
 						await unlink(join(tempDir, name));
 					}
-				} catch {}
+				} catch (cleanupError) {
+					// A file vanishing mid-cleanup is the outcome cleanup wants.
+					if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT") {
+						console.error("Temp file cleanup failed:", cleanupError);
+						Sentry.captureException(cleanupError, {
+							level: "warning",
+							tags: { service: "download-stream", operation: "temp-cleanup" },
+							extra: { videoId },
+						});
+					}
+				}
 			}
 		},
 		cancel() {

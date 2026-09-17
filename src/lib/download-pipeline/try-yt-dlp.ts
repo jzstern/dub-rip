@@ -82,7 +82,8 @@ export async function tryYtDlpDownload({
 		// is ever reached.
 		"-f",
 		"bestaudio[protocol^=m3u8]/bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
-		// Only bites on the fragmented fallbacks above, which are otherwise serial.
+		// HLS audio, now the first choice, is fragmented, as are the video fallbacks
+		// above; without this their fragments download one at a time.
 		"--concurrent-fragments",
 		"4",
 		// No metadata or thumbnail postprocessors here on purpose: the downstream

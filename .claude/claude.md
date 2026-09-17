@@ -111,10 +111,13 @@ missed. `POST /api/canary` exists to catch the next one within hours.
 - **It reports through a Sentry Cron Monitor** (`src/lib/canary/report-canary-check-in.ts`),
   `in_progress` → `ok`/`error`, opening an issue only after 2 consecutive
   failures and alerting on a missed check-in. Sentry's check-in payload has no
-  room for custom tags, so a single `captureMessage` tagged with `stage`
-  travels alongside every `error` check-in — same "classify, tag, report once"
-  shape as `reportDownloadFailure` in `download-stream/+server.ts`, not a
-  second independent report of the same failure.
+  room for custom tags, and `captureMessage` was tried and reverted — it opens
+  its own Issue on the very first failure, independent of
+  `failureIssueThreshold`, which reintroduces "two issues for one incident" a
+  full cycle before the monitor's own threshold ever fires. `Sentry.logger`
+  (`enableLogs: true` in `sentry-options.ts`) carries the same `stage`/`itag`/
+  `detail` context as a searchable log entry instead, without ever opening an
+  Issue itself.
 - **Runbook**, keyed off the `stage` a failed run reports
   (`src/lib/canary/classify-canary-run.ts`):
   | Stage | Likely cause | Fix |
@@ -122,7 +125,7 @@ missed. `POST /api/canary` exists to catch the next one within hours.
   | `media_refused` / `fragments_refused` | The egress IP is blocked (media fetch or every HLS fragment 403s/401s) | Rotate the Railway Static Outbound IP, or move to a residential proxy — see [`docs/deployment-strategy.md`](../docs/deployment-strategy.md) |
   | `player_bot_check` | YouTube is bot-checking the current client list before any format is even chosen | Check `_DEFAULT_CLIENTS` in yt-dlp's `_video.py` against `YOUTUBE_EXTRACTOR_ARG` — don't hand-pick a list (see the `player_client` history in `yt-dlp-binary.ts`) |
   | `format_unavailable` | SABR-only response / no downloadable format for this client | Format selector or client-list problem, not an IP block — see `try-yt-dlp.ts`'s format selector comment |
-  | `unknown` | Nothing recognized | Treat like any `unknown`-category yt-dlp failure — new yt-dlp/YouTube breakage, read the Sentry event's `detail` |
+  | `unknown` | Nothing recognized | Treat like any `unknown`-category yt-dlp failure — new yt-dlp/YouTube breakage, read the `detail` from the canary's Sentry Log entry or the endpoint's JSON response |
 - **Cost**: one real yt-dlp invocation against production every 6 hours, from
   the same egress IP and through the same concurrency limiter real users use.
   It wakes the sleeping app and bgutil-pot sidecar on the same schedule (see

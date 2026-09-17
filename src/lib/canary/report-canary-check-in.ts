@@ -39,12 +39,18 @@ export function startCanaryCheckIn(): string {
  * Sentry's check-in payload carries no room for custom tags (it's a fixed
  * `{monitor_slug, status, duration, monitor_config}` shape — verified against
  * `@sentry/core`'s `captureCheckIn` implementation), so the check-in alone
- * can tell Sentry Crons *that* a run failed but not *how*. A single
- * `captureMessage` alongside it — the same "classify, tag, report once"
- * shape `reportDownloadFailure` already uses for real downloads — carries the
- * stage. A skip (see `isCanaryFailure`) finishes the check-in `"ok"` and sends
- * no message, the same way a full queue never becomes a Sentry issue for a
- * real download.
+ * can tell Sentry Crons *that* a run failed but not *how*. `captureMessage`
+ * looked like the fix but isn't: it creates its own Issue immediately, on the
+ * very first failure, regardless of `failureIssueThreshold` — so the very
+ * signal meant to carry the stage would have opened an issue a full cycle
+ * before the monitor's own 2-consecutive-failure threshold ever did,
+ * reintroducing the "two issues for one incident" problem `reportDownloadFailure`
+ * exists to avoid for real downloads. `Sentry.logger` is a separate telemetry
+ * stream — searchable, carries the same stage/itag/detail context, but never
+ * creates or contributes to an Issue — so the check-in's `failureIssueThreshold`
+ * stays the only thing that decides when this becomes an alert. A skip (see
+ * `isCanaryFailure`) finishes the check-in `"ok"` and logs nothing, the same
+ * way a full queue never becomes a Sentry issue for a real download.
  */
 export function finishCanaryCheckIn(
 	checkInId: string,
@@ -61,15 +67,20 @@ export function finishCanaryCheckIn(
 
 	if (!failed) return;
 
-	Sentry.captureMessage(`Production canary failed: ${classification.stage}`, {
-		// `unknown` is how new yt-dlp/YouTube breakages announce themselves —
-		// same reasoning as classifyYtDlpError's category levels.
-		level: classification.stage === "unknown" ? "error" : "warning",
-		tags: { service: "canary", stage: classification.stage },
-		extra: {
-			itag: classification.itag,
-			detail: classification.detail,
-			durationMs: classification.durationMs,
-		},
-	});
+	const attributes = {
+		service: "canary",
+		stage: classification.stage,
+		itag: classification.itag,
+		detail: classification.detail,
+		durationMs: classification.durationMs,
+	};
+	const message = `Production canary failed: ${classification.stage}`;
+
+	// `unknown` is how new yt-dlp/YouTube breakages announce themselves — same
+	// reasoning as classifyYtDlpError's category levels.
+	if (classification.stage === "unknown") {
+		Sentry.logger.error(message, attributes);
+	} else {
+		Sentry.logger.warn(message, attributes);
+	}
 }

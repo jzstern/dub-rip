@@ -41,6 +41,8 @@ describe("finishCanaryCheckIn()", () => {
 	beforeEach(() => {
 		vi.mocked(Sentry.captureCheckIn).mockClear();
 		vi.mocked(Sentry.captureMessage).mockClear();
+		vi.mocked(Sentry.logger.warn).mockClear();
+		vi.mocked(Sentry.logger.error).mockClear();
 	});
 
 	it("finishes the check-in as ok for a successful download", () => {
@@ -77,7 +79,7 @@ describe("finishCanaryCheckIn()", () => {
 		);
 	});
 
-	it("does not send a diagnostic message for a skipped run", () => {
+	it("does not log a diagnostic for a skipped run", () => {
 		// #when
 		finishCanaryCheckIn("abc-123", {
 			stage: "queue_full",
@@ -87,6 +89,21 @@ describe("finishCanaryCheckIn()", () => {
 		});
 
 		// #then
+		expect(Sentry.logger.warn).not.toHaveBeenCalled();
+		expect(Sentry.logger.error).not.toHaveBeenCalled();
+	});
+
+	it("never captures a Sentry message or exception for a failure, since that would create a separate issue on the very first failure", () => {
+		// #when
+		finishCanaryCheckIn("abc-123", {
+			stage: "media_refused",
+			itag: "251",
+			durationMs: 2500,
+			detail: "The media fetch for itag 251 was refused",
+		});
+
+		// #then — only a Sentry Log entry, never an event; failureIssueThreshold
+		// on the check-in itself is the only thing allowed to open an issue
 		expect(Sentry.captureMessage).not.toHaveBeenCalled();
 	});
 
@@ -105,7 +122,7 @@ describe("finishCanaryCheckIn()", () => {
 		);
 	});
 
-	it("tags the diagnostic message with the failure stage", () => {
+	it("logs the diagnostic with the failure stage as a structured attribute", () => {
 		// #when
 		finishCanaryCheckIn("abc-123", {
 			stage: "media_refused",
@@ -115,15 +132,13 @@ describe("finishCanaryCheckIn()", () => {
 		});
 
 		// #then
-		expect(Sentry.captureMessage).toHaveBeenCalledWith(
+		expect(Sentry.logger.warn).toHaveBeenCalledWith(
 			expect.any(String),
-			expect.objectContaining({
-				tags: expect.objectContaining({ stage: "media_refused" }),
-			}),
+			expect.objectContaining({ stage: "media_refused" }),
 		);
 	});
 
-	it("reports an unknown failure at error level, since that is how new breakages announce themselves", () => {
+	it("logs an unknown failure at the error log level, since that is how new breakages announce themselves", () => {
 		// #when
 		finishCanaryCheckIn("abc-123", {
 			stage: "unknown",
@@ -133,13 +148,10 @@ describe("finishCanaryCheckIn()", () => {
 		});
 
 		// #then
-		expect(Sentry.captureMessage).toHaveBeenCalledWith(
-			expect.any(String),
-			expect.objectContaining({ level: "error" }),
-		);
+		expect(Sentry.logger.error).toHaveBeenCalled();
 	});
 
-	it("reports a recognized infra failure stage at warning level, not error", () => {
+	it("logs a recognized infra failure stage at the warn log level, not error", () => {
 		// #when
 		finishCanaryCheckIn("abc-123", {
 			stage: "media_refused",
@@ -149,9 +161,27 @@ describe("finishCanaryCheckIn()", () => {
 		});
 
 		// #then
-		expect(Sentry.captureMessage).toHaveBeenCalledWith(
+		expect(Sentry.logger.warn).toHaveBeenCalled();
+		expect(Sentry.logger.error).not.toHaveBeenCalled();
+	});
+
+	it("includes the itag and detail in the logged attributes for a triage-ready log entry", () => {
+		// #when
+		finishCanaryCheckIn("abc-123", {
+			stage: "media_refused",
+			itag: "251",
+			durationMs: 2500,
+			detail: "The media fetch for itag 251 was refused",
+		});
+
+		// #then
+		expect(Sentry.logger.warn).toHaveBeenCalledWith(
 			expect.any(String),
-			expect.objectContaining({ level: "warning" }),
+			expect.objectContaining({
+				itag: "251",
+				detail: "The media fetch for itag 251 was refused",
+				durationMs: 2500,
+			}),
 		);
 	});
 });

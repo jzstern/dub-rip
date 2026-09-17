@@ -293,7 +293,7 @@ railway outbound-network status --service dub-rip --environment production --jso
 
 Railway does not guarantee static addresses are dedicated, and sustained traffic can get them flagged too. If this symptom returns on the static IPs, the durable option is routing yt-dlp through a residential proxy (`--proxy`).
 
-**This is exactly the failure `POST /api/canary` exists to catch within hours instead of days** — see the Production Canary section in [`../.claude/CLAUDE.md`](../.claude/CLAUDE.md#production-canary). It classifies this exact symptom as stage `media_refused` (or `fragments_refused` for the HLS-fragment variant below) and only means anything because it runs inside the `dub-rip` service itself: a canary on a separate service, in a GitHub Action, or in a PR environment shares none of production's egress IP and would have passed throughout this entire incident, the same way the PR env above did.
+**This is exactly the failure `POST /api/canary` exists to catch within hours instead of days** — see the Production Canary section in [`../.claude/claude.md`](../.claude/claude.md#production-canary). It classifies this exact symptom as stage `media_refused` (or `fragments_refused` for the HLS-fragment variant below) and only means anything because it runs inside the `dub-rip` service itself: a canary on a separate service, in a GitHub Action, or in a PR environment shares none of production's egress IP and would have passed throughout this entire incident, the same way the PR env above did.
 
 Do **not** exclude the client with `player_client=default,-visionos`: that leaves only `web`, which YouTube serves SABR-only at this pin (`YouTube is forcing SABR streaming for this client`), so the download fails with "Requested format is not available" instead. And do not go back to a hand-picked list — that list is what YouTube bot-checked on 2026-09-14 (next section).
 
@@ -407,7 +407,7 @@ Background: [PR #52 research notes](https://github.com/jzstern/dub-rip/pull/52) 
 - The `production-canary` Sentry monitor should show a check-in roughly every
   6 hours; a missed check-in or 2 consecutive `error` check-ins means
   production downloads are broken *right now* (see the Production Canary
-  section in [`../.claude/CLAUDE.md`](../.claude/CLAUDE.md#production-canary))
+  section in [`../.claude/claude.md`](../.claude/claude.md#production-canary))
 
 **When YouTube Changes:**
 - Monitor [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) release notes for BotGuard-related updates.

@@ -6,6 +6,7 @@ vi.mock("@sentry/sveltekit", () => ({
 	captureCheckIn: vi.fn(() => "fake-check-in-id"),
 	captureException: vi.fn(),
 	captureMessage: vi.fn(),
+	logger: { warn: vi.fn(), error: vi.fn() },
 	init: vi.fn(),
 	handleErrorWithSentry: vi.fn(() => vi.fn()),
 	sentryHandle: vi.fn(() => vi.fn()),

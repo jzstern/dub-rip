@@ -129,7 +129,7 @@ describe("tryYtDlpDownload()", () => {
 		expect(clientArg).toMatch(/(^|;)fetch_pot=always(;|$)/);
 	});
 
-	it("prefers an audio-only stream and caps the fallback at 360p", async () => {
+	it("prefers HLS audio, then any audio-only stream, and caps the fallback at 360p", async () => {
 		// #given
 		const promise = run();
 
@@ -139,7 +139,7 @@ describe("tryYtDlpDownload()", () => {
 
 		// #then
 		expect(execArgs[execArgs.indexOf("-f") + 1]).toBe(
-			"bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
+			"bestaudio[protocol^=m3u8]/bestaudio[vcodec=none]/bestaudio/18/best[height<=360]/best",
 		);
 	});
 

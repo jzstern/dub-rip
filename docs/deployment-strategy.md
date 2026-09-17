@@ -272,18 +272,20 @@ env PATH=/usr/bin:/bin /tmp/yt-dlp -v --simulate -f bestaudio \
 
 ## Symptom: `unable to download video data: HTTP Error 403: Forbidden`
 
-Extraction succeeds, but the media fetch 403s.
-
-Most likely yt-dlp picked a format whose URL needed a token nobody attached. bgutil-pot issues *WebPO* tokens, usable only by clients in `WEBPO_CLIENTS` (`yt_dlp/extractor/youtube/pot/utils.py`). A client outside that set whose formats still need authorization can win `-f bestaudio` and fetch unauthorized. That client was `android_vr`, the lead of `_DEFAULT_CLIENTS` on the 2026.07.04 pin, and it is why `player_client` was once hand-pinned to `web_safari,mweb,tv`. The 2026.08.19 lead, `visionos`, needs no token, and its formats downloaded cleanly from a Railway PR env on 2026-09-16 — but re-check `_DEFAULT_CLIENTS` in `yt_dlp/extractor/youtube/_video.py` whenever the pin moves rather than trusting this paragraph.
-
-Confirm which client served the format. The extraction log names each client that issued a player request, then the format it picked:
+Extraction succeeds, but the media fetch 403s. In the SSE stream the tell is a download that stops right after the format is chosen, with no `Destination:` line, on every retry:
 
 ```
 [youtube] <id>: Downloading visionos player API JSON
 [info] <id>: Downloading 1 format(s): 251
 ```
 
-**Fix:** exclude only the offending client, e.g. `player_client=default,-visionos`. Do not go back to a hand-picked list — that list is exactly what YouTube bot-checked on 2026-09-14 (next section).
+yt-dlp picked a format whose URL YouTube refuses to serve to this requester. bgutil-pot issues *WebPO* tokens, usable only by clients in `WEBPO_CLIENTS` (`yt_dlp/extractor/youtube/pot/utils.py`), so a format from a client outside that set goes out with no token. That was `android_vr` on the 2026.07.04 pin, and it is why `player_client` was once hand-pinned to `web_safari,mweb,tv`.
+
+It is also `visionos`, the 2026.08.19 lead. On 2026-09-16 its direct https audio (itag 251) downloaded cleanly from a Railway PR env, then 403d on every production attempt with the same code, video, and format (Sentry DUB-RIP-9, release `629b020`). The difference is the egress IP, which a PR env does not share — **a PR-env pass cannot rule this symptom out; verify on dub.rip.**
+
+**Mitigation:** the format selector in `src/lib/download-pipeline/try-yt-dlp.ts` tries HLS audio first (`bestaudio[protocol^=m3u8]`, itags 233/234 on `visionos`), which is served through a separate manifest-signed path. If production still 403s on HLS, the block is on the IP rather than the format, and the remaining options are egress-level: a different outbound IP or a residential proxy.
+
+Do **not** exclude the client with `player_client=default,-visionos`: that leaves only `web`, which YouTube serves SABR-only at this pin (`YouTube is forcing SABR streaming for this client`), so the download fails with "Requested format is not available" instead. And do not go back to a hand-picked list — that list is what YouTube bot-checked on 2026-09-14 (next section).
 
 ## Symptom: `Sign in to confirm you're not a bot` while bgutil-pot is healthy
 

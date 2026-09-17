@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { access, unlink } from "node:fs/promises";
+import { access, readdir, unlink } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -149,7 +149,8 @@ export const GET: RequestHandler = async ({ url }) => {
 			};
 
 			const randomId = randomBytes(16).toString("hex");
-			const outputPath = join(tmpdir(), `${randomId}`);
+			const tempDir = tmpdir();
+			const outputPath = join(tempDir, randomId);
 
 			try {
 				send({ type: "status", message: "Getting video info..." });
@@ -367,20 +368,27 @@ export const GET: RequestHandler = async ({ url }) => {
 				}
 
 				try {
-					// `.mp4` covers the bounded video fallback in the format selector,
-					// and `.part` the retry that gave up mid-transfer — both are
-					// reachable now in a way they weren't when this list was written.
-					const extensions = ["mp3", "webm", "m4a", "mp4"];
-					const possibleFiles = extensions.flatMap((ext) => [
-						`${outputPath}.${ext}`,
-						`${outputPath}.${ext}.part`,
-					]);
-					for (const file of possibleFiles) {
-						if (await pathExists(file)) {
-							await unlink(file);
-						}
+					// A prefix scan rather than a list of known names: an interrupted
+					// HLS download leaves numbered `.part-FragN` files and a `.ytdl`
+					// resume-state file that no fixed list can enumerate. The prefix is
+					// 128 random bits, so it cannot match another request's files.
+					const leftovers = (await readdir(tempDir)).filter((name) =>
+						name.startsWith(`${randomId}.`),
+					);
+					for (const name of leftovers) {
+						await unlink(join(tempDir, name));
 					}
-				} catch {}
+				} catch (cleanupError) {
+					// A file vanishing mid-cleanup is the outcome cleanup wants.
+					if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT") {
+						console.error("Temp file cleanup failed:", cleanupError);
+						Sentry.captureException(cleanupError, {
+							level: "warning",
+							tags: { service: "download-stream", operation: "temp-cleanup" },
+							extra: { videoId },
+						});
+					}
+				}
 			}
 		},
 		cancel() {

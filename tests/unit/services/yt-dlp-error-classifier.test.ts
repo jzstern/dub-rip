@@ -1,6 +1,12 @@
 import * as Sentry from "@sentry/sveltekit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { isRetryableYtDlpError } from "$lib/yt-dlp-errors";
+import { isRetryableYtDlpError, parseYtDlpError } from "$lib/yt-dlp-errors";
+import {
+	AGE_GATE_WITH_COOKIES_HINT,
+	BOT_CHECK_WITH_COOKIES_HINT,
+	PRIVATE_VIDEO_WITH_COOKIES_HINT,
+	REWORDED_BOT_CHECK_WITH_COOKIES_HINT,
+} from "./yt-dlp-error-fixtures";
 
 describe("isRetryableYtDlpError()", () => {
 	beforeEach(() => {
@@ -130,5 +136,75 @@ describe("isRetryableYtDlpError()", () => {
 
 		// #then
 		expect(result).toBe(false);
+	});
+
+	it("does not retry an age-gated video just because yt-dlp appends its cookies hint", () => {
+		// #given
+		const message = AGE_GATE_WITH_COOKIES_HINT;
+
+		// #when
+		const result = isRetryableYtDlpError(message);
+
+		// #then
+		expect(result).toBe(false);
+	});
+
+	it("does not retry a private video just because yt-dlp appends its cookies hint", () => {
+		// #given
+		const message = PRIVATE_VIDEO_WITH_COOKIES_HINT;
+
+		// #when
+		const result = isRetryableYtDlpError(message);
+
+		// #then
+		expect(result).toBe(false);
+	});
+
+	it("still retries a bot-check whose sentence was reworded, when only the cookies hint identifies it", () => {
+		// #given
+		const message = REWORDED_BOT_CHECK_WITH_COOKIES_HINT;
+
+		// #when
+		const result = isRetryableYtDlpError(message);
+
+		// #then
+		expect(result).toBe(true);
+	});
+
+	it("still retries a bot-check with the typographic apostrophe and the full cookies hint", () => {
+		// #given
+		const message = BOT_CHECK_WITH_COOKIES_HINT;
+
+		// #when
+		const result = isRetryableYtDlpError(message);
+
+		// #then
+		expect(result).toBe(true);
+	});
+});
+
+describe("parseYtDlpError()", () => {
+	it("tells the user an age-gated video is age-restricted, not that the service failed to verify", () => {
+		// #given
+		const message = AGE_GATE_WITH_COOKIES_HINT;
+
+		// #when
+		const result = parseYtDlpError(message);
+
+		// #then
+		expect(result).toBe(
+			"This video is age-restricted and cannot be downloaded.",
+		);
+	});
+
+	it("tells the user a private video is private, not that the service failed to verify", () => {
+		// #given
+		const message = PRIVATE_VIDEO_WITH_COOKIES_HINT;
+
+		// #when
+		const result = parseYtDlpError(message);
+
+		// #then
+		expect(result).toBe("This video is private and cannot be downloaded.");
 	});
 });

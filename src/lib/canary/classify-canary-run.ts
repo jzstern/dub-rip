@@ -99,14 +99,23 @@ export function classifyCanaryRun({
 		};
 	}
 
-	const combined = `${stdout}\n${stderr}`;
-	if (FORMAT_UNAVAILABLE_PATTERN.test(combined)) {
-		return {
-			stage: "format_unavailable",
-			itag,
-			durationMs,
-			detail: "YouTube reported no downloadable format for this client",
-		};
+	const formatUnavailable = (): CanaryClassification => ({
+		stage: "format_unavailable",
+		itag,
+		durationMs,
+		detail: "YouTube reported no downloadable format for this client",
+	});
+
+	// yt-dlp's "formats skipped" WARNING names SABR streaming in runs that failed
+	// for an unrelated reason, so only the ERROR that ended the run may claim
+	// the stage ahead of the IP-throttling checks below.
+	const lines = stderrLines(stderr);
+	const terminalError = lastErrorLine(lines);
+	if (
+		terminalError !== undefined &&
+		FORMAT_UNAVAILABLE_PATTERN.test(terminalError)
+	) {
+		return formatUnavailable();
 	}
 
 	const hasFormatLine = itag !== null;
@@ -118,7 +127,6 @@ export function classifyCanaryRun({
 	const lowerStderr = stderr.toLowerCase();
 
 	if (!hasFormatLine && WATCH_PAGE_429_PATTERN.test(lowerStderr)) {
-		const lines = stderrLines(stderr);
 		const excerpt = excerptOfLines([
 			lines.find((line) => WATCH_PAGE_429_PATTERN.test(line.toLowerCase())),
 			lastErrorLine(lines),
@@ -132,7 +140,6 @@ export function classifyCanaryRun({
 	}
 
 	if (!hasFormatLine && BOT_CHECK_PATTERN.test(lowerStderr)) {
-		const lines = stderrLines(stderr);
 		const excerpt = excerptOfLines([
 			lastErrorLine(lines) ??
 				lines.find((line) => BOT_CHECK_PATTERN.test(line.toLowerCase())),
@@ -167,6 +174,10 @@ export function classifyCanaryRun({
 			durationMs,
 			detail: `The media fetch for itag ${itag ?? "unknown"} was refused`,
 		};
+	}
+
+	if (FORMAT_UNAVAILABLE_PATTERN.test(`${stdout}\n${stderr}`)) {
+		return formatUnavailable();
 	}
 
 	return {

@@ -9,7 +9,7 @@ export interface WaitForBgutilPotOptions {
 	createTimeoutSignal?: (ms: number) => AbortSignal;
 	attemptTimeoutMs?: number;
 	retryIntervalMs?: number;
-	/** No new attempt starts once this much time has passed since the first. */
+	/** The whole wait, attempts in flight included: each attempt is cut off when this runs out. */
 	maxWaitMs?: number;
 	/** Ends the wait — even an attempt in flight — once it aborts: a caller that has left has nothing to wait for. */
 	signal?: AbortSignal;
@@ -82,7 +82,7 @@ function sleepUnlessAborted(
  * listens still lands on a booting one. Both the download route and the
  * production canary wait here first, so neither starts yt-dlp against it.
  *
- * Never throws and never reports to Sentry: a cold sidecar is normal, and if
+ * Never throws and never reports to Sentry itself: a cold sidecar is normal, and if
  * it never answers the caller downloads anyway and lets that run say what
  * happened. `/ping` only — `/get_pot` does real BotGuard work.
  */
@@ -109,8 +109,16 @@ export async function waitForBgutilPot(
 
 	while (!signal?.aborted) {
 		attempts++;
-		const attemptTimeout = createTimeoutSignal(attemptTimeoutMs);
 		try {
+			// Bounded by what is left of the wait, not just its own timeout, so an
+			// attempt that starts near the cap cannot run past it. A whole number of
+			// milliseconds because Node's AbortSignal.timeout throws on a fractional
+			// delay (Bun accepts it, which hides that in local runs), and at least 1
+			// because it also rejects 0.
+			const remainingMs = maxWaitMs - (now() - start);
+			const attemptTimeout = createTimeoutSignal(
+				Math.max(1, Math.min(attemptTimeoutMs, Math.floor(remainingMs))),
+			);
 			const response = await fetchImpl(pingUrl, {
 				signal: signal
 					? AbortSignal.any([signal, attemptTimeout])

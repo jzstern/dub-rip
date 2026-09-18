@@ -103,7 +103,8 @@ missed. `POST /api/canary` exists to catch the next one within hours.
   so it queues behind real users rather than starving them. A full queue is
   recorded as a skip (`queue_full`), not a failure. Before downloading it wakes
   the sleeping bgutil-pot sidecar and polls `/ping` until it answers (capped at
-  ~20 s, never reported to Sentry) — the same wait `GET /api/download-stream`
+  ~20 s; a failed wake writes a `Sentry.logger.warn` entry but never opens an
+  Issue) — the same wait `GET /api/download-stream`
   now does for real users (12 s cap), so the canary still stands in for the real
   path: the bgutil plugin checks `/ping` once and caches a failure for 60 s, so a
   cold sidecar otherwise looks unavailable for the whole run and confounds every

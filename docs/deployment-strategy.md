@@ -285,7 +285,7 @@ It is also `visionos`, the 2026.08.19 lead. On 2026-09-16 its direct https audio
 
 **What did not fix it:** trying HLS audio first (`bestaudio[protocol^=m3u8]`, itags 233/234 on `visionos`). On 2026-09-17 production fetched the HLS manifest, then all 34 fragments were refused (403, escalating to 401) and skipped, and yt-dlp failed with `ERROR: The downloaded file is empty` — the same refusal, surfacing as an empty file because fragment errors go to stdout. Both DASH and HLS media were blocked; the block was on the IP, not the format.
 
-**What fixed it:** a different egress IP. Enabling Railway Static Outbound IPs on the `dub-rip` service and redeploying restored downloads immediately (2026-09-17). Check the current state with:
+**What fixed it:** a different egress IP. Enabling Railway Static Outbound IPs on the `dub-rip` service and redeploying restored downloads immediately (2026-09-17). The setting turned out to be three addresses, not one, and the next day YouTube throttled the watch page from production's egress; which of the three (or how many) is flagged is unknown — see [the 2026-09-18 section](#symptom-watch-page-http-error-429-then-the-bot-check-2026-09-18). Check the current state with:
 
 ```bash
 railway outbound-network status --service dub-rip --environment production --json
@@ -297,11 +297,58 @@ Railway does not guarantee static addresses are dedicated, and sustained traffic
 
 Do **not** exclude the client with `player_client=default,-visionos`: that leaves only `web`, which YouTube serves SABR-only at this pin (`YouTube is forcing SABR streaming for this client`), so the download fails with "Requested format is not available" instead. And do not go back to a hand-picked list — that list is what YouTube bot-checked on 2026-09-14 (next section).
 
+## Symptom: watch page `HTTP Error 429`, then the bot check (2026-09-18)
+
+Production extractions failed, and what reached Sentry was the bot check — the message the next section is about. The raw stderr of every failing run on 2026-09-18 (production logs) shows a watch-page 429 ahead of it, in this order:
+
+```
+WARNING: [youtube] <id>: Unable to download webpage: HTTP Error 429: Too Many Requests
+ERROR: [youtube] <id>: Sign in to confirm you’re not a bot
+```
+
+The `production-canary` Sentry monitor failed with stage `player_bot_check`, and a real download of `cpGHMGOeg-o` failed the same way. At the time the canary labelled the run `player_bot_check` because it pattern-matches the run's stderr for the bot check, which is what the `ERROR` line says; the 429 sits only in the `WARNING` line above it, so the label never mentioned it ([PR #125](https://github.com/jzstern/dub-rip/pull/125) gives a 429 its own `page_rate_limited` stage, so this holds only on builds without that change). **Read the raw stderr, not the stage.** The `HTTP Error 429` warning ahead of the bot check is what separates this from the two causes in the next section.
+
+**What a 429 costs** (read from yt-dlp 2026.08.19 source, not reproduced): `_download_webpage_with_retries` retries only errors that are *not* HTTP 403/429, so `--extractor-retries` and `--retry-sleep` never apply and the run carries on without the page. It then has no visitor data — `_extract_visitor_data` is fed only the webpage and player `ytcfg`, never the `initial data API JSON` response. For the `web` client that means the player calls carry no visitor id and `web` gets no GVS PO token (yt-dlp warns `Missing required Visitor Data`). It does **not** cost the *player* PO token: that binds to the video id (`get_webpo_content_binding` in `pot/utils.py`), and `_video.py` fetches one whenever the page yielded no player response, so with `fetch_pot=always` it is minted. At 17:44 UTC bgutil-pot logged ~10 fresh tokens for the failing video, yt-dlp logged `[pot:bgutil:http] Generating a player PO Token for web client`, and the download still failed.
+
+What is established is the outcome, not a mechanism: in the failing runs a watch-page 429 was followed by the bot check. Whether the missing visitor id and GVS token are what turned one into the other is not established — successes appear to lose the watch page too (see below), and why `visionos`, which takes no PO token, did not serve the video on the failing runs is unexplained.
+
+**What it was not:**
+
+- **A cold bgutil-pot sidecar.** At 17:44 UTC the sidecar was awake and minted ~10 fresh tokens for the failing video, and the download still failed.
+- **Stale or missing player PO tokens.** Same evidence: the player token was minted for the failing video.
+- **A YouTube-side change hitting everyone** — see the matched pair below.
+- **Our own traffic, in the 03:57–16:44 UTC window that day:** the only yt-dlp traffic in it was the canary. Earlier days are not covered — sustained traffic can flag the addresses.
+
+**The matched pair.** At 18:03:47 UTC, one `POST /api/preview/details` for the canary video `jNQXAC9IVRw` went to dub.rip and one to the PR env `dub-rip-pr-124`, at the same instant. Production returned a 500 with the identical 429 → bot-check stderr; the PR env returned a 200 (duration 19, 3.3 s). Same yt-dlp pin, argv and video, same instant. The difference to expect is the egress IP — a PR env does not share production's, per the Production Canary section of [`../.claude/claude.md`](../.claude/claude.md#production-canary) — but that is taken from those docs, not measured: neither IP was observed. So "YouTube is throttling production's egress IP" is the best-supported explanation, and the one remaining gap is that the addresses themselves were not observed.
+
+This is the only way to ask "is it the IP?" without a shell in production. It costs one yt-dlp extraction per environment, so keep it to one pair; every call is a request from a datacenter IP, and bursts get that IP bot-checked for several minutes.
+
+**Three addresses, not one.** As of 2026-09-18 `railway outbound-network status --service dub-rip --environment production --json` shows `staticIp.highAvailability: true` with three addresses in iad: 162.220.234.241 (zone eqdc4a), 152.55.180.240 and 152.55.180.241 (zone eqdc16a). "The egress IP" in this document and in `claude.md` means whichever of them a request left from. **Which of them is flagged, or how many, is unknown**, and it can't be read off a run: `railway logs --network` shows only the container's private `10.240.x.x` source, never the public address.
+
+**Unexplained: the 03:57 UTC canary passed** on the same deployment, binary and argv. Its stderr is unknowable — successful runs discarded it, because the stderr listener was attached to the wrong object ([PR #123](https://github.com/jzstern/dub-rip/pull/123) fixes that) — so it can't be said whether that run met a 429.
+
+**What production logs look like.** Observations, from small samples. On the previous egress IP (deployments 33a53f35 and 769270b6, 2026-09-16 20:00 → 2026-09-17 00:58 UTC; videos 6yakvy3ZV-I, jSeAjyDE-0w and Zm7c2FDb7jQ) no run logged `Downloading web player API JSON` and none logged a 429; the failures were media-fetch 403s, plus one bot check (Zm7c2FDb7jQ) with no 429. Since the static IPs went in — deployment 94d4b6b9, created 2026-09-17 00:58 UTC, presumably the redeploy after enabling them, and then 90aee016 — 4 of the 5 runs before 2026-09-18 logged that line (6yakvy3ZV-I at 00:59:41, jNQXAC9IVRw at 01:00:16 and 01:11:26; not dSA1oUhCdy8 at 01:08:09, which succeeded on HLS audio, itag 234), and every run inspected on 2026-09-18 did (the 03:57, 10:52 and 16:06 UTC canaries, and the 17:44 attempts on `cpGHMGOeg-o`). The 6yakvy3ZV-I run at 00:59:41 also had one attempt fail with the same 429 and bot check, and a second attempt in the same second succeed. The three successes before 2026-09-18 that logged the line all chose itag 18, as did the 03:57 canary: the 360p progressive video fallback near the end of the format selector in `src/lib/download-pipeline/try-yt-dlp.ts`, not audio-only — so a download in that state can be pulling a whole video stream.
+
+Per yt-dlp source, `Downloading web player API JSON` appears when the watch page's own player response is unavailable. (`Downloading iframe API JS` and `Downloading player <id>-main` also appear on healthy runs, so they mark nothing.) *Inference, not measured:* the watch page is frequently or always unusable from the static addresses, so `web` routinely makes an explicit player call there; and, reading the contrast above, the degradation began with the static IPs rather than being new on 2026-09-18. Neither is established: the samples are small, and everything else that differs between the two periods (videos, deployments, time of day) is uncontrolled. A dev-box log looks different (see the webpage-client note in [`../.claude/claude.md`](../.claude/claude.md#yt-dlp-integration)).
+
+**Investigating without a shell in production:**
+
+- `railway ssh` needs an SSH key registered on the Railway account (`railway ssh keys add|github`) — an account-level change, not made here.
+- `railway run` executes locally, so it proves nothing about egress.
+- `railway logs --json` gives every line a nanosecond timestamp. In the 10:52 UTC canary run every line was stamped 10:52:07.970, and at 17:44 UTC each attempt's lines fell within a few milliseconds of each other — observations from those runs, taken to mean a run's log lines are flushed together — so ordering *within* a run can't be read from Railway timestamps.
+
+**Open decision — neither option has been taken, and this section does not choose one:**
+
+1. **Rotate or re-provision the Static Outbound IPs.** It is dashboard state with no trace in the repo, switching IPs is what fixed the 2026-09-16/17 refusal above, and Railway does not guarantee the addresses are dedicated. With three addresses and no way to tell which is flagged, it is unclear which to replace. And if the watch-page degradation has been present since these addresses were assigned (inference, above), another Railway static address may not help.
+2. **Route yt-dlp through a residential proxy (`--proxy`).** The durable fallback named in the 403 section. Nothing for it exists yet: no proxy is wired in, and the circuit breaker described as Phase 2 in the Production Canary section of `claude.md` is a design, not code.
+
 ## Symptom: `Sign in to confirm you're not a bot` while bgutil-pot is healthy
 
 Every video fails. The sidecar is up, `/api/health?probe=bgutil` is green, `BGUTIL_POT_URL` is
 set, the plugin loads — and yt-dlp still gets bot-checked. There are two different causes, and
 the extraction log tells them apart. Check which one you have before touching anything.
+
+The same message also follows a throttled watch page: if the raw stderr shows `Unable to download webpage: HTTP Error 429` ahead of it, see [the 2026-09-18 section](#symptom-watch-page-http-error-429-then-the-bot-check-2026-09-18). That incident had tokens minted for the failing video — the signature of the next subsection — but that subsection's *diagnosis*, burned clients, is not what happened: a matched request from a PR env with the same argv and video succeeded at the same instant, so the block followed the egress IP rather than the client list (which the subsection already allows for, at its end).
 
 ### Tokens are being minted → the clients are burned
 
@@ -325,9 +372,14 @@ block is on the IP rather than the clients, and no client choice will fix it.
 ### No token line at all → `fetch_pot` is not forcing one
 
 The giveaway is a **negative**: no `Generating a … PO Token …` line for a client that issued a
-player request. First rule out the normal case — `visionos` takes no PO token, so a download it
-served legitimately logs no token line. This cause only applies when the log shows
-`Downloading web player API JSON`.
+player request. First rule out the normal case, which is narrower than it looks. `visionos` takes
+no PO token, so a run it served legitimately logs none. But `web` is requested on every run
+(`_extract_player_responses` loops over every client in the list): from a usable watch page it
+reuses the page's player response with no API call, and without one it makes the explicit
+`Downloading web player API JSON` call. Production logs on the static IPs show that call on most inspected runs (see the 2026-09-18
+section), so there a missing token line is normal only when **no**
+`Downloading web player API JSON` line appears. Once one does, `web` issued a player request, and no `Generating a player PO Token` line
+beside it means this cause.
 
 bgutil was never asked. yt-dlp's default `fetch_pot=auto` mints a token only when the client's
 own policy demands one, and `web` declares the *player* token optional

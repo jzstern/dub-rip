@@ -237,6 +237,16 @@ On a *freshly deployed* instance that line should stand alone. `Refreshing yt-dl
 
 It pings `/ping` (the healthcheck) and never `/get_pot`, which would make the sidecar do real BotGuard work speculatively. The call is not awaited, is bounded by an `AbortSignal.timeout`, and swallows its own rejection, so a dead sidecar cannot affect the preview response.
 
+### The download waits for the sidecar
+
+The prewarm's 2 s timeout is shorter than the sidecar's 3–9 s cold start, so a click on Download inside that window still reaches yt-dlp while the sidecar is booting. yt-dlp's bgutil plugin checks `/ping` once, caches a failure for 60 s, and then has no PO token for the run, so YouTube bot-checks the `web` player request — the same message a throttled IP produces. Until this wait existed, the app's retry was the only thing recovering that case (2026-09-17 00:59:41: the first attempt failed, the retry minted a token and succeeded).
+
+`GET /api/download-stream` therefore calls `waitForBgutilPot` (`src/lib/wait-for-bgutil-pot.ts`, shared with the canary) right after its first status event and before any yt-dlp work, so the oEmbed lookup, the details extraction and the download all run against a sidecar that has answered `/ping`. When the sidecar is warm that is one round trip. When it is cold the client sees `Waking up the downloader...` instead of a silent stall. The wait polls every 500 ms, stops the moment the client disconnects, and gives up after 12 s.
+
+It never fails the download. If the sidecar stays silent for the whole 12 s the attempt goes ahead anyway, the retry loop is still there as the safety net, and a `warning` breadcrumb records the attempts and time so a failure that follows can be read alongside it. The worst case is a sidecar that is down: the user waits about 12 s before the failure they were going to get, where before they waited a few seconds. That is the cost of not guessing whether a slow sidecar is starting or dead.
+
+`/api/preview/details` (the metadata extraction that runs when a URL is pasted) does not wait; it goes through its own retry loop and a failure there costs a missing duration and a Sentry event, not a download. It is the next place to give the same wait if that noise matters.
+
 ## Removed: the 0-byte-tunnel runbook
 
 This doc used to carry a Cobalt setup section, a Cobalt version-pinning rule, and a
@@ -348,7 +358,7 @@ Per yt-dlp source, `Downloading web player API JSON` appears when the watch page
 
 **Open decision — nothing below is decided or built, and the two modes need different fixes.** Option 0 addresses mode (i); options 1 and 2, the IP options, address mode (ii).
 
-0. **Make the download path wait for the sidecar the way the canary now does** ([PR #126](https://github.com/jzstern/dub-rip/pull/126)'s `/ping` wait) instead of relying on the app's retry to recover a click inside the cold start. A recommendation, not done. [PR #128](https://github.com/jzstern/dub-rip/pull/128) tried a rule keyed on the 429 instead — no retry of a bot-check that came with a watch-page 429 — and was merged, then reverted by [PR #131](https://github.com/jzstern/dub-rip/pull/131): with the 429 chronic it amounts to never retrying a bot-check, which removes the retry that recovers mode (i).
+0. **Make the download path wait for the sidecar the way the canary now does** ([PR #126](https://github.com/jzstern/dub-rip/pull/126)'s `/ping` wait) instead of relying on the app's retry to recover a click inside the cold start. Done: see [The download waits for the sidecar](#the-download-waits-for-the-sidecar). [PR #128](https://github.com/jzstern/dub-rip/pull/128) tried a rule keyed on the 429 instead — no retry of a bot-check that came with a watch-page 429 — and was merged, then reverted by [PR #131](https://github.com/jzstern/dub-rip/pull/131): with the 429 chronic it amounts to never retrying a bot-check, which removes the retry that recovers mode (i).
 1. **Rotate or re-provision the Static Outbound IPs.** It is dashboard state with no trace in the repo, switching IPs is what fixed the 2026-09-16/17 refusal above, and Railway does not guarantee the addresses are dedicated. With three addresses and no way to tell which is flagged, it is unclear which to replace. And if the watch-page degradation has been present since these addresses were assigned (inference, above), another Railway static address may not help.
 2. **Route yt-dlp through a residential proxy (`--proxy`).** The durable fallback named in the 403 section. Nothing for it exists yet: no proxy is wired in, and the circuit breaker described as Phase 2 in the Production Canary section of `claude.md` is a design, not code.
 

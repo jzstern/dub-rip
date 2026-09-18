@@ -179,6 +179,110 @@ describe("waitForBgutilPot()", () => {
 		expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(timeoutSignal);
 	});
 
+	describe("keeping the cap a real bound", () => {
+		it("gives each attempt no more time than is left of the wait", async () => {
+			// #given a ping that fails at once, so the wait keeps retrying until the
+			// cap, and an attempt timeout much longer than the cap
+			const createTimeoutSignal = vi.fn(
+				(_ms: number) => new AbortController().signal,
+			);
+			fetchMock.mockRejectedValue(transportError());
+
+			// #when
+			await wait({
+				maxWaitMs: 1_200,
+				retryIntervalMs: 500,
+				attemptTimeoutMs: 3_000,
+				createTimeoutSignal,
+			});
+
+			// #then each attempt may run only to the cap: 1200 left, then 700, then 200
+			expect(createTimeoutSignal.mock.calls.map(([ms]) => ms)).toEqual([
+				1_200, 700, 200,
+			]);
+		});
+
+		it("only ever asks for a whole-millisecond timeout, which Node requires", async () => {
+			// #given a clock that lands between milliseconds, as performance.now()
+			// does; Node's AbortSignal.timeout throws ERR_OUT_OF_RANGE for 666.7
+			const createTimeoutSignal = vi.fn(
+				(_ms: number) => new AbortController().signal,
+			);
+			fetchMock.mockRejectedValue(transportError());
+
+			// #when
+			await wait({
+				maxWaitMs: 1_000,
+				retryIntervalMs: 333.3,
+				createTimeoutSignal,
+			});
+
+			// #then
+			expect(
+				createTimeoutSignal.mock.calls.every(([ms]) => Number.isInteger(ms)),
+			).toBe(true);
+		});
+
+		it("never asks for a timeout of less than a millisecond", async () => {
+			// #given the same fractional clock, which leaves 0.1 ms for the last
+			// attempt
+			const createTimeoutSignal = vi.fn(
+				(_ms: number) => new AbortController().signal,
+			);
+			fetchMock.mockRejectedValue(transportError());
+
+			// #when
+			await wait({
+				maxWaitMs: 1_000,
+				retryIntervalMs: 333.3,
+				createTimeoutSignal,
+			});
+
+			// #then
+			expect(createTimeoutSignal.mock.calls.every(([ms]) => ms >= 1)).toBe(
+				true,
+			);
+		});
+
+		it("resolves instead of throwing when the timeout signal cannot be created", async () => {
+			// #given
+			const createTimeoutSignal = vi.fn(() => {
+				throw new RangeError("The value of delay is out of range");
+			});
+
+			// #when
+			const outcome = wait({ createTimeoutSignal });
+
+			// #then
+			await expect(outcome).resolves.toMatchObject({ awake: false });
+		});
+
+		it("aborts an attempt that is still pending when the wait runs out, instead of letting it run its full timeout", async () => {
+			// #given a ping that never answers, an attempt timeout far longer than the
+			// cap, and real timers: what is being checked is wall-clock time
+			fetchMock.mockImplementation(
+				(_url, init) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new DOMException("aborted", "AbortError")),
+						);
+					}),
+			);
+			const startedAt = performance.now();
+
+			// #when
+			await waitForBgutilPot(POT_URL, {
+				fetch: fetchMock,
+				attemptTimeoutMs: 5_000,
+				retryIntervalMs: 100,
+				maxWaitMs: 600,
+			});
+
+			// #then it ends near the 600 ms cap, not after the 5 s attempt timeout
+			expect(performance.now() - startedAt).toBeLessThan(2_000);
+		});
+	});
+
 	it("cancels the response body of a 2xx answer", async () => {
 		// #given
 		const response = new Response("{}", { status: 200 });

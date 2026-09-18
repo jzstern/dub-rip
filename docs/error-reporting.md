@@ -212,10 +212,11 @@ breadcrumbs.
   reason as the prewarm: a cold sidecar is normal and the download that follows
   wakes it regardless. The outcome is not lost. When the sidecar never answers
   within the cap, `runCanaryDownload` writes a `Sentry.logger.warn` entry
-  (`service: "canary"`, `awake`, `attempts`, `waitedMs`) and the download route
-  leaves a `warning` breadcrumb with the same fields. Neither opens an Issue, and
-  the breadcrumb rides along on any failure that request goes on to report, so
-  that failure can be read alongside whether the sidecar was reachable.
+  (`service: "canary"`, `awake: false`, `attempts`, `waitedMs`) and the download
+  route leaves a `warning` breadcrumb (`videoId`, `attempts`, `waitedMs`).
+  Neither opens an Issue, and the breadcrumb rides along on any failure that
+  request goes on to report, so that failure can be read alongside whether the
+  sidecar was reachable.
 - **Temp-file `unlink` failures** in the download token registry. The usual
   cause is the file already being gone, which is exactly what was wanted, and
   the container's `/tmp` is discarded on restart either way.

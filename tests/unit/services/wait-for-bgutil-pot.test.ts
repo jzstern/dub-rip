@@ -18,6 +18,8 @@ describe("waitForBgutilPot()", () => {
 			retryIntervalMs?: number;
 			attemptTimeoutMs?: number;
 			createTimeoutSignal?: (ms: number) => AbortSignal;
+			signal?: AbortSignal;
+			onWaiting?: () => void;
 			url?: string;
 		} = {},
 	) {
@@ -242,5 +244,155 @@ describe("waitForBgutilPot()", () => {
 
 		// #then
 		expect(fetchMock.mock.calls[0]?.[0]).toBe(`${POT_URL}/ping`);
+	});
+
+	describe("when the caller gives up", () => {
+		it("does not ping at all when the signal is already aborted", async () => {
+			// #given
+			const controller = new AbortController();
+			controller.abort();
+
+			// #when
+			const result = await wait({ signal: controller.signal });
+
+			// #then
+			expect(result).toEqual({ awake: false, attempts: 0, waitedMs: 0 });
+			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it("stops polling once the signal aborts between attempts", async () => {
+			// #given
+			const controller = new AbortController();
+			fetchMock.mockRejectedValue(transportError());
+			sleepMock.mockImplementation(async (ms) => {
+				clockMs += ms;
+				controller.abort();
+			});
+
+			// #when
+			const result = await wait({ signal: controller.signal });
+
+			// #then
+			expect(result).toMatchObject({ awake: false, attempts: 1 });
+		});
+
+		it("ends an in-flight ping when the signal aborts, without waiting for the attempt timeout", async () => {
+			// #given a ping that only settles when the signal it was given aborts,
+			// and an attempt timeout that never fires — so only the caller's signal
+			// can end it
+			const controller = new AbortController();
+			fetchMock.mockImplementation(
+				(_url, init) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new DOMException("aborted", "AbortError")),
+						);
+					}),
+			);
+			const outcome = wait({
+				signal: controller.signal,
+				createTimeoutSignal: () => new AbortController().signal,
+			});
+
+			// #when
+			controller.abort();
+
+			// #then
+			await expect(outcome).resolves.toMatchObject({
+				awake: false,
+				attempts: 1,
+			});
+		});
+
+		it("stops during the pause between attempts instead of sleeping it out", async () => {
+			// #given a pause that would never end on its own, so only the caller's
+			// signal can end the wait
+			const controller = new AbortController();
+			fetchMock.mockRejectedValue(transportError());
+			sleepMock.mockImplementation(() => new Promise<void>(() => {}));
+			const outcome = wait({ signal: controller.signal });
+			await vi.waitFor(() => expect(sleepMock).toHaveBeenCalled());
+
+			// #when
+			controller.abort();
+
+			// #then
+			await expect(outcome).resolves.toMatchObject({
+				awake: false,
+				attempts: 1,
+			});
+		});
+
+		it("does not announce that it is waiting when the caller had already gone", async () => {
+			// #given
+			const controller = new AbortController();
+			const onWaiting = vi.fn();
+			fetchMock.mockImplementation(
+				(_url, init) =>
+					new Promise<Response>((_resolve, reject) => {
+						init?.signal?.addEventListener("abort", () =>
+							reject(new DOMException("aborted", "AbortError")),
+						);
+					}),
+			);
+			const outcome = wait({
+				signal: controller.signal,
+				onWaiting,
+				createTimeoutSignal: () => new AbortController().signal,
+			});
+
+			// #when
+			controller.abort();
+			await outcome;
+
+			// #then
+			expect(onWaiting).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("onWaiting", () => {
+		it("is called once, after the first ping that does not answer", async () => {
+			// #given
+			const onWaiting = vi.fn();
+			fetchMock
+				.mockRejectedValueOnce(transportError())
+				.mockRejectedValueOnce(transportError())
+				.mockResolvedValue(new Response("{}", { status: 200 }));
+
+			// #when
+			await wait({ onWaiting });
+
+			// #then
+			expect(onWaiting).toHaveBeenCalledTimes(1);
+		});
+
+		it("is never called when the first ping answers", async () => {
+			// #given
+			const onWaiting = vi.fn();
+			fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+			// #when
+			await wait({ onWaiting });
+
+			// #then
+			expect(onWaiting).not.toHaveBeenCalled();
+		});
+
+		it("does not stop the wait when it throws", async () => {
+			// #given
+			fetchMock
+				.mockRejectedValueOnce(transportError())
+				.mockResolvedValue(new Response("{}", { status: 200 }));
+
+			// #when
+			const result = await wait({
+				onWaiting: () => {
+					throw new Error("the SSE stream is already closed");
+				},
+			});
+
+			// #then
+			expect(result.awake).toBe(true);
+		});
 	});
 });

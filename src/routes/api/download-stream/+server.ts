@@ -41,10 +41,9 @@ const QUEUE_FULL_MESSAGE =
  * Videos that can never be downloaded (private, age-restricted, copyright)
  * are normal operation, not defects, so they stay breadcrumbs — reporting
  * them buried the real failures and burned quota. Transient infrastructure
- * failures have already exhausted every retry (or were judged not worth
- * retrying) by the time they land here, so they're worth a warning; anything
- * unclassified is how new yt-dlp/YouTube breakages announce themselves and
- * gets full error level.
+ * failures have already exhausted every retry by the time they land here, so
+ * they're worth a warning; anything unclassified is how new yt-dlp/YouTube
+ * breakages announce themselves and gets full error level.
  */
 function reportDownloadFailure(
 	error: Error,

@@ -101,8 +101,15 @@ missed. `POST /api/canary` exists to catch the next one within hours.
   `tryYtDlpDownload` from `try-yt-dlp.ts` (same argv, format selector, extractor
   args), and the shared `withYtDlpConcurrencyLimit` limiter (`yt-dlp-concurrency.ts`)
   so it queues behind real users rather than starving them. A full queue is
-  recorded as a skip (`queue_full`), not a failure.
-  See `src/lib/canary/run-canary-download.ts`.
+  recorded as a skip (`queue_full`), not a failure. Before downloading it wakes
+  the sleeping bgutil-pot sidecar and polls `/ping` until it answers (capped at
+  ~20 s, never reported to Sentry), mirroring what `POST /api/preview` does for
+  real users seconds before they click Download: the bgutil plugin checks
+  `/ping` once and caches a failure for 60 s, so a cold sidecar otherwise looks
+  unavailable for the whole run and confounds every canary failure. The
+  trade-off: the canary now waits for the sidecar, so it cannot see a user who
+  clicks Download inside the 3–9 s cold start.
+  See `src/lib/canary/run-canary-download.ts` and `wait-for-bgutil-pot.ts`.
 - **It always answers 200** once authenticated (`Authorization: Bearer
   <CANARY_TOKEN>`, constant-time compared, 404 if `CANARY_TOKEN` is unset, 401
   on a bad token), even when the run fails — the GitHub workflow only fails on

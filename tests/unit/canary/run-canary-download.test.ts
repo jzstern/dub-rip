@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/sveltekit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockEnv: Record<string, string> = {};
@@ -53,6 +54,13 @@ vi.mock("$lib/download-pipeline/finalize-mp3", () => ({
 	finalizeMp3: finalizeMp3Mock,
 }));
 
+const { waitForBgutilPotMock } = vi.hoisted(() => ({
+	waitForBgutilPotMock: vi.fn(),
+}));
+vi.mock("$lib/canary/wait-for-bgutil-pot", () => ({
+	waitForBgutilPot: waitForBgutilPotMock,
+}));
+
 function emitEvent(
 	send: (data: Record<string, unknown>) => void,
 	eventType: string,
@@ -71,6 +79,18 @@ describe("runCanaryDownload()", () => {
 		pathExistsMock.mockReset().mockResolvedValue(true);
 		registerDownloadMock.mockClear();
 		finalizeMp3Mock.mockClear();
+		vi.mocked(Sentry.logger.warn).mockClear();
+		vi.mocked(Sentry.captureException).mockClear();
+		vi.mocked(Sentry.captureMessage).mockClear();
+		vi.spyOn(console, "info")
+			.mockReset()
+			.mockImplementation(() => undefined);
+		vi.spyOn(console, "warn")
+			.mockReset()
+			.mockImplementation(() => undefined);
+		waitForBgutilPotMock
+			.mockReset()
+			.mockResolvedValue({ awake: true, attempts: 1, waitedMs: 0 });
 	});
 
 	it("classifies a completed download as ok and reports the itag it used", async () => {
@@ -200,5 +220,171 @@ describe("runCanaryDownload()", () => {
 
 		// #then
 		expect(finalizeMp3Mock).not.toHaveBeenCalled();
+	});
+
+	it("wakes the sidecar at BGUTIL_POT_URL before starting the download", async () => {
+		// #given
+		const callOrder: string[] = [];
+		waitForBgutilPotMock.mockImplementation(async () => {
+			callOrder.push("wake");
+			return { awake: true, attempts: 1, waitedMs: 0 };
+		});
+		tryYtDlpDownloadMock.mockImplementation(async () => {
+			callOrder.push("download");
+		});
+
+		// #when
+		const { runCanaryDownload } = await import(
+			"$lib/canary/run-canary-download"
+		);
+		await runCanaryDownload();
+
+		// #then
+		expect(callOrder).toEqual(["wake", "download"]);
+	});
+
+	it("passes the configured sidecar URL to the wake", async () => {
+		// #given
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+
+		// #when
+		const { runCanaryDownload } = await import(
+			"$lib/canary/run-canary-download"
+		);
+		await runCanaryDownload();
+
+		// #then
+		expect(waitForBgutilPotMock).toHaveBeenCalledWith(
+			"http://bgutil.internal:4416",
+		);
+	});
+
+	it("still runs the download when the sidecar never answered", async () => {
+		// #given
+		waitForBgutilPotMock.mockResolvedValue({
+			awake: false,
+			attempts: 30,
+			waitedMs: 20_000,
+		});
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+
+		// #when
+		const { runCanaryDownload } = await import(
+			"$lib/canary/run-canary-download"
+		);
+		await runCanaryDownload();
+
+		// #then
+		expect(tryYtDlpDownloadMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not wake the sidecar when BGUTIL_POT_URL is unset", async () => {
+		// #given
+		delete mockEnv.BGUTIL_POT_URL;
+
+		// #when
+		const { runCanaryDownload } = await import(
+			"$lib/canary/run-canary-download"
+		);
+		await runCanaryDownload();
+
+		// #then
+		expect(waitForBgutilPotMock).not.toHaveBeenCalled();
+	});
+
+	describe("when the sidecar never answers", () => {
+		const unanswered = { awake: false, attempts: 30, waitedMs: 20_000 };
+
+		beforeEach(() => {
+			waitForBgutilPotMock.mockResolvedValue(unanswered);
+			tryYtDlpDownloadMock.mockResolvedValue(undefined);
+		});
+
+		it("logs the failed wake to the Sentry log stream with its context", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(Sentry.logger.warn).toHaveBeenCalledWith(
+				"Production canary could not wake bgutil-pot",
+				{ service: "canary", awake: false, attempts: 30, waitedMs: 20_000 },
+			);
+		});
+
+		it("warns on the console rather than logging at info level", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(console.warn).toHaveBeenCalledTimes(1);
+		});
+
+		it("does not log the failed wake at info level", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(console.info).not.toHaveBeenCalled();
+		});
+
+		it("never opens a Sentry issue for the failed wake", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(Sentry.captureException).not.toHaveBeenCalled();
+			expect(Sentry.captureMessage).not.toHaveBeenCalled();
+		});
+	});
+
+	describe("when the sidecar answers", () => {
+		beforeEach(() => {
+			tryYtDlpDownloadMock.mockResolvedValue(undefined);
+		});
+
+		it("keeps the Sentry log stream quiet", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(Sentry.logger.warn).not.toHaveBeenCalled();
+		});
+
+		it("does not warn on the console", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(console.warn).not.toHaveBeenCalled();
+		});
+
+		it("notes the wake with a single info line", async () => {
+			// #when
+			const { runCanaryDownload } = await import(
+				"$lib/canary/run-canary-download"
+			);
+			await runCanaryDownload();
+
+			// #then
+			expect(console.info).toHaveBeenCalledTimes(1);
+		});
 	});
 });

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
 import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { pathExists } from "$lib/download-pipeline/path-exists";
@@ -14,7 +15,10 @@ import {
 	type CanaryClassification,
 	classifyCanaryRun,
 } from "./classify-canary-run";
-import { waitForBgutilPot } from "./wait-for-bgutil-pot";
+import {
+	type WaitForBgutilPotResult,
+	waitForBgutilPot,
+} from "./wait-for-bgutil-pot";
 
 const require = createRequire(import.meta.url);
 
@@ -23,6 +27,27 @@ export const CANARY_VIDEO_URL = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
 
 function elapsedMs(start: number): number {
 	return Math.round(performance.now() - start);
+}
+
+/**
+ * A cold sidecar is normal, so a failed wake is never an issue — it goes to
+ * the log stream instead, so a later `player_bot_check`/`unknown` failure can
+ * be read alongside whether the sidecar was ever reachable.
+ */
+function reportWake(wake: WaitForBgutilPotResult): void {
+	const summary = `${wake.attempts} attempt(s), ${wake.waitedMs}ms`;
+	if (wake.awake) {
+		console.info(`[canary] bgutil-pot answered /ping after ${summary}`);
+		return;
+	}
+
+	console.warn(`[canary] bgutil-pot did not answer /ping after ${summary}`);
+	Sentry.logger.warn("Production canary could not wake bgutil-pot", {
+		service: "canary",
+		awake: false,
+		attempts: wake.attempts,
+		waitedMs: wake.waitedMs,
+	});
 }
 
 /**
@@ -57,10 +82,7 @@ export async function runCanaryDownload(): Promise<CanaryClassification> {
 	};
 
 	try {
-		const wake = await waitForBgutilPot(bgutilPotUrl);
-		console.info(
-			`[canary] bgutil-pot ${wake.awake ? "answered /ping" : "did not answer /ping"} after ${wake.attempts} attempt(s), ${wake.waitedMs}ms`,
-		);
+		reportWake(await waitForBgutilPot(bgutilPotUrl));
 
 		const [ytDlp, pluginDir] = await Promise.all([
 			getYTDlp(),

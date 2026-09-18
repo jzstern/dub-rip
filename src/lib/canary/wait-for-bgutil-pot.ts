@@ -6,6 +6,7 @@ export interface WaitForBgutilPotOptions {
 	fetch?: typeof fetch;
 	sleep?: (ms: number) => Promise<void>;
 	now?: () => number;
+	createTimeoutSignal?: (ms: number) => AbortSignal;
 	attemptTimeoutMs?: number;
 	retryIntervalMs?: number;
 	/** No new attempt starts once this much time has passed since the first. */
@@ -20,6 +21,14 @@ export interface WaitForBgutilPotResult {
 
 function defaultSleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function discardBody(response: Response): Promise<void> {
+	try {
+		await response.body?.cancel();
+	} catch {
+		// The answer is already decided; a body that won't close changes nothing.
+	}
 }
 
 /**
@@ -46,11 +55,13 @@ export async function waitForBgutilPot(
 		fetch: fetchImpl = fetch,
 		sleep = defaultSleep,
 		now = () => performance.now(),
+		createTimeoutSignal = AbortSignal.timeout,
 		attemptTimeoutMs = DEFAULT_ATTEMPT_TIMEOUT_MS,
 		retryIntervalMs = DEFAULT_RETRY_INTERVAL_MS,
 		maxWaitMs = DEFAULT_MAX_WAIT_MS,
 	} = options;
 
+	const pingUrl = `${bgutilPotUrl.replace(/\/+$/, "")}/ping`;
 	const start = now();
 	const waitedMs = (): number => Math.round(now() - start);
 	let attempts = 0;
@@ -58,10 +69,10 @@ export async function waitForBgutilPot(
 	while (true) {
 		attempts++;
 		try {
-			const response = await fetchImpl(`${bgutilPotUrl}/ping`, {
-				signal: AbortSignal.timeout(attemptTimeoutMs),
+			const response = await fetchImpl(pingUrl, {
+				signal: createTimeoutSignal(attemptTimeoutMs),
 			});
-			void response.body?.cancel().catch(() => undefined);
+			void discardBody(response);
 			if (response.ok) {
 				return { awake: true, attempts, waitedMs: waitedMs() };
 			}

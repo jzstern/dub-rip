@@ -199,6 +199,13 @@ breadcrumbs.
   sidecar sleeps, so a cold or slow `/ping` is the normal case and the download
   path wakes it regardless — reporting would file an event on most previews for
   something that costs nothing when it fails.
+- **The canary's bgutil-pot wake** (`waitForBgutilPot`) swallows every failed
+  `/ping` attempt, for the same reason as the prewarm: a cold sidecar is normal
+  and the download that follows wakes it regardless. The outcome is not lost —
+  when the sidecar never answers within the cap, `runCanaryDownload` writes a
+  `Sentry.logger.warn` entry (`service: "canary"`, `awake`, `attempts`,
+  `waitedMs`), which never opens an Issue, so a later canary failure can be read
+  alongside whether the sidecar was reachable.
 - **Temp-file `unlink` failures** in the download token registry. The usual
   cause is the file already being gone, which is exactly what was wanted, and
   the container's `/tmp` is discarded on restart either way.

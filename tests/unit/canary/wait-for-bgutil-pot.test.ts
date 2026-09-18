@@ -13,13 +13,20 @@ describe("waitForBgutilPot()", () => {
 	const sleepMock = vi.fn<(ms: number) => Promise<void>>();
 
 	function wait(
-		options: { maxWaitMs?: number; retryIntervalMs?: number } = {},
+		options: {
+			maxWaitMs?: number;
+			retryIntervalMs?: number;
+			attemptTimeoutMs?: number;
+			createTimeoutSignal?: (ms: number) => AbortSignal;
+			url?: string;
+		} = {},
 	) {
-		return waitForBgutilPot(POT_URL, {
+		const { url = POT_URL, ...rest } = options;
+		return waitForBgutilPot(url, {
 			fetch: fetchMock,
 			sleep: sleepMock,
 			now: () => clockMs,
-			...options,
+			...rest,
 		});
 	}
 
@@ -109,15 +116,16 @@ describe("waitForBgutilPot()", () => {
 		expect(result.awake).toBe(false);
 	});
 
-	it("stops starting new attempts once the cap has passed", async () => {
+	it("makes exactly the attempts that fit before the cap, counting the pause before the next one", async () => {
 		// #given
 		fetchMock.mockRejectedValue(transportError());
 
 		// #when
 		const result = await wait({ maxWaitMs: 5_000, retryIntervalMs: 500 });
 
-		// #then
-		expect(result.waitedMs).toBeLessThanOrEqual(5_000);
+		// #then — attempts at 0, 500, ... 4500 ms; a further one at 5000 ms
+		// would start at the cap, so the loop stops after the 4500 ms attempt
+		expect(result).toEqual({ awake: false, attempts: 10, waitedMs: 4_500 });
 	});
 
 	it("resolves instead of throwing when fetch rejects", async () => {
@@ -144,14 +152,95 @@ describe("waitForBgutilPot()", () => {
 		await expect(outcome).resolves.toMatchObject({ awake: false });
 	});
 
-	it("bounds every attempt with an abort signal", async () => {
+	it("bounds every attempt with a timeout signal of the configured length", async () => {
 		// #given
+		const timeoutSignal = new AbortController().signal;
+		const createTimeoutSignal = vi.fn(() => timeoutSignal);
 		fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+		// #when
+		await wait({ attemptTimeoutMs: 1_234, createTimeoutSignal });
+
+		// #then
+		expect(createTimeoutSignal).toHaveBeenCalledWith(1_234);
+	});
+
+	it("passes the timeout signal to fetch", async () => {
+		// #given
+		const timeoutSignal = new AbortController().signal;
+		fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+		// #when
+		await wait({ createTimeoutSignal: () => timeoutSignal });
+
+		// #then
+		expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(timeoutSignal);
+	});
+
+	it("cancels the response body of a 2xx answer", async () => {
+		// #given
+		const response = new Response("{}", { status: 200 });
+		const cancel = vi.spyOn(response.body as ReadableStream, "cancel");
+		fetchMock.mockResolvedValue(response);
 
 		// #when
 		await wait();
 
 		// #then
-		expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+		expect(cancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("cancels the response body of a non-2xx answer", async () => {
+		// #given
+		const notReady = new Response("starting", { status: 503 });
+		const cancel = vi.spyOn(notReady.body as ReadableStream, "cancel");
+		fetchMock
+			.mockResolvedValueOnce(notReady)
+			.mockResolvedValue(new Response("{}", { status: 200 }));
+
+		// #when
+		await wait();
+
+		// #then
+		expect(cancel).toHaveBeenCalledTimes(1);
+	});
+
+	it("still reports awake when cancelling the body throws", async () => {
+		// #given
+		const response = new Response("{}", { status: 200 });
+		vi.spyOn(response.body as ReadableStream, "cancel").mockImplementation(
+			() => {
+				throw new Error("stream already closed");
+			},
+		);
+		fetchMock.mockResolvedValue(response);
+
+		// #when
+		const result = await wait();
+
+		// #then
+		expect(result.awake).toBe(true);
+	});
+
+	it("drops a trailing slash from the base URL so it never requests //ping", async () => {
+		// #given
+		fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+		// #when
+		await wait({ url: `${POT_URL}/` });
+
+		// #then
+		expect(fetchMock.mock.calls[0]?.[0]).toBe(`${POT_URL}/ping`);
+	});
+
+	it("drops repeated trailing slashes from the base URL", async () => {
+		// #given
+		fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+		// #when
+		await wait({ url: `${POT_URL}///` });
+
+		// #then
+		expect(fetchMock.mock.calls[0]?.[0]).toBe(`${POT_URL}/ping`);
 	});
 });

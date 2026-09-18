@@ -17,6 +17,24 @@ const WATCH_PAGE_429_STDERR =
 const BOT_CHECK_ERROR_LINE =
 	"ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.";
 
+const WATCH_PAGE_429_WARNING_LINE =
+	"WARNING: [youtube] jNQXAC9IVRw: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)";
+
+// A WARNING, so it also appears in runs that failed for an unrelated reason.
+const SABR_WARNING_LINE =
+	"WARNING: [youtube] jNQXAC9IVRw: Some web client https formats have been skipped as they are missing a URL. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details";
+
+const BOT_CHECK_WARNING_LINE = BOT_CHECK_ERROR_LINE.replace(
+	"ERROR:",
+	"WARNING:",
+);
+
+const FORMAT_UNAVAILABLE_ERROR_LINE =
+	"ERROR: [youtube] jNQXAC9IVRw: Requested format is not available. Use --list-formats for a list of available formats";
+
+const wrappedStderr = (...lines: string[]): string =>
+	`\nError code: 1\n\nStderr:\n${lines.join("\n")}\n`;
+
 // A detail reads "<cause>: <stderr excerpt>", and no cause text contains ": ".
 const excerptOf = (detail: string): string =>
 	detail.slice(detail.indexOf(": ") + 2);
@@ -448,6 +466,152 @@ describe("classifyCanaryRun()", () => {
 		const result = classifyCanaryRun({
 			succeeded: false,
 			stdout,
+			stderr,
+			durationMs: 1200,
+		});
+
+		// #then
+		expect(result.stage).toBe("format_unavailable");
+	});
+
+	it("classifies page_rate_limited when the SABR warning accompanies a watch-page 429 that ends in a bot-check", () => {
+		// #given — a throttled IP whose stderr also carries the "formats skipped"
+		// notice must not be sent down the format-selector runbook
+		const stderr = wrappedStderr(
+			WATCH_PAGE_429_WARNING_LINE,
+			SABR_WARNING_LINE,
+			BOT_CHECK_ERROR_LINE,
+		);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "[youtube] jNQXAC9IVRw: Downloading webpage",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.stage).toBe("page_rate_limited");
+	});
+
+	it("classifies player_bot_check when the SABR warning accompanies a bot-check with no 429", () => {
+		// #given
+		const stderr = wrappedStderr(SABR_WARNING_LINE, BOT_CHECK_ERROR_LINE);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "[youtube] jNQXAC9IVRw: Downloading webpage",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(result.stage).toBe("player_bot_check");
+	});
+
+	it("classifies media_refused when the SABR warning accompanies a refused media fetch", () => {
+		// #given — a format was chosen and downloaded from, so no format was
+		// unavailable; the warning is about clients that were skipped
+		const stdout = "[info] jNQXAC9IVRw: Downloading 1 format(s): 251";
+		const stderr = wrappedStderr(
+			SABR_WARNING_LINE,
+			"ERROR: unable to download video data: HTTP Error 403: Forbidden",
+		);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout,
+			stderr,
+			durationMs: 2500,
+		});
+
+		// #then
+		expect(result.stage).toBe("media_refused");
+	});
+
+	it("classifies fragments_refused when the SABR warning accompanies fragments that were all refused", () => {
+		// #given
+		const stdout = [
+			"[info] jNQXAC9IVRw: Downloading 1 format(s): 233",
+			"[hlsnative] Total fragments: 34",
+			"[download] Destination: /tmp/canary-abc.mp4",
+			"[download] Got error: HTTP Error 403: Forbidden. Retrying fragment 1 (attempt 1 of 10) ...",
+			"[download] Skipping fragment 1 ...",
+		].join("\n");
+		const stderr = wrappedStderr(
+			SABR_WARNING_LINE,
+			"ERROR: The downloaded file is empty",
+		);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout,
+			stderr,
+			durationMs: 9000,
+		});
+
+		// #then
+		expect(result.stage).toBe("fragments_refused");
+	});
+
+	it("classifies format_unavailable when the ERROR line says so, even after a watch-page 429 warning", () => {
+		// #given — the run got past the 429 and ended because no format was
+		// downloadable, so the ERROR line decides the stage
+		const stderr = wrappedStderr(
+			WATCH_PAGE_429_WARNING_LINE,
+			SABR_WARNING_LINE,
+			FORMAT_UNAVAILABLE_ERROR_LINE,
+		);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "[youtube] jNQXAC9IVRw: Downloading webpage",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.stage).toBe("format_unavailable");
+	});
+
+	it("classifies format_unavailable when the ERROR line says so, even after a bot-check warning", () => {
+		// #given — one client was bot-checked (a WARNING) but another answered
+		// with SABR-only formats, which is what ended the run
+		const stderr = wrappedStderr(
+			BOT_CHECK_WARNING_LINE,
+			SABR_WARNING_LINE,
+			FORMAT_UNAVAILABLE_ERROR_LINE,
+		);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "[youtube] jNQXAC9IVRw: Downloading webpage",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.stage).toBe("format_unavailable");
+	});
+
+	it("falls back to format_unavailable when only the SABR warning explains an unrecognized failure", () => {
+		// #given — no 429, no bot-check, no format line, and an ERROR line that
+		// names nothing; the warning is the only lead there is
+		const stderr = wrappedStderr(
+			SABR_WARNING_LINE,
+			"ERROR: something bizarre happened",
+		);
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "[youtube] jNQXAC9IVRw: Downloading webpage",
 			stderr,
 			durationMs: 1200,
 		});

@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
 	buildQueueFullClassification,
 	classifyCanaryRun,
+	isCanaryFailure,
 } from "$lib/canary/classify-canary-run";
+
+// The 2026-09-18 incident signature: yt-dlp does not retry a watch-page 429,
+// so the run has no visitor data afterwards and the player request is
+// bot-checked — the ERROR line names the second failure, never the first.
+const WATCH_PAGE_429_STDERR = [
+	"WARNING: [youtube] jNQXAC9IVRw: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)",
+	"ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.",
+].join("\n");
 
 describe("classifyCanaryRun()", () => {
 	it("classifies a successful run as ok and extracts the itag used", () => {
@@ -50,6 +59,141 @@ describe("classifyCanaryRun()", () => {
 
 		// #then
 		expect(result.stage).toBe("player_bot_check");
+	});
+
+	it("classifies page_rate_limited when the watch page is 429'd, even though the run ends in a bot-check", () => {
+		// #given
+		const stdout = "[youtube] jNQXAC9IVRw: Downloading webpage";
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout,
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.stage).toBe("page_rate_limited");
+	});
+
+	it("names the watch-page 429 as the cause in the page_rate_limited detail", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).toContain(
+			"rate-limited the watch page with HTTP 429",
+		);
+	});
+
+	it("includes an excerpt of the raw stderr in the page_rate_limited detail", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).toContain(
+			"Unable to download webpage: HTTP Error 429: Too Many Requests",
+		);
+	});
+
+	it("collapses whitespace in the stderr excerpt so the detail stays on one line", () => {
+		// #given
+		const stderr =
+			"WARNING: Unable to download webpage:\n\tHTTP Error 429:   Too Many Requests\nERROR: Sign in to confirm you’re not a bot";
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).toContain(
+			"Unable to download webpage: HTTP Error 429: Too Many Requests ERROR:",
+		);
+	});
+
+	it("truncates the stderr excerpt in the page_rate_limited detail", () => {
+		// #given
+		const stderr = `${WATCH_PAGE_429_STDERR}\n${"padding ".repeat(200)}TAIL-MARKER`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).not.toContain("TAIL-MARKER");
+	});
+
+	it("does not treat a watch-page 429 as the cause once a format was chosen", () => {
+		// #given — a format was picked and its media fetch was refused, so the
+		// earlier 429 warning is not what ended the run
+		const stdout = "[info] jNQXAC9IVRw: Downloading 1 format(s): 251";
+		const stderr = [
+			"WARNING: [youtube] jNQXAC9IVRw: Unable to download webpage: HTTP Error 429: Too Many Requests",
+			"ERROR: unable to download video data: HTTP Error 403: Forbidden",
+		].join("\n");
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout,
+			stderr,
+			durationMs: 2500,
+		});
+
+		// #then
+		expect(result.stage).toBe("media_refused");
+	});
+
+	it("includes an excerpt of the raw stderr in the player_bot_check detail", () => {
+		// #given — a bot-check with no 429 anywhere in the run
+		const stderr =
+			"ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.";
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(result.detail).toContain("Sign in to confirm you’re not a bot");
+	});
+
+	it("truncates the stderr excerpt in the player_bot_check detail", () => {
+		// #given
+		const stderr = `ERROR: Sign in to confirm you’re not a bot\n${"padding ".repeat(200)}TAIL-MARKER`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(result.detail).not.toContain("TAIL-MARKER");
 	});
 
 	it("classifies media_refused when the media fetch 403s right after the format is chosen", () => {
@@ -211,5 +355,15 @@ describe("buildQueueFullClassification()", () => {
 		// #then
 		expect(result.stage).toBe("queue_full");
 		expect(result.itag).toBeNull();
+	});
+});
+
+describe("isCanaryFailure()", () => {
+	it("treats page_rate_limited as a failure", () => {
+		// #when
+		const result = isCanaryFailure("page_rate_limited");
+
+		// #then
+		expect(result).toBe(true);
 	});
 });

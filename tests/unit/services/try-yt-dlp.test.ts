@@ -14,6 +14,8 @@ import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
 } from "$lib/download-pipeline/try-yt-dlp";
+import { DEFAULT_MAX_ATTEMPTS, retryWithBackoff } from "$lib/retry";
+import { isRetryableYtDlpError } from "$lib/yt-dlp-errors";
 
 type Handler = (...args: unknown[]) => void;
 
@@ -45,6 +47,12 @@ class FakeProcess {
 
 const BOT_CHECK_STDERR =
 	"ERROR: [youtube] q9lZ4p5YRkY: Sign in to confirm you're not a bot.\n";
+
+const WATCH_PAGE_429_STDERR =
+	"WARNING: [youtube] q9lZ4p5YRkY: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)\n";
+
+const TYPOGRAPHIC_BOT_CHECK_STDERR =
+	"ERROR: [youtube] q9lZ4p5YRkY: Sign in to confirm you’re not a bot.\n";
 
 const PO_TOKEN_WARNING_STDERR =
 	"WARNING: [youtube] q9lZ4p5YRkY: mweb client https formats require a GVS PO Token which was not provided. They will be skipped as they may yield HTTP Error 403.\n";
@@ -229,6 +237,94 @@ describe("tryYtDlpDownload()", () => {
 
 		// #then
 		await expect(promise).rejects.toThrow(new Error(BOT_CHECK_STDERR));
+	});
+
+	it("keeps a watch-page 429 warning in the rejection when it arrives in a chunk of its own", async () => {
+		// #given
+		// The warning and the ERROR are separate writes, so they can land in
+		// separate chunks; the classifier can only stop the retry if it sees both.
+		const promise = run();
+
+		// #when
+		proc.emitStderr(WATCH_PAGE_429_STDERR);
+		proc.emitStderr(TYPOGRAPHIC_BOT_CHECK_STDERR);
+		proc.emit("close", 1);
+
+		// #then
+		await expect(promise).rejects.toThrow(
+			/unable to download webpage: http error 429/i,
+		);
+	});
+
+	it("does not repeat a watch-page 429 warning that already arrived in the ERROR chunk", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emitStderr(WATCH_PAGE_429_STDERR + TYPOGRAPHIC_BOT_CHECK_STDERR);
+		proc.emit("close", 1);
+
+		// #then
+		await expect(promise).rejects.toThrow(
+			new Error(WATCH_PAGE_429_STDERR + TYPOGRAPHIC_BOT_CHECK_STDERR),
+		);
+	});
+
+	it("does not start a second yt-dlp run after a bot-check that came with a watch-page 429", async () => {
+		// #given
+		let runs = 0;
+		ytDlp = {
+			exec: () => {
+				runs++;
+				const attempt = new FakeProcess();
+				queueMicrotask(() => {
+					attempt.emitStderr(WATCH_PAGE_429_STDERR);
+					attempt.emitStderr(TYPOGRAPHIC_BOT_CHECK_STDERR);
+					attempt.emit("close", 1);
+				});
+				return attempt as unknown as ReturnType<YtDlpInstance["exec"]>;
+			},
+		} as YtDlpInstance;
+
+		// #when
+		await retryWithBackoff(run, {
+			isRetryable: (error) =>
+				isRetryableYtDlpError(
+					error instanceof Error ? error.message : String(error),
+				),
+			sleep: async () => {},
+		}).catch(() => undefined);
+
+		// #then
+		expect(runs).toBe(1);
+	});
+
+	it("still runs a bot-check without a watch-page 429 up to the attempt limit", async () => {
+		// #given
+		let runs = 0;
+		ytDlp = {
+			exec: () => {
+				runs++;
+				const attempt = new FakeProcess();
+				queueMicrotask(() => {
+					attempt.emitStderr(TYPOGRAPHIC_BOT_CHECK_STDERR);
+					attempt.emit("close", 1);
+				});
+				return attempt as unknown as ReturnType<YtDlpInstance["exec"]>;
+			},
+		} as YtDlpInstance;
+
+		// #when
+		await retryWithBackoff(run, {
+			isRetryable: (error) =>
+				isRetryableYtDlpError(
+					error instanceof Error ? error.message : String(error),
+				),
+			sleep: async () => {},
+		}).catch(() => undefined);
+
+		// #then
+		expect(runs).toBe(DEFAULT_MAX_ATTEMPTS);
 	});
 
 	it("resolves when yt-dlp exits cleanly", async () => {

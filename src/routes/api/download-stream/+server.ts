@@ -47,14 +47,23 @@ const QUEUE_FULL_MESSAGE =
 const SIDECAR_WAKE_CAP_MS = 12_000;
 
 /**
+ * A warm sidecar answers in milliseconds. A first ping that answered but took
+ * this long is still a cold start worth a log line — a ping can hang for most of
+ * its 3 s timeout and then succeed, which needs no second attempt to count.
+ */
+const SLOW_WAKE_LOG_MS = 250;
+
+/**
  * `POST /api/preview` nudges the sleeping bgutil-pot sidecar awake while the
  * user reads the preview, but that ping is fire-and-forget, so a click before
  * the sidecar listens still reaches yt-dlp while it is booting. yt-dlp then
  * cannot fetch a PO token, YouTube bot-checks the `web` player request, and the
  * failure is indistinguishable from a throttled IP. The retry below used to be
- * the only thing recovering it (2026-09-17 00:59:41: the first attempt failed,
- * the retry minted a token and succeeded). How often real users click that
- * early is unmeasured; one real case has been seen.
+ * the only thing recovering it (2026-09-17 00:59:41: a direct curl of this
+ * route with no preview; the first attempt failed, the retry minted a token and
+ * succeeded). How often browser users reach this route that early is
+ * unmeasured: after a paste the page's first contact with the sidecar is
+ * `/api/preview/details`, not this route.
  *
  * Waiting here turns that into a deterministic start. It never fails the
  * download: if the sidecar stays silent the attempt goes ahead anyway and the
@@ -74,7 +83,7 @@ async function waitForSidecar(
 	});
 
 	if (wake.awake) {
-		if (wake.attempts > 1) {
+		if (wake.attempts > 1 || wake.waitedMs >= SLOW_WAKE_LOG_MS) {
 			console.info(
 				`bgutil-pot answered /ping after ${wake.attempts} attempts, ${wake.waitedMs}ms`,
 			);

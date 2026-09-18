@@ -253,11 +253,41 @@ describe("waitForBgutilPot()", () => {
 			controller.abort();
 
 			// #when
+			await wait({ signal: controller.signal });
+
+			// #then
+			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it("reports not awake, with no attempts, when the signal is already aborted", async () => {
+			// #given
+			const controller = new AbortController();
+			controller.abort();
+
+			// #when
 			const result = await wait({ signal: controller.signal });
 
 			// #then
 			expect(result).toEqual({ awake: false, attempts: 0, waitedMs: 0 });
-			expect(fetchMock).not.toHaveBeenCalled();
+		});
+
+		it("removes its abort listener once a pause ends on its own", async () => {
+			// #given
+			const controller = new AbortController();
+			const removeListener = vi.spyOn(controller.signal, "removeEventListener");
+			fetchMock
+				.mockRejectedValueOnce(transportError())
+				.mockResolvedValue(new Response("{}", { status: 200 }));
+
+			// #when
+			await wait({ signal: controller.signal });
+
+			// #then a long-lived request signal must not accumulate one listener per
+			// pause
+			expect(removeListener).toHaveBeenCalledWith(
+				"abort",
+				expect.any(Function),
+			);
 		});
 
 		it("stops polling once the signal aborts between attempts", async () => {

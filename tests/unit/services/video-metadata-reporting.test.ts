@@ -17,6 +17,7 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 	buildJsRuntimeArgs: vi.fn().mockReturnValue([]),
 }));
 
+import { DEFAULT_MAX_ATTEMPTS } from "../../../src/lib/retry";
 import { fetchVideoDetails } from "../../../src/lib/video-metadata";
 
 function mockExecFileError(err: Error) {
@@ -137,5 +138,54 @@ describe("fetchVideoDetails - failure reporting policy", () => {
 
 		// #then
 		expect(details).toBeNull();
+	});
+});
+
+describe("fetchVideoDetails - retry policy", () => {
+	const WATCH_PAGE_429_FAILURE = new Error(
+		"Command failed: /tmp/yt-dlp --dump-json\nWARNING: [youtube] abc: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)\nERROR: [youtube] abc: Sign in to confirm you’re not a bot.",
+	);
+	const PLAIN_BOT_CHECK_FAILURE = new Error(
+		"Command failed: /tmp/yt-dlp --dump-json\nERROR: [youtube] abc: Sign in to confirm you’re not a bot.",
+	);
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("runs yt-dlp once when the bot-check came with a watch-page 429", async () => {
+		// #given
+		const failure = WATCH_PAGE_429_FAILURE;
+
+		// #when
+		await fetchAndSettle(failure);
+
+		// #then
+		expect(execFileMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("still reports that single 429-backed failure at warning level", async () => {
+		// #given
+		const failure = WATCH_PAGE_429_FAILURE;
+
+		// #when
+		await fetchAndSettle(failure);
+
+		// #then
+		expect(Sentry.captureException).toHaveBeenCalledWith(
+			failure,
+			expect.objectContaining({ level: "warning" }),
+		);
+	});
+
+	it("retries a bot-check without a watch-page 429 up to the attempt limit", async () => {
+		// #given
+		const failure = PLAIN_BOT_CHECK_FAILURE;
+
+		// #when
+		await fetchAndSettle(failure);
+
+		// #then
+		expect(execFileMock).toHaveBeenCalledTimes(DEFAULT_MAX_ATTEMPTS);
 	});
 });

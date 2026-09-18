@@ -14,6 +14,7 @@ import {
 	type CanaryClassification,
 	classifyCanaryRun,
 } from "./classify-canary-run";
+import { waitForBgutilPot } from "./wait-for-bgutil-pot";
 
 const require = createRequire(import.meta.url);
 
@@ -56,6 +57,11 @@ export async function runCanaryDownload(): Promise<CanaryClassification> {
 	};
 
 	try {
+		const wake = await waitForBgutilPot(bgutilPotUrl);
+		console.info(
+			`[canary] bgutil-pot ${wake.awake ? "answered /ping" : "did not answer /ping"} after ${wake.attempts} attempt(s), ${wake.waitedMs}ms`,
+		);
+
 		const [ytDlp, pluginDir] = await Promise.all([
 			getYTDlp(),
 			ensureBgutilPlugin(),

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { waitForBgutilPot } from "$lib/canary/wait-for-bgutil-pot";
+import { waitForBgutilPot } from "$lib/wait-for-bgutil-pot";
 
 const POT_URL = "http://bgutil.internal:4416";
 

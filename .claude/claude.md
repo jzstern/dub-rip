@@ -118,6 +118,15 @@ missed. `POST /api/canary` exists to catch the next one within hours.
   (`enableLogs: true` in `sentry-options.ts`) carries the same `stage`/`itag`/
   `detail` context as a searchable log entry instead, without ever opening an
   Issue itself.
+- **GitHub's cron runs hours late, and the monitor's margin is sized for it.**
+  The first three scheduled runs (2026-09-18) started 3h57m, 4h52m and 4h06m
+  after their 00:00/06:00/12:00 UTC slots. At the original 30-minute
+  `checkinMargin` the slots in between were reported *missed*, and a missed
+  check-in counts toward `failureIssueThreshold: 2` exactly like a failed one —
+  so one real failure plus late runs opened DUB-RIP-D. The margin is now 480
+  minutes, so a "missed" alert means the canary genuinely stopped. Don't
+  tighten it without first moving the trigger somewhere punctual; the schedule
+  alone (`0 */6 * * *`) sits on GitHub's busiest minute.
 - **Runbook**, keyed off the `stage` a failed run reports
   (`src/lib/canary/classify-canary-run.ts`):
   | Stage | Likely cause | Fix |

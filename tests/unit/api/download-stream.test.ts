@@ -40,6 +40,13 @@ vi.mock("$lib/video-metadata", async (importOriginal) => ({
 	fetchThumbnailBuffer: async () => null,
 }));
 
+// The route pings the bgutil-pot sidecar before it starts yt-dlp; behavior is
+// covered in download-stream-sidecar-wait.test.ts, and nothing here should
+// depend on a sidecar being reachable.
+vi.mock("$lib/wait-for-bgutil-pot", () => ({
+	waitForBgutilPot: async () => ({ awake: true, attempts: 1, waitedMs: 0 }),
+}));
+
 vi.mock("$lib/youtube-metadata", async (importOriginal) => ({
 	...(await importOriginal<typeof import("$lib/youtube-metadata")>()),
 	fetchYouTubeMetadata: async () => ({

@@ -57,7 +57,7 @@ vi.mock("$lib/download-pipeline/finalize-mp3", () => ({
 const { waitForBgutilPotMock } = vi.hoisted(() => ({
 	waitForBgutilPotMock: vi.fn(),
 }));
-vi.mock("$lib/canary/wait-for-bgutil-pot", () => ({
+vi.mock("$lib/wait-for-bgutil-pot", () => ({
 	waitForBgutilPot: waitForBgutilPotMock,
 }));
 

@@ -8,6 +8,10 @@ import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { pathExists } from "$lib/download-pipeline/path-exists";
 import { tryYtDlpDownload } from "$lib/download-pipeline/try-yt-dlp";
 import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
+import {
+	type WaitForBgutilPotResult,
+	waitForBgutilPot,
+} from "$lib/wait-for-bgutil-pot";
 import { ensureBgutilPlugin } from "$lib/yt-dlp-binary";
 import { YtDlpQueueFullError } from "$lib/yt-dlp-concurrency";
 import {
@@ -15,10 +19,6 @@ import {
 	type CanaryClassification,
 	classifyCanaryRun,
 } from "./classify-canary-run";
-import {
-	type WaitForBgutilPotResult,
-	waitForBgutilPot,
-} from "./wait-for-bgutil-pot";
 
 const require = createRequire(import.meta.url);
 

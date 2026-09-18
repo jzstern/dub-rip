@@ -70,15 +70,17 @@ function sleepUnlessAborted(
  * Wakes the sleeping bgutil-pot sidecar and waits until it answers `/ping`.
  *
  * The sidecar is a serverless Railway service, so the first use after a quiet
- * spell starts it cold — measured at 3–9 s until it listens. The yt-dlp
+ * spell starts it cold. How long until it listens is not well measured: Railway
+ * log timestamps put "Started POT server" up to ~9 s after "Starting Container",
+ * but those lines are flushed in batches, so that is an upper bound — the one
+ * direct measurement (a canary `/ping` that answered) took 1.3 s. The yt-dlp
  * bgutil plugin checks `/ping` once, with a 5 s timeout, and caches a failure
  * for 60 s, so a cold start makes the sidecar look unavailable for the whole
  * run: no PO token, and YouTube bot-checks the `web` player request.
  * `POST /api/preview` nudges the sidecar awake while the user reads the
- * preview, but that ping is fire-and-forget with a 2 s timeout, so a click
- * inside the cold start still lands on a booting sidecar. Both the download
- * route and the production canary wait here first, so neither starts yt-dlp
- * against it.
+ * preview, but that ping is fire-and-forget, so a click before the sidecar
+ * listens still lands on a booting one. Both the download route and the
+ * production canary wait here first, so neither starts yt-dlp against it.
  *
  * Never throws and never reports to Sentry: a cold sidecar is normal, and if
  * it never answers the caller downloads anyway and lets that run say what

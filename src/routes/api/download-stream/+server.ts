@@ -39,20 +39,22 @@ const QUEUE_FULL_MESSAGE =
 	"The downloader is busy right now. Please try again in a moment.";
 
 /**
- * The sidecar's cold start has been measured at 3–9 s. A wait past this cap is
- * a sidecar that is down, not starting, and holding the user longer than that
- * before the first attempt would only delay the failure they are going to get.
+ * Railway's log timestamps put the sidecar's cold start at up to ~9 s (an upper
+ * bound; see waitForBgutilPot). A wait well past that is a sidecar that is down,
+ * not starting, and holding the user longer would only delay the failure they
+ * are going to get.
  */
 const SIDECAR_WAKE_CAP_MS = 12_000;
 
 /**
  * `POST /api/preview` nudges the sleeping bgutil-pot sidecar awake while the
- * user reads the preview, but that ping is fire-and-forget with a 2 s timeout,
- * so a click inside the 3–9 s cold start still reaches yt-dlp while the sidecar
- * is booting. yt-dlp then cannot fetch a PO token, YouTube bot-checks the `web`
- * player request, and the failure is indistinguishable from a throttled IP. The
- * retry below used to be the only thing recovering it (2026-09-17 00:59:41: the
- * first attempt failed, the retry minted a token and succeeded).
+ * user reads the preview, but that ping is fire-and-forget, so a click before
+ * the sidecar listens still reaches yt-dlp while it is booting. yt-dlp then
+ * cannot fetch a PO token, YouTube bot-checks the `web` player request, and the
+ * failure is indistinguishable from a throttled IP. The retry below used to be
+ * the only thing recovering it (2026-09-17 00:59:41: the first attempt failed,
+ * the retry minted a token and succeeded). How often real users click that
+ * early is unmeasured; one real case has been seen.
  *
  * Waiting here turns that into a deterministic start. It never fails the
  * download: if the sidecar stays silent the attempt goes ahead anyway and the

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { classifyYtDlpError } from "$lib/yt-dlp-errors";
+import {
+	AGE_GATE_WITH_COOKIES_HINT,
+	BOT_CHECK_WITH_COOKIES_HINT,
+	PRIVATE_VIDEO_WITH_COOKIES_HINT,
+	REWORDED_BOT_CHECK_WITH_COOKIES_HINT,
+} from "./yt-dlp-error-fixtures";
 
 describe("classifyYtDlpError() reporting category", () => {
 	it("categorizes an unavailable video as a user failure", () => {
@@ -49,6 +55,50 @@ describe("classifyYtDlpError() reporting category", () => {
 	it("categorizes a bot-check as transient infrastructure trouble", () => {
 		// #given
 		const message = "Sign in to confirm you're not a bot";
+
+		// #when
+		const result = classifyYtDlpError(message);
+
+		// #then
+		expect(result.category).toBe("transient");
+	});
+
+	it("categorizes an age-gated video as a user failure even with yt-dlp's cookies hint appended", () => {
+		// #given
+		const message = AGE_GATE_WITH_COOKIES_HINT;
+
+		// #when
+		const result = classifyYtDlpError(message);
+
+		// #then
+		expect(result.category).toBe("user");
+	});
+
+	it("categorizes a private video as a user failure even with yt-dlp's cookies hint appended", () => {
+		// #given
+		const message = PRIVATE_VIDEO_WITH_COOKIES_HINT;
+
+		// #when
+		const result = classifyYtDlpError(message);
+
+		// #then
+		expect(result.category).toBe("user");
+	});
+
+	it("categorizes a bot-check with the typographic apostrophe and the full cookies hint as transient", () => {
+		// #given
+		const message = BOT_CHECK_WITH_COOKIES_HINT;
+
+		// #when
+		const result = classifyYtDlpError(message);
+
+		// #then
+		expect(result.category).toBe("transient");
+	});
+
+	it("categorizes a reworded bot-check as transient when only the cookies hint identifies it", () => {
+		// #given
+		const message = REWORDED_BOT_CHECK_WITH_COOKIES_HINT;
 
 		// #when
 		const result = classifyYtDlpError(message);

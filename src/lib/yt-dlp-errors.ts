@@ -43,12 +43,7 @@ export const EMPTY_FILE_PATTERN = /the downloaded file is empty/;
 
 const ERROR_RULES: ErrorRule[] = [
 	{
-		// `cookies` matches yt-dlp's remediation hint, not the error itself. Until
-		// BOT_CHECK_PATTERN learned the typographic apostrophe, that hint was the
-		// only thing that ever fired this rule — so were it reworded, a bot-check
-		// would fall through to the generic rule and become non-retryable and
-		// `unknown`-category. Keep both alternatives.
-		pattern: new RegExp(`${BOT_CHECK_PATTERN.source}|cookies`),
+		pattern: BOT_CHECK_PATTERN,
 		message: BOT_CHECK_MESSAGE,
 		retryable: true,
 		category: "transient",
@@ -76,6 +71,21 @@ const ERROR_RULES: ErrorRule[] = [
 		message: "This video is private and cannot be downloaded.",
 		retryable: false,
 		category: "user",
+	},
+	{
+		// `cookies` matches yt-dlp's remediation hint, not the error itself. Until
+		// BOT_CHECK_PATTERN learned the typographic apostrophe, that hint was the
+		// only thing that ever fired the bot-check rule — so were the sentence
+		// reworded, a bot-check would fall through to the generic rule and become
+		// non-retryable and `unknown`-category. Keep this as a fallback.
+		//
+		// It has to sit below the user rules: yt-dlp appends the same hint to every
+		// "sign in" reason, age gates and private videos included, so above them it
+		// turned those permanent failures into retried, Sentry-reported bot-checks.
+		pattern: /cookies/,
+		message: BOT_CHECK_MESSAGE,
+		retryable: true,
+		category: "transient",
 	},
 	{
 		pattern: HTTP_403_PATTERN,

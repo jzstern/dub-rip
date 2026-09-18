@@ -145,6 +145,14 @@ those buried the real failures and burned quota. `unknown` is the important
 one — it's how new yt-dlp and YouTube breakages announce themselves, so it
 always gets full error level.
 
+Rule order in `ERROR_RULES` is part of the classification. yt-dlp appends the
+same `--cookies` remediation hint to every "sign in" reason — bot-checks, age
+gates and private videos alike — so the hint alone can't say which one it is.
+The exact bot-check sentence wins outright; the bare `cookies` match is only a
+fallback for a reworded sentence, and it sits **below** the user rules so it
+fires only when nothing more specific matched. Above them, it retried
+age-restricted and private videos and reported each as a transient failure.
+
 Process warnings follow the same logic: Node emits `warning` for routine
 deprecations on nearly every boot, so only defect-indicating ones
 (`MaxListenersExceededWarning`) become issues. The rest ride along as

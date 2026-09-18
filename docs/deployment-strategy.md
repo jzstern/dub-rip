@@ -285,7 +285,7 @@ It is also `visionos`, the 2026.08.19 lead. On 2026-09-16 its direct https audio
 
 **What did not fix it:** trying HLS audio first (`bestaudio[protocol^=m3u8]`, itags 233/234 on `visionos`). On 2026-09-17 production fetched the HLS manifest, then all 34 fragments were refused (403, escalating to 401) and skipped, and yt-dlp failed with `ERROR: The downloaded file is empty` — the same refusal, surfacing as an empty file because fragment errors go to stdout. Both DASH and HLS media were blocked; the block was on the IP, not the format.
 
-**What fixed it:** a different egress IP. Enabling Railway Static Outbound IPs on the `dub-rip` service and redeploying restored downloads immediately (2026-09-17). Check the current state with:
+**What fixed it:** a different egress IP. Enabling Railway Static Outbound IPs on the `dub-rip` service and redeploying restored downloads immediately (2026-09-17). The setting turned out to be three addresses, not one, and the next day the watch page was throttled from them anyway — see [the 2026-09-18 section](#symptom-watch-page-http-error-429-then-the-bot-check-2026-09-18). Check the current state with:
 
 ```bash
 railway outbound-network status --service dub-rip --environment production --json
@@ -297,11 +297,54 @@ Railway does not guarantee static addresses are dedicated, and sustained traffic
 
 Do **not** exclude the client with `player_client=default,-visionos`: that leaves only `web`, which YouTube serves SABR-only at this pin (`YouTube is forcing SABR streaming for this client`), so the download fails with "Requested format is not available" instead. And do not go back to a hand-picked list — that list is what YouTube bot-checked on 2026-09-14 (next section).
 
+## Symptom: watch page `HTTP Error 429`, then the bot check (2026-09-18)
+
+Production extractions failed, and what reached Sentry was the bot check — the message the next section is about — but the cause sits upstream of it. The raw stderr of every failing run (production logs), in this order:
+
+```
+WARNING: [youtube] <id>: Unable to download webpage: HTTP Error 429: Too Many Requests
+ERROR: [youtube] <id>: Sign in to confirm you’re not a bot
+```
+
+The `production-canary` Sentry monitor failed with stage `player_bot_check`, and a real download of `cpGHMGOeg-o` failed the same way. The stage label comes from the final `ERROR` line, so it hid the 429. **Read the raw stderr, not the stage.** The `HTTP Error 429` warning ahead of the bot check is what separates this from the two causes in the next section.
+
+**Why one 429 is fatal** (read from yt-dlp 2026.08.19 source, not reproduced): `_download_webpage_with_retries` retries only errors that are *not* HTTP 403/429, so `--extractor-retries` and `--retry-sleep` never apply and the first 429 stands. With the watch page gone the run has no visitor data — `_extract_visitor_data` is fed only the webpage and player `ytcfg`, never the `initial data API JSON` response — so the `web` player request goes out with no visitor id and no player PO token. Not established here: why `visionos`, which takes no PO token, did not serve the video on the failing runs.
+
+**What it was not:**
+
+- **A cold bgutil-pot sidecar.** At 17:44 UTC the sidecar was awake and minted ~10 fresh tokens for the failing video, and the download still failed.
+- **Stale PO tokens.** Same evidence.
+- **A YouTube-side change hitting everyone** — see the matched pair below.
+- **Our own traffic.** Between 03:57 and 16:44 UTC the only yt-dlp traffic was the canary.
+
+**The matched pair.** At 18:03:47 UTC, one `POST /api/preview/details` for the canary video `jNQXAC9IVRw` went to dub.rip and one to the PR env `dub-rip-pr-124`, simultaneously. Production returned a 500 with the identical 429 → bot-check stderr; the PR env returned a 200 (duration 19, 3.3 s). Same code, yt-dlp pin, argv, video and instant — only the egress IP differs (a PR env does not share production's; the addresses themselves were not measured). **Conclusion: YouTube is throttling production's egress IP.**
+
+This is the only way to ask "is it the IP?" without a shell in production. It costs one yt-dlp extraction per environment, so keep it to one pair; every call is a request from a datacenter IP, and bursts get that IP bot-checked for several minutes.
+
+**Three addresses, not one.** As of 2026-09-18 `railway outbound-network status --service dub-rip --environment production --json` shows `staticIp.highAvailability: true` with three addresses in iad: 162.220.234.241 (zone eqdc4a), 152.55.180.240 and 152.55.180.241 (zone eqdc16a). "The egress IP" in this document and in `claude.md` means whichever of them a request left from. **Which one is flagged is unknown**, and it can't be read off a run: `railway logs --network` shows only the container's private `10.240.x.x` source, never the public address.
+
+**Unexplained: the 03:57 UTC canary passed** on the same deployment, binary and argv. Its stderr is unknowable — successful runs discarded it, because the stderr listener was attached to the wrong object ([PR #123](https://github.com/jzstern/dub-rip/pull/123) fixes that) — so it can't be said whether that run met a 429.
+
+**What successes look like.** Successful production runs on 2026-09-17 (deployments 90aee016 and 94d4b6b9) and the passing canary above all log `Downloading web player API JSON`, `Downloading iframe API JS` and `Downloading player <id>-main`. Per yt-dlp source that line appears only when the watch page's own player response was unavailable. *Inference, not measured:* from Railway's IP the watch page is frequently or always unusable, and `web` falls back to an explicit player call. A dev-box log looks different (see the webpage-client note in [`../.claude/claude.md`](../.claude/claude.md#yt-dlp-integration)).
+
+**Investigating without a shell in production:**
+
+- `railway ssh` needs an SSH key registered on the Railway account (`railway ssh keys add|github`) — an account-level change, not made here.
+- `railway run` executes locally, so it proves nothing about egress.
+- `railway logs --json` gives every line a nanosecond timestamp, but the log lines of one yt-dlp run are flushed together: ordering *within* a run can't be read from Railway timestamps.
+
+**Open decision — neither option has been taken, and this section does not choose one:**
+
+1. **Rotate or re-provision the Static Outbound IPs.** It is dashboard state with no trace in the repo, switching IPs is what fixed the 2026-09-16/17 refusal above, and Railway does not guarantee the addresses are dedicated. With three addresses and no way to tell which is flagged, it is unclear which to replace.
+2. **Route yt-dlp through a residential proxy (`--proxy`).** The durable fallback named in the 403 section. Nothing for it exists yet: no proxy is wired in, and the circuit breaker described as Phase 2 in the Production Canary section of `claude.md` is a design, not code.
+
 ## Symptom: `Sign in to confirm you're not a bot` while bgutil-pot is healthy
 
 Every video fails. The sidecar is up, `/api/health?probe=bgutil` is green, `BGUTIL_POT_URL` is
 set, the plugin loads — and yt-dlp still gets bot-checked. There are two different causes, and
 the extraction log tells them apart. Check which one you have before touching anything.
+
+The same message also has a third origin: if the raw stderr shows `Unable to download webpage: HTTP Error 429` ahead of it, the watch page was throttled and this section does not apply — see [the 2026-09-18 section](#symptom-watch-page-http-error-429-then-the-bot-check-2026-09-18).
 
 ### Tokens are being minted → the clients are burned
 

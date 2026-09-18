@@ -2,7 +2,26 @@ import { describe, expect, it } from "vitest";
 import {
 	buildQueueFullClassification,
 	classifyCanaryRun,
+	DETAIL_EXCERPT_LENGTH,
+	isCanaryFailure,
 } from "$lib/canary/classify-canary-run";
+
+// Copied from production on 2026-09-18. yt-dlp-wrap's createError wraps the
+// process's stderr in an "Error code: N / Stderr:" preamble, and that wrapped
+// message is what reaches the classifier. yt-dlp does not retry a watch-page
+// 429, so the run has no visitor data afterwards and the player request is
+// bot-checked — the ERROR line names the second failure, never the first.
+const WATCH_PAGE_429_STDERR =
+	'\nError code: 1\n\nStderr:\nWARNING: [youtube] jNQXAC9IVRw: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)\nWARNING: [youtube] [pot:bgutil:http] Error reaching GET http://bgutil-pot.railway.internal:4416/ping (caused by TransportError). Please make sure that the server is reachable at http://bgutil-pot.railway.internal:4416.\nWARNING: [youtube] Unable to fetch GVS PO Token for web client: Missing required Visitor Data. You may need to pass Visitor Data with --extractor-args "youtube:visitor_data=XXX"\nERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies.\n';
+
+const BOT_CHECK_ERROR_LINE =
+	"ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.";
+
+// A detail reads "<cause>: <stderr excerpt>", and no cause text contains ": ".
+const excerptOf = (detail: string): string =>
+	detail.slice(detail.indexOf(": ") + 2);
+
+const OVER_LONG_TAIL = `${"padding ".repeat(200)}TAIL-MARKER`;
 
 describe("classifyCanaryRun()", () => {
 	it("classifies a successful run as ok and extracts the itag used", () => {
@@ -50,6 +69,293 @@ describe("classifyCanaryRun()", () => {
 
 		// #then
 		expect(result.stage).toBe("player_bot_check");
+	});
+
+	it("classifies page_rate_limited when the watch page is 429'd, even though the run ends in a bot-check", () => {
+		// #given
+		const stdout = "[youtube] jNQXAC9IVRw: Downloading webpage";
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout,
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.stage).toBe("page_rate_limited");
+	});
+
+	it("names the watch-page 429 as the cause in the page_rate_limited detail", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).toContain(
+			"rate-limited the watch page with HTTP 429",
+		);
+	});
+
+	it("includes an excerpt of the raw stderr in the page_rate_limited detail", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).toContain(
+			"Unable to download webpage: HTTP Error 429: Too Many Requests",
+		);
+	});
+
+	it("leaves the yt-dlp-wrap preamble out of the page_rate_limited excerpt", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).not.toMatch(/Error code|Stderr:/);
+	});
+
+	it("keeps the ERROR line in the page_rate_limited excerpt", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toContain(
+			"Sign in to confirm you’re not a bot",
+		);
+	});
+
+	it("puts the 429 WARNING line before the ERROR line in the page_rate_limited excerpt", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toMatch(
+			/HTTP Error 429: Too Many Requests.*Sign in to confirm you’re not a bot/,
+		);
+	});
+
+	it("drops the unrelated PO-token warnings from the page_rate_limited excerpt", () => {
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr: WATCH_PAGE_429_STDERR,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.detail).not.toContain("bgutil-pot.railway.internal");
+	});
+
+	it("still classifies page_rate_limited when the 429 line has irregular whitespace", () => {
+		// #given — the phrase the classifier matches on stays intact
+		const stderr =
+			"WARNING: Unable to download webpage: HTTP Error 429:\t\tToo   Many   Requests\nERROR: Sign in to confirm you’re not a bot";
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(result.stage).toBe("page_rate_limited");
+	});
+
+	it("collapses whitespace in the stderr excerpt so the detail stays on one line", () => {
+		// #given
+		const stderr =
+			"WARNING: Unable to download webpage: HTTP Error 429:\t\tToo   Many   Requests\nERROR: Sign in to confirm you’re not a bot";
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toBe(
+			"WARNING: Unable to download webpage: HTTP Error 429: Too Many Requests ERROR: Sign in to confirm you’re not a bot",
+		);
+	});
+
+	it("caps the page_rate_limited excerpt at the excerpt limit", () => {
+		// #given
+		const stderr = `${WATCH_PAGE_429_STDERR}ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. ${OVER_LONG_TAIL}`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(excerptOf(result.detail).length).toBeLessThanOrEqual(
+			DETAIL_EXCERPT_LENGTH,
+		);
+	});
+
+	it("keeps the heads of both decisive lines when the page_rate_limited excerpt is capped", () => {
+		// #given
+		const stderr = `${WATCH_PAGE_429_STDERR}ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. ${OVER_LONG_TAIL}`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1500,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toMatch(
+			/HTTP Error 429: Too Many Requests.*Sign in to confirm you’re not a bot/,
+		);
+	});
+
+	it("does not treat a watch-page 429 as the cause once a format was chosen", () => {
+		// #given — a format was picked and its media fetch was refused, so the
+		// earlier 429 warning is not what ended the run
+		const stdout = "[info] jNQXAC9IVRw: Downloading 1 format(s): 251";
+		const stderr = [
+			"WARNING: [youtube] jNQXAC9IVRw: Unable to download webpage: HTTP Error 429: Too Many Requests",
+			"ERROR: unable to download video data: HTTP Error 403: Forbidden",
+		].join("\n");
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout,
+			stderr,
+			durationMs: 2500,
+		});
+
+		// #then
+		expect(result.stage).toBe("media_refused");
+	});
+
+	it("includes an excerpt of the raw stderr in the player_bot_check detail", () => {
+		// #given — a bot-check with no 429 anywhere in the run
+		const stderr = `\nError code: 1\n\nStderr:\n${BOT_CHECK_ERROR_LINE}\n`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toContain(
+			"Sign in to confirm you’re not a bot",
+		);
+	});
+
+	it("leaves the yt-dlp-wrap preamble out of the player_bot_check excerpt", () => {
+		// #given
+		const stderr = `\nError code: 1\n\nStderr:\n${BOT_CHECK_ERROR_LINE}\n`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).not.toMatch(/Error code|Stderr:/);
+	});
+
+	it("keeps the ERROR line in the player_bot_check excerpt when many WARNING lines precede it", () => {
+		// #given — repeated "formats skipped" warnings would push the decisive
+		// line out of a plain head-of-stderr window
+		const warnings = Array.from(
+			{ length: 25 },
+			(_, index) =>
+				`WARNING: [youtube] jNQXAC9IVRw: Some tv client https formats have been skipped as they are missing a url (${index}). See https://github.com/yt-dlp/yt-dlp/issues/12482 for more details`,
+		).join("\n");
+		const stderr = `\nError code: 1\n\nStderr:\n${warnings}\n${BOT_CHECK_ERROR_LINE}\n`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toContain(
+			"Sign in to confirm you’re not a bot",
+		);
+	});
+
+	it("caps the player_bot_check excerpt at exactly the excerpt limit for an over-long ERROR line", () => {
+		// #given
+		const stderr = `ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. ${OVER_LONG_TAIL}`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toHaveLength(DETAIL_EXCERPT_LENGTH);
+	});
+
+	it("keeps the head of an over-long ERROR line in the player_bot_check excerpt", () => {
+		// #given
+		const stderr = `ERROR: [youtube] jNQXAC9IVRw: Sign in to confirm you’re not a bot. ${OVER_LONG_TAIL}`;
+
+		// #when
+		const result = classifyCanaryRun({
+			succeeded: false,
+			stdout: "",
+			stderr,
+			durationMs: 1800,
+		});
+
+		// #then
+		expect(excerptOf(result.detail)).toMatch(
+			/^ERROR: \[youtube\] jNQXAC9IVRw: Sign in to confirm you’re not a bot\. padding/,
+		);
 	});
 
 	it("classifies media_refused when the media fetch 403s right after the format is chosen", () => {
@@ -211,5 +517,15 @@ describe("buildQueueFullClassification()", () => {
 		// #then
 		expect(result.stage).toBe("queue_full");
 		expect(result.itag).toBeNull();
+	});
+});
+
+describe("isCanaryFailure()", () => {
+	it("treats page_rate_limited as a failure", () => {
+		// #when
+		const result = isCanaryFailure("page_rate_limited");
+
+		// #then
+		expect(result).toBe(true);
 	});
 });

@@ -188,6 +188,23 @@ describe("finishCanaryCheckIn()", () => {
 		expect(Sentry.logger.error).not.toHaveBeenCalled();
 	});
 
+	it("logs a page_rate_limited failure at the warn log level, not error", () => {
+		// #when
+		finishCanaryCheckIn("abc-123", {
+			stage: "page_rate_limited",
+			itag: null,
+			durationMs: 1500,
+			detail: "YouTube rate-limited the watch page with HTTP 429",
+		});
+
+		// #then
+		expect(Sentry.logger.warn).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ stage: "page_rate_limited" }),
+		);
+		expect(Sentry.logger.error).not.toHaveBeenCalled();
+	});
+
 	it("includes the itag and detail in the logged attributes for a triage-ready log entry", () => {
 		// #when
 		finishCanaryCheckIn("abc-123", {

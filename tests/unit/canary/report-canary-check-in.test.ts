@@ -1,10 +1,33 @@
 import * as Sentry from "@sentry/sveltekit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	CANARY_MONITOR_CONFIG,
 	CANARY_MONITOR_SLUG,
 	finishCanaryCheckIn,
 	startCanaryCheckIn,
 } from "$lib/canary/report-canary-check-in";
+
+describe("CANARY_MONITOR_CONFIG", () => {
+	it("waits longer than the worst GitHub cron delay seen in production before calling a check-in missed", () => {
+		// #given the 06:00 UTC slot of 2026-09-18 did not run until 10:52 UTC
+		const worstObservedDelayMinutes = 4 * 60 + 52;
+
+		// #then
+		expect(CANARY_MONITOR_CONFIG.checkinMargin).toBeGreaterThan(
+			worstObservedDelayMinutes,
+		);
+	});
+
+	it("still flags a canary that has stopped running within a day", () => {
+		// #given
+		const oneDayMinutes = 24 * 60;
+
+		// #then
+		expect(CANARY_MONITOR_CONFIG.checkinMargin).toBeLessThanOrEqual(
+			oneDayMinutes,
+		);
+	});
+});
 
 describe("startCanaryCheckIn()", () => {
 	beforeEach(() => {

@@ -2,9 +2,11 @@ name: Production Canary
 
 on:
   schedule:
-    # Every 6 hours. GitHub may delay scheduled runs; Sentry's monitor margin
-    # (see src/lib/canary/report-canary-check-in.ts) tolerates that and alerts
-    # on a genuinely missed check-in instead.
+    # Every 6 hours. GitHub delays scheduled runs at the top of the hour — by
+    # up to ~5h so far (see the margin in
+    # src/lib/canary/report-canary-check-in.ts, sized to tolerate that) — so
+    # the actual run times drift; only a check-in later than that margin is
+    # reported as missed.
     - cron: "0 */6 * * *"
   workflow_dispatch: {}
 

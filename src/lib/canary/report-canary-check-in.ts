@@ -9,9 +9,18 @@ export const CANARY_MONITOR_SLUG = "production-canary";
 /**
  * Sentry-side config for the cron monitor, upserted from code on every
  * check-in (`captureCheckIn`'s second argument) rather than hand-configured
- * in the dashboard. GitHub Actions schedules are approximate, so the margin
- * is generous — a false "missed" alert from GH's own scheduling jitter would
- * train the on-call to ignore this monitor.
+ * in the dashboard.
+ *
+ * `checkinMargin` is sized against GitHub, not Sentry: scheduled workflows at
+ * the top of the hour queue behind everyone else's, and the first three runs
+ * (2026-09-18) started 3h57m, 4h52m and 4h06m after their 00:00/06:00/12:00
+ * UTC slots. At the original 30 minutes each of those slots was reported
+ * missed, and since a missed check-in counts toward `failureIssueThreshold`,
+ * one real failure plus one late run opened an issue. 480 minutes clears the
+ * worst delay seen by ~3 hours while a canary that has stopped running is
+ * still flagged the same day. That is wider than Sentry's own advice that the
+ * margin not exceed the schedule interval (6h here) — deliberately, since the
+ * delay being absorbed is itself about that long.
  *
  * `@sentry/sveltekit` re-exports `captureCheckIn` but, unlike most of its
  * API, not the `MonitorConfig` type it takes (checked against
@@ -21,7 +30,7 @@ export const CANARY_MONITOR_SLUG = "production-canary";
  */
 export const CANARY_MONITOR_CONFIG = {
 	schedule: { type: "crontab", value: "0 */6 * * *" },
-	checkinMargin: 30,
+	checkinMargin: 480,
 	maxRuntime: 10,
 	timezone: "UTC",
 	failureIssueThreshold: 2,

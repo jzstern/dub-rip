@@ -41,8 +41,9 @@ export const BOT_CHECK_PATTERN = /sign in to confirm you['’]re not a bot/;
  * yt-dlp's WARNING for a watch page YouTube answered with 429. yt-dlp never
  * retries that fetch itself, and the bot-check ERROR it goes on to raise names
  * no cause, so this line is the only evidence that the egress IP is throttled.
- * Matched against a lowercased message. Exported so the download path can keep
- * the line when it assembles the failure message.
+ * Matched against a lowercased message. Both call sites already hand the
+ * classifier all of stderr (yt-dlp-wrap's rejection embeds it, and so does
+ * execFile's), so the warning arrives alongside the ERROR without any help.
  */
 export const WATCH_PAGE_429_PATTERN =
 	/unable to download webpage: http error 429/;

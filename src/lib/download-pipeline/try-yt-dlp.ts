@@ -9,7 +9,6 @@ import {
 } from "$lib/video-utils";
 import { buildJsRuntimeArgs, YOUTUBE_EXTRACTOR_ARG } from "$lib/yt-dlp-binary";
 import { withYtDlpConcurrencyLimit } from "$lib/yt-dlp-concurrency";
-import { WATCH_PAGE_429_PATTERN } from "$lib/yt-dlp-errors";
 
 interface YtDlpProcess {
 	on(
@@ -50,17 +49,6 @@ export interface TryYtDlpInput {
 	titleState: TitleState;
 	send: (data: Record<string, unknown>) => void;
 	signal?: AbortSignal;
-}
-
-function withWatchPage429Warning(
-	errorMessage: string,
-	watchPage429Warning: string,
-): string {
-	const alreadyPresent = WATCH_PAGE_429_PATTERN.test(
-		errorMessage.toLowerCase(),
-	);
-	if (!watchPage429Warning || alreadyPresent) return errorMessage;
-	return `${watchPage429Warning}\n${errorMessage}`;
 }
 
 export async function tryYtDlpDownload({
@@ -214,9 +202,6 @@ export async function tryYtDlpDownload({
 			);
 
 			let errorMessage = "";
-			// A WARNING, so it only reaches `errorMessage` when it happens to share a
-			// chunk with the ERROR. The classifier needs it to stop the retry.
-			let watchPage429Warning = "";
 			downloadProcess.ytDlpProcess?.stderr?.on("data", (data: Buffer) => {
 				const text = data.toString();
 				console.error("yt-dlp stderr:", text);
@@ -229,9 +214,6 @@ export async function tryYtDlpDownload({
 				for (const line of text.split("\n")) {
 					if (!line.includes("WARNING:")) continue;
 					console.warn("yt-dlp warning:", line);
-					if (WATCH_PAGE_429_PATTERN.test(line.toLowerCase())) {
-						watchPage429Warning = line.trim();
-					}
 					Sentry.addBreadcrumb({
 						category: "download",
 						level: "warning",
@@ -251,12 +233,8 @@ export async function tryYtDlpDownload({
 					if (code === 0) {
 						resolve();
 					} else {
-						const failureMessage = withWatchPage429Warning(
-							errorMessage,
-							watchPage429Warning,
-						);
 						reject(
-							new Error(failureMessage || `Process exited with code ${code}`),
+							new Error(errorMessage || `Process exited with code ${code}`),
 						);
 					}
 				});

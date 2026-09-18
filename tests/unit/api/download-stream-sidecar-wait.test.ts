@@ -3,13 +3,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const POT_URL = "http://pot.internal:4416";
 
-const { envMock, waitForBgutilPotMock, tryYtDlpDownloadMock } = vi.hoisted(
-	() => ({
-		envMock: { BGUTIL_POT_URL: undefined as string | undefined },
-		waitForBgutilPotMock: vi.fn(),
-		tryYtDlpDownloadMock: vi.fn(),
-	}),
-);
+const {
+	envMock,
+	waitForBgutilPotMock,
+	tryYtDlpDownloadMock,
+	getVideoDetailsMock,
+	fetchYouTubeMetadataMock,
+} = vi.hoisted(() => ({
+	envMock: { BGUTIL_POT_URL: undefined as string | undefined },
+	waitForBgutilPotMock: vi.fn(),
+	tryYtDlpDownloadMock: vi.fn(),
+	getVideoDetailsMock: vi.fn(() => Promise.resolve(null)),
+	fetchYouTubeMetadataMock: vi.fn(() =>
+		Promise.resolve({
+			videoTitle: "Test Video",
+			artist: "Test Artist",
+			trackTitle: "Test Title",
+			uploader: "Test Uploader",
+			thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+		}),
+	),
+}));
 
 vi.mock("$env/dynamic/private", () => ({ env: envMock }));
 
@@ -32,7 +46,7 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 }));
 
 vi.mock("$lib/video-details-cache", () => ({
-	getVideoDetails: vi.fn(() => Promise.resolve(null)),
+	getVideoDetails: getVideoDetailsMock,
 }));
 
 vi.mock("$lib/video-metadata", () => ({
@@ -40,15 +54,7 @@ vi.mock("$lib/video-metadata", () => ({
 }));
 
 vi.mock("$lib/youtube-metadata", () => ({
-	fetchYouTubeMetadata: vi.fn(() =>
-		Promise.resolve({
-			videoTitle: "Test Video",
-			artist: "Test Artist",
-			trackTitle: "Test Title",
-			uploader: "Test Uploader",
-			thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-		}),
-	),
+	fetchYouTubeMetadata: fetchYouTubeMetadataMock,
 	YouTubeMetadataError: class YouTubeMetadataError extends Error {},
 }));
 
@@ -266,23 +272,118 @@ describe("GET /api/download-stream - waiting for the bgutil-pot sidecar", () => 
 		});
 	});
 
-	it("does not start yt-dlp when the client leaves while the sidecar is starting", async () => {
-		// #given
-		let sidecarAnswers: (result: typeof AWAKE) => void = () => {};
-		waitForBgutilPotMock.mockReturnValue(
-			new Promise((resolve) => {
-				sidecarAnswers = resolve;
-			}),
-		);
-		const response = await startDownload();
-		await vi.waitFor(() => expect(waitForBgutilPotMock).toHaveBeenCalled());
+	describe("when the client leaves while the sidecar is starting", () => {
+		/**
+		 * The wait ends after the disconnect, the way the real one does when its
+		 * signal aborts. The negative assertions below give the route a beat to
+		 * (wrongly) carry on before they look.
+		 */
+		async function clientLeavesDuringWait(): Promise<void> {
+			let sidecarAnswers: (result: typeof AWAKE) => void = () => {};
+			waitForBgutilPotMock.mockReturnValue(
+				new Promise((resolve) => {
+					sidecarAnswers = resolve;
+				}),
+			);
+			const response = await startDownload();
+			await vi.waitFor(() => expect(waitForBgutilPotMock).toHaveBeenCalled());
 
-		// #when the client disconnects, and the wait then ends
-		await response.body?.cancel();
-		sidecarAnswers({ awake: false, attempts: 1, waitedMs: 30 });
-		await new Promise((resolve) => setTimeout(resolve, 20));
+			await response.body?.cancel();
+			sidecarAnswers({ awake: false, attempts: 1, waitedMs: 30 });
+			await new Promise((resolve) => setTimeout(resolve, 20));
+		}
 
-		// #then
-		expect(tryYtDlpDownloadMock).not.toHaveBeenCalled();
+		it("does not start yt-dlp", async () => {
+			// #when
+			await clientLeavesDuringWait();
+
+			// #then
+			expect(tryYtDlpDownloadMock).not.toHaveBeenCalled();
+		});
+
+		it("does not look the video up on oEmbed", async () => {
+			// #when
+			await clientLeavesDuringWait();
+
+			// #then
+			expect(fetchYouTubeMetadataMock).not.toHaveBeenCalled();
+		});
+
+		it("does not start the details extraction, which spawns yt-dlp", async () => {
+			// #when
+			await clientLeavesDuringWait();
+
+			// #then
+			expect(getVideoDetailsMock).not.toHaveBeenCalled();
+		});
+
+		it("does not leave a breadcrumb about a sidecar that never answered", async () => {
+			// #when
+			await clientLeavesDuringWait();
+
+			// #then the wait ended because the client left, not because the sidecar
+			// was silent
+			expect(Sentry.addBreadcrumb).not.toHaveBeenCalledWith(
+				expect.objectContaining({ level: "warning" }),
+			);
+		});
+	});
+
+	describe("logging how long the sidecar took", () => {
+		const infoSpy = vi.spyOn(console, "info");
+
+		beforeEach(() => {
+			infoSpy.mockReset().mockImplementation(() => {});
+		});
+
+		afterEach(() => {
+			infoSpy.mockReset();
+		});
+
+		function loggedWaits(): string[] {
+			return infoSpy.mock.calls
+				.map((call) => String(call[0]))
+				.filter((line) => line.includes("bgutil-pot answered"));
+		}
+
+		it("logs the attempts and time when it needed more than one ping", async () => {
+			// #given
+			waitForBgutilPotMock.mockResolvedValue({
+				awake: true,
+				attempts: 4,
+				waitedMs: 1_500,
+			});
+
+			// #when
+			await readEvents(await startDownload());
+
+			// #then
+			expect(loggedWaits()).toEqual([
+				"bgutil-pot answered /ping after 4 attempts, 1500ms",
+			]);
+		});
+
+		it("logs a first ping that answered, but only after a slow wait", async () => {
+			// #given a ping that hung for most of its 3 s timeout, then answered
+			waitForBgutilPotMock.mockResolvedValue({
+				awake: true,
+				attempts: 1,
+				waitedMs: 2_900,
+			});
+
+			// #when
+			await readEvents(await startDownload());
+
+			// #then
+			expect(loggedWaits()).toHaveLength(1);
+		});
+
+		it("stays quiet when the sidecar answers straight away", async () => {
+			// #when
+			await readEvents(await startDownload());
+
+			// #then
+			expect(loggedWaits()).toEqual([]);
+		});
 	});
 });

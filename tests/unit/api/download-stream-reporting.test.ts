@@ -204,20 +204,6 @@ describe("GET /api/download-stream - failure reporting policy", () => {
 		);
 	});
 
-	it("starts one yt-dlp run, not a retry loop, when a bot-check came with a watch-page 429", async () => {
-		// #given
-		// The wrapped shape yt-dlp-wrap rejects with: all of stderr, warnings included.
-		const failure = new Error(
-			"\nError code: 1\n\nStderr:\nWARNING: [youtube] dQw4w9WgXcQ: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)\nERROR: [youtube] dQw4w9WgXcQ: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.\n",
-		);
-
-		// #when
-		await runDownloadUntilError(failure);
-
-		// #then
-		expect(tryYtDlpDownloadMock).toHaveBeenCalledTimes(1);
-	});
-
 	it("downgrades an exhausted transient failure to warning level", async () => {
 		// #given — retries are skipped with fake timers so backoff adds no delay
 		vi.useFakeTimers();

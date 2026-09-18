@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyYtDlpError, parseYtDlpError } from "$lib/yt-dlp-errors";
-
-const WATCH_PAGE_429_WARNING =
-	"WARNING: [youtube] abc: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)";
+import { classifyYtDlpError } from "$lib/yt-dlp-errors";
 
 describe("classifyYtDlpError() reporting category", () => {
 	it("categorizes an unavailable video as a user failure", () => {
@@ -58,65 +55,6 @@ describe("classifyYtDlpError() reporting category", () => {
 
 		// #then
 		expect(result.category).toBe("transient");
-	});
-
-	it("categorizes a bot-check that came with a watch-page 429 as transient infrastructure trouble", () => {
-		// #given
-		const message = `${WATCH_PAGE_429_WARNING}\nERROR: [youtube] abc: Sign in to confirm you’re not a bot.`;
-
-		// #when
-		const result = classifyYtDlpError(message);
-
-		// #then
-		expect(result.category).toBe("transient");
-	});
-
-	it("keeps the bot-check user message for a bot-check that came with a watch-page 429", () => {
-		// #given
-		const message = `${WATCH_PAGE_429_WARNING}\nERROR: [youtube] abc: Sign in to confirm you’re not a bot.`;
-
-		// #when
-		const result = parseYtDlpError(message);
-
-		// #then
-		expect(result).toBe(
-			"Download service couldn't verify with YouTube. Please try again in a few minutes.",
-		);
-	});
-
-	it("still categorizes an unavailable video as a user failure when a watch-page 429 warning sits beside it", () => {
-		// #given
-		const message = `${WATCH_PAGE_429_WARNING}\nERROR: [youtube] abc: Video unavailable`;
-
-		// #when
-		const result = classifyYtDlpError(message);
-
-		// #then
-		expect(result.category).toBe("user");
-	});
-
-	it("still categorizes an age-restricted video as a user failure when a watch-page 429 warning sits beside it", () => {
-		// #given
-		// Opens with the same "Sign in to confirm" words as the bot-check, so it
-		// guards the 429 rule against matching on those alone.
-		const message = `${WATCH_PAGE_429_WARNING}\nERROR: [youtube] abc: Sign in to confirm your age. This video may be inappropriate for some users.`;
-
-		// #when
-		const result = classifyYtDlpError(message);
-
-		// #then
-		expect(result.category).toBe("user");
-	});
-
-	it("keeps a watch-page 429 beside an unavailable video non-retryable", () => {
-		// #given
-		const message = `${WATCH_PAGE_429_WARNING}\nERROR: [youtube] abc: Video unavailable`;
-
-		// #when
-		const result = classifyYtDlpError(message);
-
-		// #then
-		expect(result.retryable).toBe(false);
 	});
 
 	it("categorizes an HTTP 403 as transient infrastructure trouble", () => {

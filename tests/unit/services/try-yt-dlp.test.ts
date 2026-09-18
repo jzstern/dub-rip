@@ -14,7 +14,6 @@ import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
 } from "$lib/download-pipeline/try-yt-dlp";
-import { isRetryableYtDlpError } from "$lib/yt-dlp-errors";
 
 type Handler = (...args: unknown[]) => void;
 
@@ -42,17 +41,7 @@ class FakeProcess {
 	emitStderr(text: string) {
 		for (const handler of this.stderrHandlers) handler(Buffer.from(text));
 	}
-
-	emitError(error: Error) {
-		this.emit("error", error);
-	}
 }
-
-// yt-dlp-wrap never emits `close` for a failed run: on any non-zero exit it emits
-// `error` with this wrapper, which already carries all of stderr, warnings included.
-const WRAPPED_WATCH_PAGE_429_BOT_CHECK_ERROR = new Error(
-	"\nError code: 1\n\nStderr:\nWARNING: [youtube] q9lZ4p5YRkY: Unable to download webpage: HTTP Error 429: Too Many Requests (caused by <HTTPError 429: Too Many Requests>)\nERROR: [youtube] q9lZ4p5YRkY: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication.\n",
-);
 
 const BOT_CHECK_STDERR =
 	"ERROR: [youtube] q9lZ4p5YRkY: Sign in to confirm you're not a bot.\n";
@@ -240,18 +229,6 @@ describe("tryYtDlpDownload()", () => {
 
 		// #then
 		await expect(promise).rejects.toThrow(new Error(BOT_CHECK_STDERR));
-	});
-
-	it("rejects with a message the classifier will not retry when a bot-check came with a watch-page 429", async () => {
-		// #given
-		const promise = run();
-
-		// #when
-		proc.emitError(WRAPPED_WATCH_PAGE_429_BOT_CHECK_ERROR);
-
-		// #then
-		const failure = await promise.catch((error: Error) => error);
-		expect(isRetryableYtDlpError((failure as Error).message)).toBe(false);
 	});
 
 	it("resolves when yt-dlp exits cleanly", async () => {

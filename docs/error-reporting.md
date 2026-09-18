@@ -137,7 +137,7 @@ decides what Sentry sees:
 | Category | Meaning | Sentry |
 | --- | --- | --- |
 | `user` | Private, unavailable, age-restricted, copyright-blocked | Breadcrumb only |
-| `transient` | Bot-check, 403, timeout, network drop | `warning` (retries exhausted, or skipped when they would only re-hit a throttled IP) |
+| `transient` | Bot-check, 403, timeout, network drop | `warning` (retries already exhausted) |
 | `unknown` | Nothing matched | `error` |
 
 A user pasting a private video is normal operation, not a defect. Reporting

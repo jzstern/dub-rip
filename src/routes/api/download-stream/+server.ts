@@ -20,6 +20,7 @@ import {
 	type VideoDetails,
 } from "$lib/video-metadata";
 import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
+import { waitForBgutilPot } from "$lib/wait-for-bgutil-pot";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -37,6 +38,61 @@ const require = createRequire(import.meta.url);
 
 const QUEUE_FULL_MESSAGE =
 	"The downloader is busy right now. Please try again in a moment.";
+
+/**
+ * The sidecar's cold start has been measured at 3–9 s. A wait past this cap is
+ * a sidecar that is down, not starting, and holding the user longer than that
+ * before the first attempt would only delay the failure they are going to get.
+ */
+const SIDECAR_WAKE_CAP_MS = 12_000;
+
+/**
+ * `POST /api/preview` nudges the sleeping bgutil-pot sidecar awake while the
+ * user reads the preview, but that ping is fire-and-forget with a 2 s timeout,
+ * so a click inside the 3–9 s cold start still reaches yt-dlp while the sidecar
+ * is booting. yt-dlp then cannot fetch a PO token, YouTube bot-checks the `web`
+ * player request, and the failure is indistinguishable from a throttled IP. The
+ * retry below used to be the only thing recovering it (2026-09-17 00:59:41: the
+ * first attempt failed, the retry minted a token and succeeded).
+ *
+ * Waiting here turns that into a deterministic start. It never fails the
+ * download: if the sidecar stays silent the attempt goes ahead anyway and the
+ * retry loop is still the safety net.
+ */
+async function waitForSidecar(
+	bgutilPotUrl: string,
+	videoId: string,
+	signal: AbortSignal,
+	send: (data: Record<string, unknown>) => void,
+): Promise<void> {
+	const wake = await waitForBgutilPot(bgutilPotUrl, {
+		maxWaitMs: SIDECAR_WAKE_CAP_MS,
+		signal,
+		onWaiting: () =>
+			send({ type: "status", message: "Waking up the downloader..." }),
+	});
+
+	if (wake.awake) {
+		if (wake.attempts > 1) {
+			console.info(
+				`bgutil-pot answered /ping after ${wake.attempts} attempts, ${wake.waitedMs}ms`,
+			);
+		}
+		return;
+	}
+	if (signal.aborted) return;
+
+	const summary = `${wake.attempts} attempts, ${wake.waitedMs}ms`;
+	console.warn(
+		`bgutil-pot did not answer /ping before the download: ${summary}`,
+	);
+	Sentry.addBreadcrumb({
+		category: "download",
+		level: "warning",
+		message: "bgutil-pot did not answer /ping before the download started",
+		data: { videoId, attempts: wake.attempts, waitedMs: wake.waitedMs },
+	});
+}
 
 /**
  * Videos that can never be downloaded (private, age-restricted, copyright)
@@ -122,6 +178,20 @@ export const GET: RequestHandler = async ({ url }) => {
 
 			try {
 				send({ type: "status", message: "Getting video info..." });
+
+				if (env.BGUTIL_POT_URL) {
+					await waitForSidecar(
+						env.BGUTIL_POT_URL,
+						videoId,
+						abortController.signal,
+						send,
+					);
+					if (abortController.signal.aborted) {
+						throw (
+							abortController.signal.reason ?? new Error("Download aborted")
+						);
+					}
+				}
 
 				const titleState = {
 					videoTitle: "",

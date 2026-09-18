@@ -103,13 +103,12 @@ missed. `POST /api/canary` exists to catch the next one within hours.
   so it queues behind real users rather than starving them. A full queue is
   recorded as a skip (`queue_full`), not a failure. Before downloading it wakes
   the sleeping bgutil-pot sidecar and polls `/ping` until it answers (capped at
-  ~20 s, never reported to Sentry), mirroring what `POST /api/preview` does for
-  real users seconds before they click Download: the bgutil plugin checks
-  `/ping` once and caches a failure for 60 s, so a cold sidecar otherwise looks
-  unavailable for the whole run and confounds every canary failure. The
-  trade-off: the canary now waits for the sidecar, so it cannot see a user who
-  clicks Download inside the 3–9 s cold start.
-  See `src/lib/canary/run-canary-download.ts` and `wait-for-bgutil-pot.ts`.
+  ~20 s, never reported to Sentry) — the same wait `GET /api/download-stream`
+  now does for real users (12 s cap), so the canary still stands in for the real
+  path: the bgutil plugin checks `/ping` once and caches a failure for 60 s, so a
+  cold sidecar otherwise looks unavailable for the whole run and confounds every
+  canary failure.
+  See `src/lib/canary/run-canary-download.ts` and `src/lib/wait-for-bgutil-pot.ts`.
 - **It always answers 200** once authenticated (`Authorization: Bearer
   <CANARY_TOKEN>`, constant-time compared, 404 if `CANARY_TOKEN` is unset, 401
   on a bad token), even when the run fails — the GitHub workflow only fails on
@@ -183,7 +182,7 @@ missed. `POST /api/canary` exists to catch the next one within hours.
 - **The allowlist pins the repository, not just the host — this is load-bearing.** github.com serves release assets for *every* account, so "it is on github.com" is not a trust boundary. On the common path (`latest` past the pin) the digest the bytes are held to comes from the same API response as the URL, so a response naming some other account's asset alongside that asset's real digest would verify against itself. Requiring the `/yt-dlp/yt-dlp/releases/download/` path is what stops that. Compare `parsed.origin + parsed.pathname`, never the raw string — the WHATWG parser normalises `..` and percent-encoded traversal first.
 - **Digest resolution, in order:** when the resolved tag equals `YTDLP_VERSION` the in-repo `ASSET_SHA256` entry wins; otherwise the `digest` the releases API reports for that asset. **If neither resolves, the download is refused.** That is safe because both refresh branches keep serving the binary already on disk; only a cold container with no bake has nothing to fall back on, and that path already hard-fails when GitHub is down. Two limits worth knowing rather than rediscovering: the pin-vs-API cross-check only fires when GitHub is *honest* (a hostile response just names a different tag), so treat it as a re-published-asset canary, not a defence; and none of this detects a compromise of yt-dlp's own release pipeline, which is inherent to tracking `releases/latest`.
 - The boot log says which path was taken (`Using baked yt-dlp binary at …` vs `No baked yt-dlp binary found…`). Check it after any change to the build or the deploy image.
-- **`POST /api/preview` fire-and-forget pings `${BGUTIL_POT_URL}/ping`** to wake the sleeping sidecar while the user is still reading the preview. Use `/ping` (the healthcheck), never `/get_pot` — the latter does real BotGuard work speculatively. Never await it, always bound it with `AbortSignal.timeout`, always swallow the rejection.
+- **`POST /api/preview` fire-and-forget pings `${BGUTIL_POT_URL}/ping`** to wake the sleeping sidecar while the user is still reading the preview. Use `/ping` (the healthcheck), never `/get_pot` — the latter does real BotGuard work speculatively. Never await it, always bound it with `AbortSignal.timeout`, always swallow the rejection. That ping alone is not enough: its 2 s timeout is shorter than the sidecar's 3–9 s cold start, so `GET /api/download-stream` also *awaits* `waitForBgutilPot` (12 s cap, stops on client disconnect, never fails the download) before it starts any yt-dlp work — see [`docs/deployment-strategy.md`](../docs/deployment-strategy.md#the-download-waits-for-the-sidecar). Don't remove that wait to "save a round trip": without it a click inside the cold start is bot-checked and only the retry recovers it.
 
 ## Metadata (node-id3)
 - Use node-id3 for ID3 tags (not ffmpeg)

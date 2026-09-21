@@ -1049,7 +1049,7 @@ git commit -m "feat(metadata): resolve artist/title from cleaned titles, credits
 - Create: `src/lib/metadata/credits.ts`
 - Test: `tests/unit/metadata/credits.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1131,12 +1131,12 @@ describe("resolveLabel()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail**
+- [x] **Step 2: Run it to see it fail**
 
 Run: `bun run test:run tests/unit/metadata/credits.test.ts`
 Expected: FAIL (the module is not found).
 
-- [ ] **Step 3: Implement `src/lib/metadata/credits.ts`**
+- [x] **Step 3: Implement `src/lib/metadata/credits.ts`**
 
 ```ts
 const VERSION_CREDIT =
@@ -1189,12 +1189,12 @@ export function resolveLabel({
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `bun run test:run tests/unit/metadata/credits.test.ts`
 Expected: PASS. If `bun run check` rejects `Array.prototype.at`, use `names[names.length - 1]` instead.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/metadata/credits.ts tests/unit/metadata/credits.test.ts

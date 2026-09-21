@@ -8,6 +8,7 @@ import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
 import { pathExists } from "$lib/download-pipeline/path-exists";
 import { METADATA_PROCESSING_PERCENT } from "$lib/download-pipeline/progress-stages";
+import { titleFromVideoDetails } from "$lib/download-pipeline/title-from-video-details";
 import { tryYtDlpDownload } from "$lib/download-pipeline/try-yt-dlp";
 import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
 import { retryWithBackoff } from "$lib/retry";
@@ -126,7 +127,14 @@ export const GET: RequestHandler = async ({ url }) => {
 					videoTitle: "",
 					artist: "",
 					trackTitle: "",
-					uploader: "",
+				};
+				const sendTitleInfo = () => {
+					send({
+						type: "info",
+						title: titleState.videoTitle,
+						artist: titleState.artist,
+						track: titleState.trackTitle,
+					});
 				};
 
 				const detailsPromise: Promise<VideoDetails | null> = getVideoDetails(
@@ -143,21 +151,15 @@ export const GET: RequestHandler = async ({ url }) => {
 						titleState.videoTitle = metadata.videoTitle;
 						titleState.artist = metadata.artist;
 						titleState.trackTitle = metadata.trackTitle;
-						titleState.uploader = metadata.uploader;
 
 						console.log("Got metadata from oEmbed:", {
 							videoTitle: titleState.videoTitle,
 							artist: titleState.artist,
 							trackTitle: titleState.trackTitle,
-							uploader: titleState.uploader,
+							uploader: metadata.uploader,
 						});
 
-						send({
-							type: "info",
-							title: titleState.videoTitle,
-							artist: titleState.artist,
-							track: titleState.trackTitle,
-						});
+						sendTitleInfo();
 					} catch (err) {
 						if (err instanceof YouTubeMetadataError) {
 							console.log("oEmbed metadata failed:", err.message);
@@ -210,7 +212,6 @@ export const GET: RequestHandler = async ({ url }) => {
 							pluginDir,
 							debugMode,
 							ytDlp,
-							titleState,
 							send,
 							signal: abortController.signal,
 						}),
@@ -245,6 +246,14 @@ export const GET: RequestHandler = async ({ url }) => {
 					);
 					closeStream();
 					return;
+				}
+
+				if (!titleState.videoTitle) {
+					Object.assign(
+						titleState,
+						titleFromVideoDetails(await detailsPromise),
+					);
+					if (titleState.videoTitle) sendTitleInfo();
 				}
 
 				console.log("Video title:", titleState.videoTitle);

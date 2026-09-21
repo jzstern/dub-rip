@@ -3,10 +3,6 @@ import {
 	DOWNLOAD_COMPLETE_PERCENT,
 	DOWNLOAD_START_PERCENT,
 } from "$lib/download-pipeline/progress-stages";
-import {
-	parseArtistAndTitle,
-	sanitizeUploaderAsArtist,
-} from "$lib/video-utils";
 import { buildJsRuntimeArgs, YOUTUBE_EXTRACTOR_ARG } from "$lib/yt-dlp-binary";
 import { withYtDlpConcurrencyLimit } from "$lib/yt-dlp-concurrency";
 
@@ -31,13 +27,6 @@ export interface YtDlpInstance {
 	exec(args: string[]): YtDlpProcess;
 }
 
-export interface TitleState {
-	videoTitle: string;
-	artist: string;
-	trackTitle: string;
-	uploader: string;
-}
-
 export interface TryYtDlpInput {
 	videoUrl: string;
 	outputPath: string;
@@ -46,7 +35,6 @@ export interface TryYtDlpInput {
 	pluginDir: string;
 	debugMode: boolean;
 	ytDlp: YtDlpInstance;
-	titleState: TitleState;
 	send: (data: Record<string, unknown>) => void;
 	signal?: AbortSignal;
 }
@@ -59,7 +47,6 @@ export async function tryYtDlpDownload({
 	pluginDir,
 	debugMode,
 	ytDlp,
-	titleState,
 	send,
 	signal,
 }: TryYtDlpInput): Promise<void> {
@@ -160,43 +147,6 @@ export async function tryYtDlpDownload({
 				"ytDlpEvent",
 				(eventType: string, eventData: string) => {
 					console.log("yt-dlp event:", eventType, "|", eventData);
-
-					if (!titleState.videoTitle) {
-						if (eventType === "Destination") {
-							const match = eventData.match(/\/([^/]+)\.\w+$/);
-							if (match) {
-								titleState.videoTitle = match[1].replace(/_/g, " ");
-							}
-						} else if (
-							eventData.includes(".mp3") ||
-							eventData.includes(".webm")
-						) {
-							const match = eventData.match(/([^/]+)\.\w+/);
-							if (match) {
-								titleState.videoTitle = match[1].replace(/_/g, " ");
-							}
-						}
-
-						if (titleState.videoTitle) {
-							const parsed = parseArtistAndTitle(titleState.videoTitle);
-							titleState.artist = parsed.artist;
-							titleState.trackTitle = parsed.title;
-
-							if (!titleState.artist && titleState.uploader) {
-								titleState.artist = sanitizeUploaderAsArtist(
-									titleState.uploader,
-								);
-							}
-
-							send({
-								type: "info",
-								title: titleState.videoTitle,
-								artist: titleState.artist,
-								track: titleState.trackTitle,
-							});
-						}
-					}
-
 					send({ type: "event", eventType, eventData });
 				},
 			);

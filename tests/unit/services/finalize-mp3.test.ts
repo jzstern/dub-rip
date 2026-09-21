@@ -37,6 +37,7 @@ import {
 	sanitizeFilenameSegment,
 } from "$lib/download-pipeline/finalize-mp3";
 import { YT_DLP_METHOD } from "$lib/types";
+import { buildID3Tags } from "$lib/video-metadata";
 
 describe("sanitizeFilenameSegment()", () => {
 	it("strips characters that are unsafe in a filesystem path", () => {
@@ -296,5 +297,27 @@ describe("finalizeMp3() cancellation", () => {
 
 		// #then — signal stays optional for any caller that doesn't have one
 		expect(result.token).toBe("fake-token");
+	});
+});
+
+describe("finalizeMp3() tag inputs", () => {
+	it("passes the uploader and source URL through to the ID3 tags", async () => {
+		// #given
+		const filePath = await createTempMp3();
+
+		// #when
+		await finalizeMp3({
+			...finalizeInputFor(filePath),
+			uploader: "Decaydance Records",
+			sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+		});
+
+		// #then
+		expect(buildID3Tags).toHaveBeenCalledWith(
+			expect.objectContaining({
+				uploader: "Decaydance Records",
+				sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+			}),
+		);
 	});
 });

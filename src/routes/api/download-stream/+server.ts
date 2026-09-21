@@ -128,6 +128,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					artist: "",
 					trackTitle: "",
 				};
+				let uploader = "";
 				const sendTitleInfo = () => {
 					send({
 						type: "info",
@@ -151,6 +152,7 @@ export const GET: RequestHandler = async ({ url }) => {
 						titleState.videoTitle = metadata.videoTitle;
 						titleState.artist = metadata.artist;
 						titleState.trackTitle = metadata.trackTitle;
+						uploader = metadata.uploader;
 
 						console.log("Got metadata from oEmbed:", {
 							videoTitle: titleState.videoTitle,
@@ -282,6 +284,8 @@ export const GET: RequestHandler = async ({ url }) => {
 					thumbnailPromise,
 					send,
 					signal: abortController.signal,
+					uploader,
+					sourceUrl: normalizedUrl,
 				});
 
 				// The file is deliberately left on disk: the browser fetches it from

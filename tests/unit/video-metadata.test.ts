@@ -282,6 +282,35 @@ describe("fetchVideoDetails", () => {
 		expect(details).toBeNull();
 		expect(execFileMock).toHaveBeenCalledTimes(1);
 	});
+
+	it("takes the label from a YouTube Music ℗ line", async () => {
+		// #given
+		mockExecFileJson({
+			duration: 194,
+			description:
+				"Provided to YouTube by Interscope\n\nbad guy · Billie Eilish\n\n℗ 2019 Darkroom/Interscope Records\n\nReleased on: 2019-03-29",
+		});
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details?.label).toBe("Darkroom/Interscope Records");
+	});
+
+	it("falls back to the 'Provided to YouTube by' distributor", async () => {
+		// #given
+		mockExecFileJson({
+			duration: 194,
+			description: "Provided to YouTube by Believe SAS\n\nTrack · Artist",
+		});
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details?.label).toBe("Believe SAS");
+	});
 });
 
 describe("fetchThumbnailBuffer", () => {

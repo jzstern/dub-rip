@@ -1209,7 +1209,7 @@ git commit -m "feat(metadata): extract remixer and resolve record label"
 - Modify: `src/routes/api/download-stream/+server.ts` (around line 126, the oEmbed block, and the `finalizeMp3` call at lines 274–285)
 - Test: create `tests/unit/metadata/id3-enrichment.test.ts`; append to `tests/unit/video-metadata.test.ts` and `tests/unit/services/finalize-mp3.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/unit/metadata/id3-enrichment.test.ts`:
 
@@ -1354,12 +1354,12 @@ describe("finalizeMp3() tag inputs", () => {
 });
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `bun run test:run tests/unit/metadata/id3-enrichment.test.ts tests/unit/video-metadata.test.ts tests/unit/services/finalize-mp3.test.ts`
 Expected: FAIL. The new frames are missing, `details.label` is undefined, and `uploader` is not passed through.
 
-- [ ] **Step 3: Implement in `src/lib/video-metadata.ts`**
+- [x] **Step 3: Implement in `src/lib/video-metadata.ts`**
 
 1. Add these imports after the existing `./retry` import:
 
@@ -1442,7 +1442,7 @@ function labelFromDescription(description: string | undefined): string | undefin
 	if (sourceUrl) tags.audioSourceUrl = sourceUrl;
 ```
 
-- [ ] **Step 4: Plumb the new inputs through**
+- [x] **Step 4: Plumb the new inputs through**
 
 In `src/lib/download-pipeline/finalize-mp3.ts`:
 - Add `uploader?: string;` and `sourceUrl?: string;` to `FinalizeMp3Input`.
@@ -1461,7 +1461,7 @@ In `src/routes/api/download-stream/+server.ts`, keep the oEmbed uploader. Since 
 
 `tests/unit/api/download-stream-title-fallback.test.ts`, added by PR #134, asserts on `finalizeMp3`'s input with `objectContaining`, so the extra fields don't affect it.
 
-- [ ] **Step 5: Run everything**
+- [x] **Step 5: Run everything**
 
 ```bash
 bun run test:run
@@ -1471,7 +1471,7 @@ bun run lint
 
 Expected: all green. Existing `buildID3Tags` tests keep passing because their plain titles produce no credit frames.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/video-metadata.ts src/lib/download-pipeline/finalize-mp3.ts src/routes/api/download-stream/+server.ts tests/unit/metadata/id3-enrichment.test.ts tests/unit/video-metadata.test.ts tests/unit/services/finalize-mp3.test.ts

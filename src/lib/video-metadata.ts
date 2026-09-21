@@ -1,6 +1,8 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as Sentry from "@sentry/sveltekit";
+import { cleanUploadTitle } from "./metadata/clean-upload-title";
+import { extractRemixer, resolveLabel } from "./metadata/credits";
 import { retryWithBackoff } from "./retry";
 import {
 	buildBgutilPotArgs,
@@ -27,6 +29,9 @@ export interface VideoDetails {
 	artist?: string;
 	bpm?: number;
 	duration?: number;
+	/** Record label: SoundCloud's `label_name`, or a YouTube Music description's ℗ line. */
+	label?: string;
+	isrc?: string;
 }
 
 export interface ThumbnailImage {
@@ -49,6 +54,7 @@ interface YtDlpJson {
 	composer?: string;
 	bpm?: number;
 	duration?: number;
+	description?: string;
 }
 
 function parseYear(
@@ -76,6 +82,24 @@ function pickGenre(
 		return categories[0].trim();
 	}
 	return undefined;
+}
+
+const PHONOGRAM_LINE = /^℗\s*(?:\d{4}\s+)?(.+)$/m;
+const PROVIDED_TO_YOUTUBE_BY = /^Provided to YouTube by (.+)$/m;
+
+/**
+ * YouTube Music's auto-generated ("… - Topic") uploads carry the label in the
+ * description. The ℗ line names the imprint and "Provided to YouTube by" the
+ * distributor, so the ℗ line wins.
+ */
+function labelFromDescription(
+	description: string | undefined,
+): string | undefined {
+	if (!description) return undefined;
+	const label =
+		description.match(PHONOGRAM_LINE)?.[1] ??
+		description.match(PROVIDED_TO_YOUTUBE_BY)?.[1];
+	return label?.trim() || undefined;
 }
 
 async function fetchVideoDetailsOnce(
@@ -130,6 +154,7 @@ async function fetchVideoDetailsOnce(
 			typeof info.duration === "number" && info.duration > 0
 				? Math.round(info.duration)
 				: undefined,
+		label: labelFromDescription(info.description),
 	};
 }
 
@@ -247,6 +272,9 @@ export interface ID3TagInput {
 	artist: string;
 	details: VideoDetails | null;
 	image: ThumbnailImage | null;
+	uploader?: string;
+	/** Canonical URL of the upload, written to WOAS. */
+	sourceUrl?: string;
 }
 
 export interface ID3Tags {
@@ -264,6 +292,11 @@ export interface ID3Tags {
 		description: string;
 		imageBuffer: Buffer;
 	};
+	publisher?: string;
+	ISRC?: string;
+	remixArtist?: string;
+	audioSourceUrl?: string;
+	userDefinedText?: { description: string; value: string }[];
 }
 
 export function buildID3Tags({
@@ -272,6 +305,8 @@ export function buildID3Tags({
 	artist,
 	details,
 	image,
+	uploader,
+	sourceUrl,
 }: ID3TagInput): ID3Tags {
 	const title = (details?.track || trackTitle || videoTitle || "").trim();
 	const finalArtist = (details?.artist || artist || "Unknown Artist").trim();
@@ -295,6 +330,26 @@ export function buildID3Tags({
 	if (typeof details?.year === "number") tags.year = String(details.year);
 	if (typeof details?.bpm === "number")
 		tags.bpm = String(Math.round(details.bpm));
+
+	const titleCredits = cleanUploadTitle(videoTitle, {
+		labelName: details?.label,
+	});
+	const label = resolveLabel({
+		platformLabel: details?.label,
+		titleLabel: titleCredits.label,
+		uploader: uploader || details?.uploader,
+		artist: finalArtist,
+	});
+	if (label) tags.publisher = label;
+	if (details?.isrc) tags.ISRC = details.isrc;
+	const remixer = extractRemixer(tags.title);
+	if (remixer) tags.remixArtist = remixer;
+	if (titleCredits.catalogNumber) {
+		tags.userDefinedText = [
+			{ description: "CATALOGNUMBER", value: titleCredits.catalogNumber },
+		];
+	}
+	if (sourceUrl) tags.audioSourceUrl = sourceUrl;
 
 	if (image) {
 		tags.image = {

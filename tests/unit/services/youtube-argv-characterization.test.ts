@@ -13,7 +13,7 @@ import { YOUTUBE_EXTRACTOR_ARG } from "$lib/yt-dlp-binary";
 
 /**
  * The canary's whole value is that it runs the argv real users get. This pins
- * this argv element-for-element, so moving the SoundCloud path in beside it
+ * that argv element-for-element, so moving the SoundCloud path in beside it
  * can't change a single YouTube flag unnoticed.
  */
 const EXPECTED_YOUTUBE_ARGV = [

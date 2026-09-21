@@ -93,6 +93,9 @@ export const GET: RequestHandler = async ({ url }) => {
 			let isClosed = false;
 
 			const send = (data: Record<string, unknown>) => {
+				// The canary reads these raw yt-dlp lines straight from tryYtDlpDownload;
+				// they carry the temp output path and must not reach the browser.
+				if (data.type === "event") return;
 				if (!isClosed) {
 					try {
 						controller.enqueue(

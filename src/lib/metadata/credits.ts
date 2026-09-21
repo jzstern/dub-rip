@@ -7,9 +7,18 @@ const GENERIC_VERSION_NAME =
 
 const LABEL_LIKE_NAME = /\b(?:records|recordings)\b/i;
 
-/** The person named in the last version credit, e.g. "(W&W Remix)" → "W&W". Written to TPE4. */
+/**
+ * The person named in the last version credit, e.g. "(W&W Remix)" → "W&W". Written to TPE4.
+ *
+ * Whitespace runs are collapsed before matching, not for tidiness: VERSION_CREDIT's
+ * `\s*`, lazy name and `\s+` can each take part of a run, so an unclosed bracket
+ * before a long run backtracks in cubic time. The title can be yt-dlp's `track`,
+ * which an uploader controls through a YouTube Music-style description, so an
+ * uncollapsed run of a few thousand spaces blocks the event loop for seconds.
+ */
 export function extractRemixer(title: string): string | undefined {
-	const names = [...title.matchAll(VERSION_CREDIT)]
+	const singleSpaced = title.replace(/\s+/g, " ");
+	const names = [...singleSpaced.matchAll(VERSION_CREDIT)]
 		.map((match) => match[1]?.trim() ?? "")
 		.filter((name) => name && !GENERIC_VERSION_NAME.test(name));
 	return names.at(-1);

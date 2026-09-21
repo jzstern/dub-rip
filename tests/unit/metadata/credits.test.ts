@@ -35,6 +35,30 @@ describe("extractRemixer()", () => {
 		// #then
 		expect(remixer).toBeUndefined();
 	});
+
+	it("reports a credited name with its whitespace runs collapsed", () => {
+		// #when
+		const remixer = extractRemixer("Spring (DROPIXX  &\u3000ARAYSEN   Remix)");
+
+		// #then
+		expect(remixer).toBe("DROPIXX & ARAYSEN");
+	});
+
+	it.each([
+		["ASCII spaces", " "],
+		["em spaces", "\u2003"],
+		["ideographic spaces", "\u3000"],
+	])("returns quickly for an unclosed bracket before a long run of %s", (_name, space) => {
+		// #given
+		const uploaderControlledTrack = `(${space.repeat(2000)}x`;
+		const startedAt = performance.now();
+
+		// #when
+		extractRemixer(uploaderControlledTrack);
+
+		// #then
+		expect(performance.now() - startedAt).toBeLessThan(100);
+	});
 });
 
 describe("resolveLabel()", () => {

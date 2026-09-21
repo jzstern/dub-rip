@@ -9,11 +9,19 @@ vi.mock("$lib/yt-dlp-binary", async (importOriginal) => ({
 	buildJsRuntimeArgs: vi.fn(() => ["--js-runtimes", "node:/usr/bin/node"]),
 }));
 
+import { createRequire } from "node:module";
 import * as Sentry from "@sentry/sveltekit";
 import {
 	tryYtDlpDownload,
 	type YtDlpInstance,
 } from "$lib/download-pipeline/try-yt-dlp";
+
+const { default: YTDlpWrap } = createRequire(import.meta.url)(
+	"yt-dlp-wrap",
+) as typeof import("yt-dlp-wrap");
+
+// download-stream names every output file with randomBytes(16).toString("hex").
+const OUTPUT_PATH = "/tmp/5d41402abc4b2a76b9719d911017c592";
 
 type Handler = (...args: unknown[]) => void;
 
@@ -40,6 +48,14 @@ class FakeProcess {
 
 	emitStderr(text: string) {
 		for (const handler of this.stderrHandlers) handler(Buffer.from(text));
+	}
+
+	/** Routes stdout through yt-dlp-wrap's own line parser, as production does. */
+	emitStdout(text: string) {
+		YTDlpWrap.emitYoutubeDlEvents(
+			text,
+			this as unknown as Parameters<typeof YTDlpWrap.emitYoutubeDlEvents>[1],
+		);
 	}
 }
 
@@ -71,21 +87,28 @@ describe("tryYtDlpDownload()", () => {
 	function run() {
 		return tryYtDlpDownload({
 			videoUrl: "https://www.youtube.com/watch?v=q9lZ4p5YRkY",
-			outputPath: "/tmp/out",
+			outputPath: OUTPUT_PATH,
 			bgutilPotUrl: "http://bgutil-pot.railway.internal:4416",
 			ffmpegPath: "/usr/bin/ffmpeg",
 			pluginDir: "/tmp/yt-dlp-plugins",
 			debugMode: false,
 			ytDlp,
-			titleState: {
-				videoTitle: "",
-				artist: "",
-				trackTitle: "",
-				uploader: "",
-			},
 			send: (data) => sent.push(data),
 		});
 	}
+
+	it("never takes a title from yt-dlp's output path, which is a random ID", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emitStdout(`[download] Destination: ${OUTPUT_PATH}.mp3\n`);
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(sent.filter((event) => event.type === "info")).toEqual([]);
+	});
 
 	it("enables a JS runtime so yt-dlp can solve YouTube's n challenge", async () => {
 		// #given
@@ -283,7 +306,6 @@ describe("tryYtDlpDownload() concurrency limiting", () => {
 			pluginDir: "/tmp/yt-dlp-plugins",
 			debugMode: false,
 			ytDlp,
-			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
 			send: () => {},
 		});
 	}
@@ -329,7 +351,6 @@ describe("tryYtDlpDownload() cancellation", () => {
 			pluginDir: "/tmp/yt-dlp-plugins",
 			debugMode: false,
 			ytDlp,
-			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
 			send: () => {},
 			signal,
 		});
@@ -374,7 +395,6 @@ describe("tryYtDlpDownload() cancellation", () => {
 			pluginDir: "/tmp/yt-dlp-plugins",
 			debugMode: false,
 			ytDlp,
-			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
 			send: () => {},
 			signal: controller.signal,
 		}).catch(() => {});

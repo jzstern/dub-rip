@@ -130,6 +130,23 @@ describe("fetchVideoDetails", () => {
 		});
 	});
 
+	it("exposes the video title and uploader, the download's title fallback", async () => {
+		// #given
+		mockExecFileJson({
+			title: "Daft Punk - One More Time (Official Video)",
+			uploader: "Daft Punk",
+		});
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details).toMatchObject({
+			title: "Daft Punk - One More Time (Official Video)",
+			uploader: "Daft Punk",
+		});
+	});
+
 	it("returns null when yt-dlp fails (non-fatal)", async () => {
 		// #given
 		mockExecFileError(new Error("yt-dlp crashed"));

@@ -98,7 +98,6 @@ export async function runCanaryDownload(): Promise<CanaryClassification> {
 			pluginDir,
 			debugMode: false,
 			ytDlp,
-			titleState: { videoTitle: "", artist: "", trackTitle: "", uploader: "" },
 			send: collectStdout,
 		});
 

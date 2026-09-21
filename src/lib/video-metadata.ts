@@ -16,6 +16,8 @@ const DETAILS_TIMEOUT = 15000;
 const THUMBNAIL_TIMEOUT = 8000;
 
 export interface VideoDetails {
+	title?: string;
+	uploader?: string;
 	year?: number;
 	genre?: string;
 	album?: string;
@@ -33,6 +35,8 @@ export interface ThumbnailImage {
 }
 
 interface YtDlpJson {
+	title?: string;
+	uploader?: string;
 	upload_date?: string;
 	release_date?: string;
 	release_year?: number;
@@ -112,6 +116,8 @@ async function fetchVideoDetailsOnce(
 	const info = JSON.parse(result.stdout) as YtDlpJson;
 
 	return {
+		title: info.title?.trim() || undefined,
+		uploader: info.uploader?.trim() || undefined,
 		year: parseYear(info.upload_date, info.release_date, info.release_year),
 		genre: pickGenre(info.genre, info.categories),
 		album: info.album?.trim() || undefined,

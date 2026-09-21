@@ -392,7 +392,7 @@ git commit -m "test: pin current YouTube argv and title identity before metadata
 - Modify: `src/lib/video-utils.ts:13-17` (the patterns) and `src/lib/video-utils.ts:46-52` (`sanitizeUploaderAsArtist`)
 - Test: append to `tests/unit/video-utils.test.ts`
 
-- [ ] **Step 1: Append the failing tests**
+- [x] **Step 1: Append the failing tests**
 
 ```ts
 describe("parseArtistAndTitle() separator rules", () => {
@@ -440,12 +440,12 @@ describe("sanitizeUploaderAsArtist() channel decorations", () => {
 });
 ```
 
-- [ ] **Step 2: Run them to see them fail**
+- [x] **Step 2: Run them to see them fail**
 
 Run: `bun run test:run tests/unit/video-utils.test.ts`
 Expected: FAIL. For example, `Jay-Z - Empire State Of Mind` gives `{ artist: "Jay", … }`, and `AdeleVEVO` stays `AdeleVEVO`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/lib/video-utils.ts`, replace the `patterns` array in `parseArtistAndTitle`:
 
@@ -473,12 +473,12 @@ The variation selector and zero-width joiner go outside the character class as a
 
 Also update the function's doc comment so it mentions the VEVO suffix and the trailing symbols.
 
-- [ ] **Step 4: Run the tests**
+- [x] **Step 4: Run the tests**
 
 Run: `bun run test:run tests/unit/video-utils.test.ts tests/unit/metadata/youtube-identity-characterization.test.ts tests/unit/youtube-metadata.test.ts`
 Expected: PASS, including every test that already existed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/video-utils.ts tests/unit/video-utils.test.ts

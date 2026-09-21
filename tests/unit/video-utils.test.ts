@@ -395,3 +395,48 @@ describe("formatBytes", () => {
 		expect(formatBytes(1)).toBe("1 B");
 	});
 });
+
+describe("parseArtistAndTitle() separator rules", () => {
+	it.each([
+		["Jay-Z - Empire State Of Mind", "Jay-Z", "Empire State Of Mind"],
+		["Blink-182 - All The Small Things", "Blink-182", "All The Small Things"],
+		["A-ha - Take On Me", "A-ha", "Take On Me"],
+		["Temz- 5 in the morning", "Temz", "5 in the morning"],
+		["Artist -Title", "Artist", "Title"],
+		["Queen–Bohemian Rhapsody", "Queen", "Bohemian Rhapsody"],
+	])("splits %j into %j / %j", (input, artist, title) => {
+		// #when
+		const result = parseArtistAndTitle(input);
+
+		// #then
+		expect(result).toEqual({ artist, title });
+	});
+
+	it.each([
+		"X-COOL!",
+		"5:00 AM",
+		"Re:Zero Main Theme",
+	])("leaves %j whole", (input) => {
+		// #when
+		const result = parseArtistAndTitle(input);
+
+		// #then
+		expect(result).toEqual({ artist: "", title: input });
+	});
+});
+
+describe("sanitizeUploaderAsArtist() channel decorations", () => {
+	it.each([
+		["AdeleVEVO", "Adele"],
+		["Lil Tecca ✰", "Lil Tecca"],
+		["PHAN BAO 🌊", "PHAN BAO"],
+		["Edwards Music ™", "Edwards Music"],
+		["VEVO", "VEVO"],
+	])("turns %j into %j", (uploader, expected) => {
+		// #when
+		const result = sanitizeUploaderAsArtist(uploader);
+
+		// #then
+		expect(result).toBe(expected);
+	});
+});

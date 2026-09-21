@@ -1480,9 +1480,9 @@ git commit -m "feat(id3): write label, ISRC, remixer, catalog number and source 
 
 ### Task 7: Phase 1 verification and PR
 
-- [ ] **Step 1: Audit test edits.** The expect audit (Guardrail rule 2) should print nothing, since Phase 1 changes no existing assertion.
-- [ ] **Step 2: Run the project's pre-commit agents** (the `.claude/CLAUDE.md` "Before Committing" rule): `code-simplifier:code-simplifier` on the diff, then `security-auditor`. Apply the fixes that hold up, re-run `bun run test:run`, and commit.
-- [ ] **Step 3: Check against a real YouTube video.** Start the dev server through the preview tool (`preview_start`, not Bash). Download `https://www.youtube.com/watch?v=jNQXAC9IVRw` and inspect its tags:
+- [x] **Step 1: Audit test edits.** The expect audit (Guardrail rule 2) should print nothing, since Phase 1 changes no existing assertion.
+- [x] **Step 2: Run the project's pre-commit agents** (the `.claude/CLAUDE.md` "Before Committing" rule): `code-simplifier:code-simplifier` on the diff, then `security-auditor`. Apply the fixes that hold up, re-run `bun run test:run`, and commit.
+- [x] **Step 3: Check against a real YouTube video.** Start the dev server through the preview tool (`preview_start`, not Bash). Download `https://www.youtube.com/watch?v=jNQXAC9IVRw` and inspect its tags:
 
 ```bash
 node -e 'const t=require("node-id3").read(process.argv[1]); delete t.image; delete t.raw; console.log(t)' "$HOME/Downloads/<downloaded file>.mp3"
@@ -1490,7 +1490,7 @@ node -e 'const t=require("node-id3").read(process.argv[1]); delete t.image; dele
 
 Expected: the same title, artist and album as `main` produces, plus `audioSourceUrl: "https://www.youtube.com/watch?v=jNQXAC9IVRw"`.
 
-- [ ] **Step 4: Open the PR.** Push `feat/upload-title-metadata` and open a PR using `.github/PULL_REQUEST_TEMPLATE.md`. The template has no "Behavior changes" section, so add one under Description and list D1–D6 there. Put Task 1's baseline test count and the final count under "How to test". Once CI and the PR environment are green, ask the human to merge it promptly, because the PR environment is billed while it's open. The human merges.
+- [x] **Step 4: Open the PR.** Push `feat/upload-title-metadata` and open a PR using `.github/PULL_REQUEST_TEMPLATE.md`. The template has no "Behavior changes" section, so add one under Description and list D1–D6 there. Put Task 1's baseline test count and the final count under "How to test". Once CI and the PR environment are green, ask the human to merge it promptly, because the PR environment is billed while it's open. The human merges.
 
 ---
 

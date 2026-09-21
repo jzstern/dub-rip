@@ -767,7 +767,7 @@ git commit -m "feat(metadata): strip premiere/free-download/official-audio noise
 - Modify: `src/lib/youtube-metadata.ts:66-78`
 - Test: `tests/unit/metadata/resolve-track-identity.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -912,12 +912,12 @@ describe("resolveTrackIdentity()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail**
+- [x] **Step 2: Run it to see it fail**
 
 Run: `bun run test:run tests/unit/metadata/resolve-track-identity.test.ts`
 Expected: FAIL (the module is not found).
 
-- [ ] **Step 3: Implement `src/lib/metadata/resolve-track-identity.ts`**
+- [x] **Step 3: Implement `src/lib/metadata/resolve-track-identity.ts`**
 
 ```ts
 import { parseArtistAndTitle, sanitizeUploaderAsArtist } from "$lib/video-utils";
@@ -1004,7 +1004,7 @@ export function resolveTrackIdentity({
 }
 ```
 
-- [ ] **Step 4: Switch YouTube over.** In `src/lib/youtube-metadata.ts`:
+- [x] **Step 4: Switch YouTube over.** In `src/lib/youtube-metadata.ts`:
   1. Replace the import on line 2 with `import { resolveTrackIdentity } from "./metadata/resolve-track-identity";`.
   2. Replace lines 66–78 with:
 
@@ -1027,7 +1027,7 @@ export function resolveTrackIdentity({
 		};
 ```
 
-- [ ] **Step 5: Run the tests**
+- [x] **Step 5: Run the tests**
 
 Run: `bun run test:run tests/unit/metadata tests/unit/youtube-metadata.test.ts tests/unit/video-utils.test.ts`
 Expected: PASS, including the Task 1 characterization table.
@@ -1036,7 +1036,7 @@ Expected: PASS, including the Task 1 characterization table.
 
 If a test there asserts the argument that `parseArtistAndTitle` was called with, and its title contains noise that cleanup now removes, stop and ask. It would be a deliberate change missing from the table.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/metadata/resolve-track-identity.ts src/lib/youtube-metadata.ts tests/unit/metadata/resolve-track-identity.test.ts

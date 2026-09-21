@@ -491,7 +491,7 @@ git commit -m "fix(metadata): don't split artist on an unspaced hyphen or colon"
 - Create: `src/lib/metadata/clean-upload-title.ts`
 - Test: `tests/unit/metadata/clean-upload-title.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 The `cleans %j` fixtures are real upload titles from the 2026-09-20 sample, or common YouTube forms. The `keeps … intact` fixtures are a mix of real titles and made-up edge cases (`[EP01]`, `(New Release)`) that guard against false positives.
 
@@ -579,12 +579,12 @@ describe("cleanUploadTitle()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail**
+- [x] **Step 2: Run it to see it fail**
 
 Run: `bun run test:run tests/unit/metadata/clean-upload-title.test.ts`
 Expected: FAIL with "Failed to resolve import `$lib/metadata/clean-upload-title`".
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 /**
@@ -747,12 +747,12 @@ export function cleanUploadTitle(
 }
 ```
 
-- [ ] **Step 4: Run the test**
+- [x] **Step 4: Run the test**
 
 Run: `bun run test:run tests/unit/metadata/clean-upload-title.test.ts`
 Expected: PASS. If a `cleans %j` fixture fails, fix the pattern rather than the fixture, because those are real titles. The made-up edge cases in `keeps … intact` can be discussed, but only by adding a real title that argues the other way.
 
-- [ ] **Step 5: Lint and commit**
+- [x] **Step 5: Lint and commit**
 
 ```bash
 bun run lint

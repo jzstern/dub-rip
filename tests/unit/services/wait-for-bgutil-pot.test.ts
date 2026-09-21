@@ -223,6 +223,21 @@ describe("waitForBgutilPot()", () => {
 			).toBe(true);
 		});
 
+		it("rounds a fractional attempt timeout down to a whole millisecond", async () => {
+			// #given an attempt timeout shorter than what is left of the wait, so it
+			// is the value that reaches the timeout signal
+			const createTimeoutSignal = vi.fn(
+				(_ms: number) => new AbortController().signal,
+			);
+			fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+			// #when
+			await wait({ attemptTimeoutMs: 1_234.5, createTimeoutSignal });
+
+			// #then
+			expect(createTimeoutSignal).toHaveBeenCalledWith(1_234);
+		});
+
 		it("never asks for a timeout of less than a millisecond", async () => {
 			// #given the same fractional clock, which leaves 0.1 ms for the last
 			// attempt

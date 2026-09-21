@@ -117,7 +117,7 @@ export async function waitForBgutilPot(
 			// because it also rejects 0.
 			const remainingMs = maxWaitMs - (now() - start);
 			const attemptTimeout = createTimeoutSignal(
-				Math.max(1, Math.min(attemptTimeoutMs, Math.floor(remainingMs))),
+				Math.max(1, Math.floor(Math.min(attemptTimeoutMs, remainingMs))),
 			);
 			const response = await fetchImpl(pingUrl, {
 				signal: signal

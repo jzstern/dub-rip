@@ -9,6 +9,13 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 	ensureBgutilPlugin: vi.fn(() => Promise.resolve("/tmp/yt-dlp-plugins")),
 }));
 
+// The route pings the bgutil-pot sidecar before it starts yt-dlp; behavior is
+// covered in download-stream-sidecar-wait.test.ts, and nothing here should
+// depend on a sidecar being reachable.
+vi.mock("$lib/wait-for-bgutil-pot", () => ({
+	waitForBgutilPot: async () => ({ awake: true, attempts: 1, waitedMs: 0 }),
+}));
+
 vi.mock("$lib/download-pipeline/yt-dlp-instance", () => ({
 	getYTDlp: vi.fn(() => Promise.resolve({})),
 }));

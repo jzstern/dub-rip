@@ -1518,7 +1518,7 @@ git -C "$ROOT" worktree add .claude/worktrees/soundcloud-support -b feat/soundcl
 - Modify: `src/lib/video-details-cache.ts` (its public API is unchanged)
 - Test: `tests/unit/services/single-flight-cache.test.ts`
 
-- [ ] **Step 1: Write the failing test.** The existing `video-details-cache.test.ts` already covers hit, miss, dedupe, TTL and not caching `null`. These two tests cover what SoundCloud needs on top.
+- [x] **Step 1: Write the failing test.** The existing `video-details-cache.test.ts` already covers hit, miss, dedupe, TTL and not caching `null`. These two tests cover what SoundCloud needs on top.
 
 ```ts
 import { describe, expect, it, vi } from "vitest";
@@ -1558,9 +1558,9 @@ describe("createSingleFlightCache()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail** (the module is not found).
+- [x] **Step 2: Run it to see it fail** (the module is not found).
 
-- [ ] **Step 3: Implement `src/lib/single-flight-cache.ts`**
+- [x] **Step 3: Implement `src/lib/single-flight-cache.ts`**
 
 ```ts
 interface CacheEntry<T> {
@@ -1614,7 +1614,7 @@ export function createSingleFlightCache<T>(): SingleFlightCache<T> {
 }
 ```
 
-- [ ] **Step 4: Rewrite `src/lib/video-details-cache.ts` on top of it.** Keep the existing docstring on `getVideoDetails`, and change "keyed by YouTube videoId" to "keyed by videoId".
+- [x] **Step 4: Rewrite `src/lib/video-details-cache.ts` on top of it.** Keep the existing docstring on `getVideoDetails`, and change "keyed by YouTube videoId" to "keyed by videoId".
 
 ```ts
 import { createSingleFlightCache } from "./single-flight-cache";
@@ -1646,8 +1646,8 @@ export function clearVideoDetailsCache(): void {
 }
 ```
 
-- [ ] **Step 5: Run the tests.** `bun run test:run tests/unit/services/single-flight-cache.test.ts tests/unit/services/video-details-cache.test.ts` → PASS, with no edits to the existing cache tests.
-- [ ] **Step 6: Commit** `refactor: extract single-flight TTL cache from video-details-cache`.
+- [x] **Step 5: Run the tests.** `bun run test:run tests/unit/services/single-flight-cache.test.ts tests/unit/services/video-details-cache.test.ts` → PASS, with no edits to the existing cache tests.
+- [x] **Step 6: Commit** `refactor: extract single-flight TTL cache from video-details-cache`.
 
 ### Task 9: SoundCloud URL parsing
 

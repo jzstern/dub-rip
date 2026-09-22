@@ -1,14 +1,9 @@
+import { createSingleFlightCache } from "./single-flight-cache";
 import { fetchVideoDetails, type VideoDetails } from "./video-metadata";
 
 export const DEFAULT_VIDEO_DETAILS_TTL_MS = 10 * 60 * 1000;
 
-interface CacheEntry {
-	value: VideoDetails;
-	expiresAt: number;
-}
-
-const cache = new Map<string, CacheEntry>();
-const inFlight = new Map<string, Promise<VideoDetails | null>>();
+const cache = createSingleFlightCache<VideoDetails | null>();
 
 export interface GetVideoDetailsOptions {
 	ttlMs?: number;
@@ -16,7 +11,7 @@ export interface GetVideoDetailsOptions {
 }
 
 /**
- * Get-or-fetch cache for yt-dlp video details, keyed by YouTube videoId.
+ * Get-or-fetch cache for yt-dlp video details, keyed by videoId.
  *
  * A single user download currently costs ~3 yt-dlp extractions (preview
  * duration, fetchVideoDetails, the download itself), each re-solving
@@ -30,39 +25,18 @@ export interface GetVideoDetailsOptions {
  * rather than starting a new subprocess. Failures are never cached, so a
  * failed extraction is retried on the very next request.
  */
-export async function getVideoDetails(
+export function getVideoDetails(
 	videoId: string,
 	videoUrl: string,
 	options: GetVideoDetailsOptions = {},
 ): Promise<VideoDetails | null> {
-	const ttlMs = options.ttlMs ?? DEFAULT_VIDEO_DETAILS_TTL_MS;
-
-	const cached = cache.get(videoId);
-	if (cached && cached.expiresAt > Date.now()) {
-		return cached.value;
-	}
-
-	const existing = inFlight.get(videoId);
-	if (existing) {
-		return existing;
-	}
-
-	const promise = fetchVideoDetails(videoUrl, options.timeout)
-		.then((value) => {
-			if (value) {
-				cache.set(videoId, { value, expiresAt: Date.now() + ttlMs });
-			}
-			return value;
-		})
-		.finally(() => {
-			inFlight.delete(videoId);
-		});
-
-	inFlight.set(videoId, promise);
-	return promise;
+	return cache.get(
+		videoId,
+		() => fetchVideoDetails(videoUrl, options.timeout),
+		options.ttlMs ?? DEFAULT_VIDEO_DETAILS_TTL_MS,
+	);
 }
 
 export function clearVideoDetailsCache(): void {
 	cache.clear();
-	inFlight.clear();
 }

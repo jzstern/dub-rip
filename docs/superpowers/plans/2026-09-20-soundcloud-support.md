@@ -2708,7 +2708,7 @@ export async function fetchSoundCloudTrack(
 - Create: `src/lib/soundcloud/soundcloud-metadata.ts`, `src/lib/soundcloud/soundcloud-track-cache.ts`
 - Test: `tests/unit/soundcloud/soundcloud-metadata.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -2797,9 +2797,9 @@ describe("soundCloudRefusal()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement `src/lib/soundcloud/soundcloud-metadata.ts`**
+- [x] **Step 3: Implement `src/lib/soundcloud/soundcloud-metadata.ts`**
 
 ```ts
 import type { DownloadTitle } from "$lib/download-pipeline/title-from-video-details";
@@ -2854,7 +2854,7 @@ export function soundCloudRefusal(track: SoundCloudTrack): string | null {
 }
 ```
 
-- [ ] **Step 4: Implement `src/lib/soundcloud/soundcloud-track-cache.ts`**
+- [x] **Step 4: Implement `src/lib/soundcloud/soundcloud-track-cache.ts`**
 
 ```ts
 import type { MediaLink } from "$lib/media-link";
@@ -2878,8 +2878,8 @@ export function clearSoundCloudTrackCache(): void {
 }
 ```
 
-- [ ] **Step 5: Run the tests** → PASS. `bun run check` → clean.
-- [ ] **Step 6: Commit** `feat(soundcloud): map tracks to title state and ID3 details`.
+- [x] **Step 5: Run the tests** → PASS. `bun run check` → clean.
+- [x] **Step 6: Commit** `feat(soundcloud): map tracks to title state and ID3 details`.
 
 ### Task 14: Split the yt-dlp runner and add the SoundCloud arguments
 

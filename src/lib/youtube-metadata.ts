@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/sveltekit";
-import { parseArtistAndTitle, sanitizeUploaderAsArtist } from "./video-utils";
+import { resolveTrackIdentity } from "./metadata/resolve-track-identity";
 
 const DEFAULT_TIMEOUT = 10000;
 
@@ -64,13 +64,16 @@ export async function fetchYouTubeMetadata(
 		};
 
 		const videoTitle = oembed.title ?? "";
-		const { artist, title } = parseArtistAndTitle(videoTitle);
 		const uploader = oembed.author_name ?? "";
+		const { artist, trackTitle } = resolveTrackIdentity({
+			rawTitle: videoTitle,
+			uploader,
+		});
 
 		return {
 			videoTitle,
-			artist: artist || sanitizeUploaderAsArtist(uploader),
-			trackTitle: title || videoTitle,
+			artist,
+			trackTitle,
 			uploader,
 			thumbnailUrl:
 				oembed.thumbnail_url ??

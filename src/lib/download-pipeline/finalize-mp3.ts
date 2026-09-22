@@ -27,6 +27,8 @@ export interface FinalizeMp3Input {
 	thumbnailPromise: Promise<ThumbnailImage | null>;
 	send: (data: Record<string, unknown>) => void;
 	signal?: AbortSignal;
+	uploader?: string;
+	sourceUrl?: string;
 }
 
 export interface FinalizeMp3Result {
@@ -96,6 +98,8 @@ export async function finalizeMp3({
 	thumbnailPromise,
 	send,
 	signal,
+	uploader,
+	sourceUrl,
 }: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
 
@@ -118,6 +122,8 @@ export async function finalizeMp3({
 			artist,
 			details,
 			image,
+			uploader,
+			sourceUrl,
 		});
 
 		const { image: _image, ...tagsForLog } = tags;

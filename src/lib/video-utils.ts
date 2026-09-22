@@ -11,9 +11,11 @@ export function parseArtistAndTitle(videoTitle: string): {
 	title: string;
 } {
 	const patterns = [
-		/^(.+?)\s*[-–—]\s*(.+)$/, // Artist - Title (various dash types)
-		/^(.+?)\s*:\s*(.+)$/, // Artist: Title
-		/^(.+?)\s*\|\s*(.+)$/, // Artist | Title
+		// A hyphen needs whitespace on one side, so "Jay-Z" and "Blink-182" stay whole
+		/^(.+?)(?:\s+-\s*|\s*-\s+|\s*[–—]\s*)(.+)$/,
+		// Needs whitespace after, so "5:00 AM" and "Re:Zero" stay whole
+		/^(.+?)\s*:\s+(.+)$/,
+		/^(.+?)\s*\|\s*(.+)$/,
 	];
 
 	for (const pattern of patterns) {
@@ -40,7 +42,8 @@ export function parseArtistAndTitle(videoTitle: string): {
 
 /**
  * Sanitize YouTube uploader/channel name for use as artist fallback
- * Strips " - Topic" suffix used by YouTube Music auto-generated channels
+ * Strips " - Topic" suffix used by YouTube Music auto-generated channels,
+ * a trailing "VEVO" suffix, and trailing symbols or emoji
  * Returns empty string for yt-dlp's "NA" placeholder (used when uploader is unavailable)
  */
 export function sanitizeUploaderAsArtist(uploader: string): string {
@@ -48,7 +51,14 @@ export function sanitizeUploaderAsArtist(uploader: string): string {
 	if (trimmed.toUpperCase() === "NA") {
 		return "";
 	}
-	return trimmed.replace(/\s*-\s*Topic$/i, "").trim();
+	return trimmed
+		.replace(/\s*-\s*Topic$/i, "")
+		.replace(/(?<=\S)VEVO$/, "")
+		.replace(
+			/(?:[\s™®©✓✔✰★☆\p{Extended_Pictographic}]|\u{FE0F}|\u{200D})+$/u,
+			"",
+		)
+		.trim();
 }
 
 /**

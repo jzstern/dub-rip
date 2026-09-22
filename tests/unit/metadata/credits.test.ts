@@ -28,6 +28,13 @@ describe("extractRemixer()", () => {
 		"Song (Acapella Edit)",
 		"Song (A Cappella Edit)",
 		"Song (Super Clean Edit)",
+		"Song (Video Edit)",
+		"Song (Lyric Edit)",
+		"Song (Intro Edit)",
+		"Song (DJ Edit)",
+		"Song (TV Edit)",
+		"Song (Promo Edit)",
+		"Song (Dirty Edit)",
 	])("names nobody for %j", (title) => {
 		// #when
 		const remixer = extractRemixer(title);

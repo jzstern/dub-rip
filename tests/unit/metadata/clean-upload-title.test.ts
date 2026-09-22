@@ -38,6 +38,12 @@ describe("cleanUploadTitle()", () => {
 			{ title: "Artist - Title", label: "Black Hole Recordings" },
 		],
 		[
+			"Artist - Title [Out Now on Spinnin' Records]",
+			{ title: "Artist - Title", label: "Spinnin' Records" },
+		],
+		["Title.mp3 [Free Download]", { title: "Title" }],
+		["Artist - Title.mp3 | Free Download", { title: "Artist - Title" }],
+		[
 			"The Chainsmokers - Don't Let Me Down ft. Daya (Hipst3r Edit)[FREE DOWNLOAD]",
 			{ title: "The Chainsmokers - Don't Let Me Down ft. Daya (Hipst3r Edit)" },
 		],
@@ -98,7 +104,7 @@ describe("cleanUploadTitle()", () => {
 		"Artist - Title [Pre Release]",
 		"Artist - Title [Vinyl Release]",
 		"Artist - Title [Japan Release]",
-		"Artist - Title [Out Now on Spinnin' Records]",
+		"Artist - Title [Out Now on Spotify]",
 		"Artist - Title [Available via Armada Recordings]",
 	])("keeps version info and ordinary titles intact: %j", (raw) => {
 		// #when

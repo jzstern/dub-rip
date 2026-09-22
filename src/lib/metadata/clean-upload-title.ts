@@ -61,11 +61,20 @@ const NOISE_PHRASE = new RegExp(
  * "[EP01]" and "[HD1080]" are not catalog numbers, "[RCKLSS014]" is.
  */
 const CATALOG_NUMBER = /^[A-Z]{3,}[A-Z0-9]*-?\d{2,}$/;
-/** "(Live at Abbey Road Recordings)" is a version, not a label. */
-const LABEL_SUFFIX = /^(?!(?:official|live)\b).+\s(?:records|recordings)$/i;
-/** "[Monstercat Release]" names a label; "(New Release)" and "[Single Release]" don't. */
-const RELEASE_SUFFIX =
-	/^(?!(?:official|new|single|album|early|promo)\b)(.+?)\s+release$/i;
+/** "[Out Now on Spinnin' Records]" announces the label that follows it. */
+const OUT_ON_LEAD_IN = /^out\s+(?:now\s+)?on\s+/i;
+/**
+ * A label is a name. Text that opens by describing the recording or the
+ * release — "(Home Recordings)", "(Live at Abbey Road Recordings)", "[Free
+ * Release]", "[Single Release]" — is version info, and any other phrase that
+ * merely contains a label ("[Available via Armada Recordings]") is not one.
+ * Both stay in the title and write no TPUB.
+ */
+const NOT_A_LABEL_NAME =
+	/^(?:official|live|home|demo|original|studio|early|new|single|album|promo|free|digital|debut|press|pre|vinyl|japan)\b|\s(?:on|at|via|from|by)\s/i;
+const LABEL_SUFFIX = /^.+\s(?:records|recordings)$/i;
+/** "[Monstercat Release]" names the label Monstercat. */
+const RELEASE_SUFFIX = /^(.+?)\s+release$/i;
 const BRACKET_GROUP = /\s*([[(【])([^()[\]【】]*)[\])】]/g;
 const TRAILING_SEGMENT = /\s+(?:\||\/\/?)\s*([^|/]*)$/;
 const TRAILING_FREE_DOWNLOAD =
@@ -108,7 +117,8 @@ function stripTrailingNoise(title: string): string {
 		}
 		const stripped = current
 			.replace(TRAILING_FREE_DOWNLOAD, "")
-			.replace(TRAILING_PREMIERE_BANNER, "");
+			.replace(TRAILING_PREMIERE_BANNER, "")
+			.replace(FILE_EXTENSION, "");
 		if (stripped === current) return current;
 		current = stripped;
 	}
@@ -118,12 +128,14 @@ function labelFrom(
 	text: string,
 	labelName: string | undefined,
 ): string | undefined {
+	const name = text.replace(OUT_ON_LEAD_IN, "");
 	const hint = labelName?.trim();
-	if (hint && text.toLowerCase() === normalizeForMatching(hint).toLowerCase()) {
+	if (hint && name.toLowerCase() === normalizeForMatching(hint).toLowerCase()) {
 		return hint;
 	}
-	if (LABEL_SUFFIX.test(text)) return text;
-	return text.match(RELEASE_SUFFIX)?.[1];
+	if (NOT_A_LABEL_NAME.test(name)) return undefined;
+	if (LABEL_SUFFIX.test(name)) return name;
+	return name.match(RELEASE_SUFFIX)?.[1];
 }
 
 export function cleanUploadTitle(
@@ -133,8 +145,7 @@ export function cleanUploadTitle(
 	const original = collapseWhitespace(rawTitle);
 	const credits: Omit<CleanedUploadTitle, "title"> = {};
 
-	let title = stripPromoPrefix(original).replace(FILE_EXTENSION, "");
-	title = stripTrailingNoise(title);
+	let title = stripTrailingNoise(stripPromoPrefix(original));
 	title = title.replace(
 		BRACKET_GROUP,
 		(group: string, open: string, inner: string) => {

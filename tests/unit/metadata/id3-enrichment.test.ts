@@ -43,6 +43,21 @@ describe("buildID3Tags() credits", () => {
 		expect(tags.publisher).toBe("Reboot Records");
 	});
 
+	it("writes no label for a version descriptor that ends in Recordings", () => {
+		// #when
+		const tags = buildID3Tags({
+			trackTitle: "Division Day (Home Recordings)",
+			videoTitle: "Elliott Smith - Division Day (Home Recordings)",
+			artist: "Elliott Smith",
+			uploader: "Elliott Smith",
+			details: null,
+			image: null,
+		});
+
+		// #then
+		expect(tags.publisher).toBeUndefined();
+	});
+
 	it("adds no credit frames when nothing names them", () => {
 		// #when
 		const tags = buildID3Tags({

@@ -3068,7 +3068,7 @@ export async function trySoundCloudDownload({
 - Modify: `src/lib/download-pipeline/finalize-mp3.ts`
 - Test: `tests/unit/artwork-soundcloud.test.ts`; append to `tests/unit/services/finalize-mp3.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/unit/artwork-soundcloud.test.ts`:
 
@@ -3182,9 +3182,9 @@ describe("finalizeMp3() SoundCloud cover art", () => {
 });
 ```
 
-- [ ] **Step 2: Run them to see them fail.**
+- [x] **Step 2: Run them to see them fail.**
 
-- [ ] **Step 3: Implement.** Append to `src/lib/artwork.ts`:
+- [x] **Step 3: Implement.** Append to `src/lib/artwork.ts`:
 
 ```ts
 export interface SoundCloudArtwork {
@@ -3279,8 +3279,8 @@ In `src/lib/download-pipeline/finalize-mp3.ts`:
 				});
 ```
 
-- [ ] **Step 4: Run the tests.** `bun run test:run tests/unit/artwork.test.ts tests/unit/artwork-soundcloud.test.ts tests/unit/services/finalize-mp3.test.ts` → PASS.
-- [ ] **Step 5: Commit** `feat(soundcloud): prefer the upload's own cover art`.
+- [x] **Step 4: Run the tests.** `bun run test:run tests/unit/artwork.test.ts tests/unit/artwork-soundcloud.test.ts tests/unit/services/finalize-mp3.test.ts` → PASS.
+- [x] **Step 5: Commit** `feat(soundcloud): prefer the upload's own cover art`.
 
 ### Task 16: Per-source download preparation and the download route
 

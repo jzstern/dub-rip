@@ -1860,7 +1860,7 @@ export function parseSoundCloudShortLinkCode(input: string): string | null {
 - Create: `src/lib/media-link.ts`, `src/lib/resolve-media-link.ts`
 - Test: `tests/unit/media-link.test.ts`, `tests/unit/soundcloud/resolve-media-link.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/unit/media-link.test.ts`:
 
@@ -2001,9 +2001,9 @@ describe("resolveMediaLink()", () => {
 });
 ```
 
-- [ ] **Step 2: Run them to see them fail.**
+- [x] **Step 2: Run them to see them fail.**
 
-- [ ] **Step 3: Implement `src/lib/media-link.ts`**
+- [x] **Step 3: Implement `src/lib/media-link.ts`**
 
 ```ts
 import {
@@ -2045,7 +2045,7 @@ export function parseMediaLink(input: string): ParsedMediaLink | null {
 }
 ```
 
-- [ ] **Step 4: Implement `src/lib/resolve-media-link.ts`**
+- [x] **Step 4: Implement `src/lib/resolve-media-link.ts`**
 
 ```ts
 import * as Sentry from "@sentry/sveltekit";
@@ -2095,8 +2095,8 @@ export async function resolveMediaLink(input: string): Promise<MediaLink | null>
 }
 ```
 
-- [ ] **Step 5: Run the tests** → PASS.
-- [ ] **Step 6: Commit** `feat: parse YouTube and SoundCloud links into one MediaLink`.
+- [x] **Step 5: Run the tests** → PASS.
+- [x] **Step 6: Commit** `feat: parse YouTube and SoundCloud links into one MediaLink`.
 
 ### Task 11: Error classification per site
 

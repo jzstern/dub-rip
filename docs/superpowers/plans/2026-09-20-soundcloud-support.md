@@ -2261,7 +2261,7 @@ const GENERIC_ERROR_BY_SITE: Record<MediaLinkKind, ClassifiedYtDlpError> = {
 - Create: `src/lib/soundcloud/soundcloud-track.ts`
 - Test: `tests/unit/soundcloud/soundcloud-track.test.ts`
 
-- [ ] **Step 1: Write the failing test.** The fixture values are real (`billieeilish/bad-guy`, 2026-09-20).
+- [x] **Step 1: Write the failing test.** The fixture values are real (`billieeilish/bad-guy`, 2026-09-20).
 
 ```ts
 import * as Sentry from "@sentry/sveltekit";
@@ -2462,9 +2462,9 @@ describe("fetchSoundCloudTrack()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement `src/lib/soundcloud/soundcloud-track.ts`**
+- [x] **Step 3: Implement `src/lib/soundcloud/soundcloud-track.ts`**
 
 ```ts
 import * as Sentry from "@sentry/sveltekit";
@@ -2699,8 +2699,8 @@ export async function fetchSoundCloudTrack(
 }
 ```
 
-- [ ] **Step 4: Run the test** → PASS.
-- [ ] **Step 5: Commit** `feat(soundcloud): read track metadata from the page with an oEmbed fallback`.
+- [x] **Step 4: Run the test** → PASS.
+- [x] **Step 5: Commit** `feat(soundcloud): read track metadata from the page with an oEmbed fallback`.
 
 ### Task 13: SoundCloud metadata mapping and the track cache
 

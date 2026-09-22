@@ -1,3 +1,5 @@
+import type { MediaLinkKind } from "./media-link";
+
 /**
  * How a failure should be treated by error reporting:
  * - `user`: the video can never be downloaded (private, age-restricted, …).
@@ -41,7 +43,7 @@ export const HTTP_403_PATTERN = /http error 403|403 forbidden|status code 403/;
 /** Exported for reuse by the canary's stage classifier. */
 export const EMPTY_FILE_PATTERN = /the downloaded file is empty/;
 
-const ERROR_RULES: ErrorRule[] = [
+const YOUTUBE_RULES: ErrorRule[] = [
 	{
 		pattern: BOT_CHECK_PATTERN,
 		message: BOT_CHECK_MESSAGE,
@@ -121,10 +123,84 @@ const ERROR_RULES: ErrorRule[] = [
 	},
 ];
 
-const GENERIC_ERROR: ClassifiedYtDlpError = {
+const YOUTUBE_GENERIC_ERROR: ClassifiedYtDlpError = {
 	message: "Download failed. Please try a different video.",
 	retryable: false,
 	category: "unknown",
+};
+
+const SOUNDCLOUD_REFUSED_MESSAGE =
+	"SoundCloud refused the download. Please try again in a few minutes.";
+
+/**
+ * SoundCloud has no bot-check, PO-token or SABR failure modes, so none of the
+ * YouTube-specific rules apply. "Requested format is not available" is
+ * deliberately absent: Go+ previews are refused before yt-dlp ever runs
+ * (soundCloudRefusal), so one reaching here is a real format change and
+ * belongs in `unknown`, where Sentry sees it.
+ */
+const SOUNDCLOUD_RULES: ErrorRule[] = [
+	{
+		pattern: /http error 404|404 not found/,
+		message: "This track was removed, or it's private.",
+		retryable: false,
+		category: "user",
+	},
+	{
+		pattern:
+			/geo restriction|not available from your location|not available in your country/,
+		message:
+			"This track isn't available in the region the downloader runs from.",
+		retryable: false,
+		category: "user",
+	},
+	{
+		pattern: /http error 429|too many requests/,
+		message:
+			"SoundCloud is limiting downloads right now. Please try again in a few minutes.",
+		retryable: false,
+		category: "transient",
+	},
+	{
+		pattern: HTTP_403_PATTERN,
+		message: SOUNDCLOUD_REFUSED_MESSAGE,
+		retryable: true,
+		category: "transient",
+	},
+	{
+		pattern: EMPTY_FILE_PATTERN,
+		message: SOUNDCLOUD_REFUSED_MESSAGE,
+		retryable: false,
+		category: "transient",
+	},
+	{
+		pattern: /timed? ?out|etimedout/,
+		message: "The request to SoundCloud timed out. Please try again.",
+		retryable: true,
+		category: "transient",
+	},
+	{
+		pattern:
+			/econnreset|econnrefused|enotfound|network error|socket hang up|fetch failed/,
+		message:
+			"A network error occurred while contacting SoundCloud. Please try again.",
+		retryable: true,
+		category: "transient",
+	},
+];
+
+const RULES_BY_SITE: Record<MediaLinkKind, ErrorRule[]> = {
+	youtube: YOUTUBE_RULES,
+	soundcloud: SOUNDCLOUD_RULES,
+};
+
+const GENERIC_ERROR_BY_SITE: Record<MediaLinkKind, ClassifiedYtDlpError> = {
+	youtube: YOUTUBE_GENERIC_ERROR,
+	soundcloud: {
+		message: "Download failed. Please try a different track.",
+		retryable: false,
+		category: "unknown",
+	},
 };
 
 /**
@@ -135,9 +211,12 @@ const GENERIC_ERROR: ClassifiedYtDlpError = {
  * unavailable) are not, so retrying never wastes an attempt on a video that
  * can never succeed.
  */
-export function classifyYtDlpError(errorMessage: string): ClassifiedYtDlpError {
+export function classifyYtDlpError(
+	errorMessage: string,
+	site: MediaLinkKind = "youtube",
+): ClassifiedYtDlpError {
 	const lowerMessage = errorMessage.toLowerCase();
-	for (const rule of ERROR_RULES) {
+	for (const rule of RULES_BY_SITE[site]) {
 		if (rule.pattern.test(lowerMessage)) {
 			return {
 				message: rule.message,
@@ -146,7 +225,7 @@ export function classifyYtDlpError(errorMessage: string): ClassifiedYtDlpError {
 			};
 		}
 	}
-	return GENERIC_ERROR;
+	return GENERIC_ERROR_BY_SITE[site];
 }
 
 /**
@@ -154,10 +233,16 @@ export function classifyYtDlpError(errorMessage: string): ClassifiedYtDlpError {
  * download route already reports the failure once from its terminal catch.
  * Reporting from here too produced two Sentry issues per failed download.
  */
-export function parseYtDlpError(errorMessage: string): string {
-	return classifyYtDlpError(errorMessage).message;
+export function parseYtDlpError(
+	errorMessage: string,
+	site: MediaLinkKind = "youtube",
+): string {
+	return classifyYtDlpError(errorMessage, site).message;
 }
 
-export function isRetryableYtDlpError(errorMessage: string): boolean {
-	return classifyYtDlpError(errorMessage).retryable;
+export function isRetryableYtDlpError(
+	errorMessage: string,
+	site: MediaLinkKind = "youtube",
+): boolean {
+	return classifyYtDlpError(errorMessage, site).retryable;
 }

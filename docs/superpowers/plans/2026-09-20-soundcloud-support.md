@@ -2105,7 +2105,7 @@ export async function resolveMediaLink(input: string): Promise<MediaLink | null>
 - Modify: `tests/unit/services/yt-dlp-error-category.test.ts:167` and `:185` (a named fixture edit; see Step 3, item 6)
 - Test: `tests/unit/services/yt-dlp-error-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -2168,9 +2168,9 @@ describe("classifyYtDlpError() for SoundCloud", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail** (`"soundcloud"` is ignored, so the 404 comes back `unknown`).
+- [x] **Step 2: Run it to see it fail** (`"soundcloud"` is ignored, so the 404 comes back `unknown`).
 
-- [ ] **Step 3: Implement.** In `src/lib/yt-dlp-errors.ts`:
+- [x] **Step 3: Implement.** In `src/lib/yt-dlp-errors.ts`:
 
 1. Add `import type { MediaLinkKind } from "./media-link";` at the top.
 2. Rename `ERROR_RULES` to `YOUTUBE_RULES`. Leave its contents byte-identical.
@@ -2252,8 +2252,8 @@ const GENERIC_ERROR_BY_SITE: Record<MediaLinkKind, ClassifiedYtDlpError> = {
 
 6. **A named fixture edit.** `tests/unit/services/yt-dlp-error-category.test.ts:167` calls `userFailures.map(classifyYtDlpError)`, and `:185` calls `transientFailures.map(classifyYtDlpError)`. `.map` passes the array index as the new `site` argument, which fails at runtime (`RULES_BY_SITE[site] is not iterable`) and in `bun run check`. Change both to `.map((message) => classifyYtDlpError(message))`. Neither line is an `expect(` line, so the Task 20 audit stays clean. Don't add a `?? YOUTUBE_RULES` fallback instead: it hides the runtime error but not the type error.
 
-- [ ] **Step 4: Run the tests.** `bun run test:run tests/unit/services` → PASS, including the existing classifier, category and canary tests.
-- [ ] **Step 5: Commit** `feat(errors): classify yt-dlp failures per site; YouTube rules unchanged`.
+- [x] **Step 4: Run the tests.** `bun run test:run tests/unit/services` → PASS, including the existing classifier, category and canary tests.
+- [x] **Step 5: Commit** `feat(errors): classify yt-dlp failures per site; YouTube rules unchanged`.
 
 ### Task 12: Fetch SoundCloud tracks
 

@@ -2888,7 +2888,7 @@ export function clearSoundCloudTrackCache(): void {
 - Create: `src/lib/download-pipeline/try-soundcloud.ts`
 - Test: `tests/unit/services/try-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it, vi } from "vitest";
@@ -2945,9 +2945,9 @@ describe("buildSoundCloudDownloadArgs()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Split `src/lib/download-pipeline/try-yt-dlp.ts` without changing behavior.**
+- [x] **Step 3: Split `src/lib/download-pipeline/try-yt-dlp.ts` without changing behavior.**
   1. Add a `YouTubeDownloadArgsInput` interface with `videoUrl`, `outputPath`, `bgutilPotUrl`, `ffmpegPath`, `pluginDir` and `debugMode`.
   2. Add `export function buildYouTubeDownloadArgs({ videoUrl, outputPath, bgutilPotUrl, ffmpegPath, pluginDir, debugMode }: YouTubeDownloadArgsInput): string[]`. Its body is the current lines 53–107 moved verbatim, meaning the `args` array with every comment plus the `debugMode` push. It ends with `return args;`.
   3. Add a `RunYtDlpDownloadInput` interface: `{ args: string[]; ytDlp: YtDlpInstance; send: (data: Record<string, unknown>) => void; signal?: AbortSignal }`.
@@ -2974,7 +2974,7 @@ export async function tryYtDlpDownload({
 
 Keep `TryYtDlpInput` as it is; the canary depends on it.
 
-- [ ] **Step 4: Implement `src/lib/download-pipeline/try-soundcloud.ts`**
+- [x] **Step 4: Implement `src/lib/download-pipeline/try-soundcloud.ts`**
 
 ```ts
 import { buildJsRuntimeArgs } from "$lib/yt-dlp-binary";
@@ -3058,8 +3058,8 @@ export async function trySoundCloudDownload({
 }
 ```
 
-- [ ] **Step 5: Run the tests.** `bun run test:run tests/unit/services tests/unit/canary` → PASS. The Task 1 argv characterization must still pass unchanged.
-- [ ] **Step 6: Commit** `feat(soundcloud): SoundCloud yt-dlp argv; YouTube argv unchanged`.
+- [x] **Step 5: Run the tests.** `bun run test:run tests/unit/services tests/unit/canary` → PASS. The Task 1 argv characterization must still pass unchanged.
+- [x] **Step 6: Commit** `feat(soundcloud): SoundCloud yt-dlp argv; YouTube argv unchanged`.
 
 ### Task 15: SoundCloud cover art in `finalizeMp3`
 

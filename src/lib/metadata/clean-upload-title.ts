@@ -61,11 +61,18 @@ const NOISE_PHRASE = new RegExp(
  * "[EP01]" and "[HD1080]" are not catalog numbers, "[RCKLSS014]" is.
  */
 const CATALOG_NUMBER = /^[A-Z]{3,}[A-Z0-9]*-?\d{2,}$/;
-/** "(Live at Abbey Road Recordings)" is a version, not a label. */
-const LABEL_SUFFIX = /^(?!(?:official|live)\b).+\s(?:records|recordings)$/i;
-/** "[Monstercat Release]" names a label; "(New Release)" and "[Single Release]" don't. */
-const RELEASE_SUFFIX =
-	/^(?!(?:official|new|single|album|early|promo)\b)(.+?)\s+release$/i;
+/**
+ * A label is a name. Text that opens by describing the recording or the
+ * release — "(Home Recordings)", "(Live at Abbey Road Recordings)", "[Free
+ * Release]", "[Single Release]" — is version info, and a phrase that merely
+ * contains a label ("[Out Now on Spinnin' Records]") is not one. Both stay in
+ * the title and write no TPUB.
+ */
+const NOT_A_LABEL_NAME =
+	/^(?:official|live|home|demo|original|studio|early|new|single|album|promo|free|digital|debut|press|pre|vinyl|japan)\b|\s(?:on|at|via|from|by)\s/i;
+const LABEL_SUFFIX = /^.+\s(?:records|recordings)$/i;
+/** "[Monstercat Release]" names the label Monstercat. */
+const RELEASE_SUFFIX = /^(.+?)\s+release$/i;
 const BRACKET_GROUP = /\s*([[(【])([^()[\]【】]*)[\])】]/g;
 const TRAILING_SEGMENT = /\s+(?:\||\/\/?)\s*([^|/]*)$/;
 const TRAILING_FREE_DOWNLOAD =
@@ -122,6 +129,7 @@ function labelFrom(
 	if (hint && text.toLowerCase() === normalizeForMatching(hint).toLowerCase()) {
 		return hint;
 	}
+	if (NOT_A_LABEL_NAME.test(text)) return undefined;
 	if (LABEL_SUFFIX.test(text)) return text;
 	return text.match(RELEASE_SUFFIX)?.[1];
 }

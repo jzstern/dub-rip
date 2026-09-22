@@ -123,6 +123,36 @@ describe("resolveTrackIdentity()", () => {
 		});
 	});
 
+	it.each([
+		["Starley - Island", "Island Records", "Starley", "Island"],
+		["Adele - Hello", "Hello Music", "Adele", "Hello"],
+		["Coldplay - Magic", "Magic TV", "Coldplay", "Magic"],
+		["Calvin Harris - Summer", "Summer Mixes", "Calvin Harris", "Summer"],
+		[
+			"The Midnight - Night Drive",
+			"Night Drive Music",
+			"The Midnight",
+			"Night Drive",
+		],
+	])("does not swap %j just because channel %j is its title plus a channel word", (rawTitle, uploader, artist, trackTitle) => {
+		// #when
+		const identity = resolveTrackIdentity({ rawTitle, uploader });
+
+		// #then
+		expect(identity).toEqual({ artist, trackTitle });
+	});
+
+	it("swaps a reversed title whose right side is a spaced VEVO channel's artist", () => {
+		// #when
+		const identity = resolveTrackIdentity({
+			rawTitle: "Hello - Adele",
+			uploader: "Adele VEVO",
+		});
+
+		// #then
+		expect(identity).toEqual({ artist: "Adele", trackTitle: "Hello" });
+	});
+
 	it("keeps a hyphenated artist whole (D1)", () => {
 		// #when
 		const identity = resolveTrackIdentity({

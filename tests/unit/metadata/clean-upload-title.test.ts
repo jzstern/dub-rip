@@ -34,6 +34,10 @@ describe("cleanUploadTitle()", () => {
 			{ title: "Artist - Title", label: "Monstercat" },
 		],
 		[
+			"Artist - Title [Black Hole Recordings]",
+			{ title: "Artist - Title", label: "Black Hole Recordings" },
+		],
+		[
 			"The Chainsmokers - Don't Let Me Down ft. Daya (Hipst3r Edit)[FREE DOWNLOAD]",
 			{ title: "The Chainsmokers - Don't Let Me Down ft. Daya (Hipst3r Edit)" },
 		],
@@ -82,6 +86,20 @@ describe("cleanUploadTitle()", () => {
 		"Artist - Title [EP01]",
 		"Artist - Title [HD1080]",
 		"Song (Live at Abbey Road Recordings)",
+		"Elliott Smith - Division Day (Home Recordings)",
+		"Artist - Title (Demo Recordings)",
+		"Artist - Title (Original Recordings)",
+		"Artist - Title (Studio Recordings)",
+		"Artist - Title (Early Recordings)",
+		"Artist - Title [Free Release]",
+		"Artist - Title [Digital Release]",
+		"Artist - Title [Debut Release]",
+		"Artist - Title [Press Release]",
+		"Artist - Title [Pre Release]",
+		"Artist - Title [Vinyl Release]",
+		"Artist - Title [Japan Release]",
+		"Artist - Title [Out Now on Spinnin' Records]",
+		"Artist - Title [Available via Armada Recordings]",
 	])("keeps version info and ordinary titles intact: %j", (raw) => {
 		// #when
 		const result = cleanUploadTitle(raw);

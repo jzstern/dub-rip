@@ -1655,7 +1655,7 @@ export function clearVideoDetailsCache(): void {
 - Create: `src/lib/soundcloud/soundcloud-url.ts`
 - Test: `tests/unit/soundcloud/soundcloud-url.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1748,9 +1748,9 @@ describe("parseSoundCloudShortLinkCode()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement `src/lib/soundcloud/soundcloud-url.ts`**
+- [x] **Step 3: Implement `src/lib/soundcloud/soundcloud-url.ts`**
 
 ```ts
 /**
@@ -1851,8 +1851,8 @@ export function parseSoundCloudShortLinkCode(input: string): string | null {
 }
 ```
 
-- [ ] **Step 4: Run the test** → PASS.
-- [ ] **Step 5: Commit** `feat(soundcloud): parse and canonicalize SoundCloud track and share links`.
+- [x] **Step 4: Run the test** → PASS.
+- [x] **Step 5: Commit** `feat(soundcloud): parse and canonicalize SoundCloud track and share links`.
 
 ### Task 10: `MediaLink`, and short-link resolution
 

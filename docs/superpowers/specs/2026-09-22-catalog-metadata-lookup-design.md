@@ -100,7 +100,7 @@ An unrecognized bracket counts as identity, so matching fails closed. `(SneakPre
 
 **A candidate is accepted** when the artist check passes (either side's primary artist is in the other's artist set, split on `, & x feat ft with`), the base titles are equal, the version rules above hold, and one of:
 
-1. **ISRC** — the candidate came from `/track/isrc:`. An exact identifier, accepted outright.
+1. **ISRC** — the candidate carries the upload's own ISRC. An exact identifier, but the uploader supplies it on SoundCloud, so it also needs the artist *or* the song name to line up. Without that check, an ISRC stamped from a famous release would hand that release's artist, title and artwork to an unrelated upload — and the result becomes the filename. Real distributor uploads pay nothing for the check, since their own metadata is where the ISRC came from.
 2. **Duration** — within ±5 s. SoundCloud always has it; YouTube has it once `/details` returns.
 3. **Agreement** — an iTunes candidate and a Deezer candidate pass independently with the same normalized identity.
 
@@ -131,6 +131,9 @@ SoundCloud's own label and ISRC win because the distributor supplied them as cle
 - One log line per verdict — `[catalog] matched via=duration source=deezer` or `[catalog] unmatched reason=version-mismatch` — gives a production match rate without Sentry noise. A miss is normal, as artwork misses are (`docs/error-reporting.md`).
 - Sentry sees only exceptions from our own parsing or judging, at `warning` with `service: "catalog"`. Those mean a bug.
 - Transient failures are not cached; empty results are.
+- **Input is capped and whitespace collapsed before any pattern runs** (`collapseWhitespace`, 300 characters). The patterns start with `\s*`, which rescans a run of spaces from every offset, and the artist can be `details.artist` — which an uploader controls through a video description. Measured before the fix: a 16k-space artist blocked the event loop for 3.7 s, because the query credit was re-parsed once per candidate. The query is now parsed once per lookup, not once per candidate.
+- **Artwork URLs are checked for scheme as well as host.** `https:` only, on `mzstatic.com` or `dzcdn.net`. This allowlist is the only gate the later image fetch has, and `file://mzstatic.com/etc/passwd` passes a host-only check. When Stage B fetches these, it must use `redirect: "manual"` or re-validate each hop, or a redirect escapes the allowlist.
+- Response arrays are capped at the search limit on our side; `limit` is only a request hint.
 - The `service: "catalog"` tag gets documented in `docs/error-reporting.md` during **Stage B**. That file is in Phase 2's File map, so a Stage A edit would halt its controller.
 - No rate-limit queue at current traffic. The shared cache takes iTunes from 2 searches per track to 1, against its ~20/min limit.
 
@@ -193,6 +196,8 @@ Phase 2 (`docs/superpowers/plans/2026-09-20-soundcloud-support.md`) halts its co
 | Deezer preferred over iTunes when both pass | It carries the ISRC and keeps artist and feat. credits in the shape the filenames already use. |
 | Compilation albums are not written | `Levels (Skrillex Remix)` would otherwise be tagged to a workout compilation. |
 | Unknown bracket text is treated as identity | Failing closed keeps unreleased and edited uploads on the heuristic path. |
+| An ISRC hit is sanity-checked against the artist or title | The uploader supplies the ISRC on SoundCloud, and the match becomes the filename. |
+| Comparison input is capped at 300 characters | The artist can be attacker-chosen text, and the patterns scan whitespace runs quadratically. |
 
 ## Considered and rejected
 

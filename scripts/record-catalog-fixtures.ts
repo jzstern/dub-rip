@@ -120,8 +120,14 @@ async function record(
 	trim: (body: Json) => Json,
 ): Promise<[string, Json]> {
 	const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-	const body = (await response.json()) as Json;
 	console.log(`${response.status} ${url}`);
+	if (!response.ok) {
+		throw new Error(`Refusing to record HTTP ${response.status} for ${url}`);
+	}
+	const body = (await response.json()) as Json;
+	if (body.error) {
+		throw new Error(`Refusing to record an error body for ${url}`);
+	}
 	return [url, trim(body)];
 }
 

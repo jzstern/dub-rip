@@ -1,5 +1,7 @@
-import type { CatalogCandidate } from "./catalog-candidate";
-import type { CatalogRequestOptions } from "./itunes-catalog";
+import type {
+	CatalogCandidate,
+	CatalogRequestOptions,
+} from "./catalog-candidate";
 
 /**
  * Deezer, which the artwork lookup already calls. Its search results carry the
@@ -76,7 +78,10 @@ function coverArtUrl(album: DeezerAlbumRef | undefined): string | undefined {
 		optionalString(album?.cover_medium);
 	if (!url) return undefined;
 	try {
-		return ARTWORK_HOST.test(new URL(url).hostname) ? url : undefined;
+		const parsed = new URL(url);
+		/** The scheme is checked too: this allowlist is the only gate the later fetch has. */
+		if (parsed.protocol !== "https:") return undefined;
+		return ARTWORK_HOST.test(parsed.hostname) ? url : undefined;
 	} catch {
 		return undefined;
 	}
@@ -103,13 +108,19 @@ function toCandidate(track: DeezerTrack): CatalogCandidate | null {
 	};
 }
 
-/** Deezer answers 200 with an `error` object, including for quota. */
+/**
+ * Deezer answers 200 with an `error` object, including for quota. The message
+ * is upstream text going into a log line, so its newlines are stripped rather
+ * than left to forge a second line.
+ */
 function payloadError(body: unknown): string | null {
 	const error = (body as DeezerError | null)?.error;
 	if (!error) return null;
-	return `${optionalString(error.message) ?? "error"} (code ${
-		optionalString(error.code) ?? "?"
-	})`;
+	const message = (optionalString(error.message) ?? "error").replace(
+		/[\r\n]+/g,
+		" ",
+	);
+	return `${message} (code ${optionalString(error.code) ?? "?"})`;
 }
 
 async function requestDeezer(
@@ -155,7 +166,9 @@ export async function searchDeezer(
 		timeout,
 	)) as { data?: DeezerTrack[] } | null;
 	if (!Array.isArray(body?.data)) return [];
+	/** `limit` is a request hint; the cap is ours, and it bounds the judging loop. */
 	return body.data
+		.slice(0, SEARCH_LIMIT)
 		.map(toCandidate)
 		.filter((candidate): candidate is CatalogCandidate => candidate !== null);
 }
@@ -177,7 +190,8 @@ export async function deezerAlbum(
 	albumId: string,
 	{ timeout = DEFAULT_TIMEOUT_MS }: CatalogRequestOptions = {},
 ): Promise<DeezerAlbumInfo | null> {
-	if (!albumId.trim()) return null;
+	/** The id comes from a search response; a numeric one cannot walk the path. */
+	if (!/^\d+$/.test(albumId)) return null;
 	const body = (await requestDeezer(
 		deezerAlbumUrl(albumId),
 		"album lookup",

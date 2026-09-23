@@ -103,7 +103,16 @@ const CANONICAL_YOUTUBE_TITLES: [
 	["Artist – Title (Lyrics)", "Some Channel", "Artist", "Title", "heuristic"],
 ];
 
-async function resolveShownIdentity(rawTitle: string, uploader: string) {
+interface ShownIdentity {
+	artist: string;
+	title: string;
+	from: "catalog" | "heuristic";
+}
+
+async function resolveShownIdentity(
+	rawTitle: string,
+	uploader: string,
+): Promise<ShownIdentity> {
 	const heuristic = resolveTrackIdentity({ rawTitle, uploader });
 	const verdict = await lookupCatalogMetadata({
 		artist: heuristic.artist,

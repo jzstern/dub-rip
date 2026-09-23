@@ -10,23 +10,13 @@ import PreviewSkeleton from "$lib/components/PreviewSkeleton.svelte";
 import { Input } from "$lib/components/ui/input";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
+import { parseMediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
 import { createProgressSmoother } from "$lib/progress-smoothing";
 import { smoothCollapse } from "$lib/transitions";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
 
 let url = $state("");
 let loading = $state(false);
-
-function isValidYouTubeUrl(input: string): boolean {
-	if (!input) return false;
-	const patterns = [
-		/^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]{11}/,
-		/^https?:\/\/youtu\.be\/[\w-]{11}/,
-		/^https?:\/\/(www\.)?youtube\.com\/shorts\/[\w-]{11}/,
-		/^https?:\/\/m\.youtube\.com\/watch\?v=[\w-]{11}/,
-	];
-	return patterns.some((pattern) => pattern.test(input));
-}
 
 /**
  * Marks a failure the server already answered for — it logged and reported
@@ -40,7 +30,7 @@ class ServerRejectionError extends Error {
 	}
 }
 
-let isValidUrl = $derived(isValidYouTubeUrl(url));
+let isValidUrl = $derived(parseMediaLink(url) !== null);
 let error = $state("");
 let errorUrl = $state("");
 let status = $state("");
@@ -269,7 +259,7 @@ async function saveDownload(
 
 function handleDownload() {
 	if (!isValidUrl) {
-		error = "Please enter a valid YouTube URL";
+		error = UNSUPPORTED_LINK_MESSAGE;
 		return;
 	}
 
@@ -400,8 +390,8 @@ $effect(() => {
 			<div class="flex flex-col p-5">
 				<Input
 					bind:value={url}
-					placeholder="Paste a YouTube link"
-					aria-label="YouTube link"
+					placeholder="Paste a YouTube or SoundCloud link"
+					aria-label="YouTube or SoundCloud link"
 					disabled={loading}
 					autofocus
 					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}

@@ -3994,7 +3994,7 @@ Use @svelte-code-writer for the `.svelte` edits.
 - Modify: `src/routes/+layout.svelte` (lines 27, 31, 36, 38), `src/app.html:29`
 - Test: append to `tests/e2e/app.spec.ts`
 
-- [ ] **Step 1: Write the failing e2e tests.** Add these inside `test.describe("dub-rip App", …)`:
+- [x] **Step 1: Write the failing e2e tests.** Add these inside `test.describe("dub-rip App", …)`:
 
 ```ts
 	test("should accept a SoundCloud track link", async ({ page }) => {
@@ -4043,9 +4043,9 @@ Use @svelte-code-writer for the `.svelte` edits.
 	});
 ```
 
-- [ ] **Step 2: Run them to see them fail.** `bun run test:e2e` → the first new test fails (Download stays disabled).
+- [x] **Step 2: Run them to see them fail.** `bun run test:e2e` → the first new test fails (Download stays disabled).
 
-- [ ] **Step 3: Implement.** In `src/routes/+page.svelte`:
+- [x] **Step 3: Implement.** In `src/routes/+page.svelte`:
   - Delete the `isValidYouTubeUrl` function (lines 20–29).
   - Add `import { parseMediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";` with the other `$lib` imports, in alphabetical order.
   - Line 43 → `let isValidUrl = $derived(parseMediaLink(url) !== null);`
@@ -4055,8 +4055,8 @@ Use @svelte-code-writer for the `.svelte` edits.
 
 In `src/routes/+layout.svelte` and `src/app.html`, change "Download YouTube audio with rich metadata" to "Download YouTube and SoundCloud audio with rich metadata" everywhere it appears (the og and twitter description and image-alt tags, and the meta description).
 
-- [ ] **Step 4: Run everything.** `bun run test:run && bun run test:e2e && bun run check && bun run lint` → green. If the e2e dev server returns 403 for client files in this worktree, see memory `dub-rip-worktree-vite-fs`: set `server.fs.strict: false` locally, and don't commit that change.
-- [ ] **Step 5: Commit** `feat(ui): accept SoundCloud links`.
+- [x] **Step 4: Run everything.** `bun run test:run && bun run test:e2e && bun run check && bun run lint` → green. If the e2e dev server returns 403 for client files in this worktree, see memory `dub-rip-worktree-vite-fs`: set `server.fs.strict: false` locally, and don't commit that change.
+- [x] **Step 5: Commit** `feat(ui): accept SoundCloud links`.
 
 ### Task 19: Documentation
 

@@ -145,7 +145,7 @@ those buried the real failures and burned quota. `unknown` is the important
 one — it's how new yt-dlp and YouTube breakages announce themselves, so it
 always gets full error level.
 
-Rule order in `ERROR_RULES` is part of the classification. yt-dlp appends the
+Rule order in `YOUTUBE_RULES` is part of the classification. yt-dlp appends the
 same `--cookies` remediation hint to every "sign in" reason — bot-checks, age
 gates and private videos alike — so the hint alone can't say which one it is.
 The exact bot-check sentence wins outright; the bare `cookies` match is only a
@@ -157,6 +157,16 @@ Process warnings follow the same logic: Node emits `warning` for routine
 deprecations on nearly every boot, so only defect-indicating ones
 (`MaxListenersExceededWarning`) become issues. The rest ride along as
 breadcrumbs.
+
+### SoundCloud categories
+
+`classifyYtDlpError(message, "soundcloud")` uses `SOUNDCLOUD_RULES` instead of
+`YOUTUBE_RULES`:
+
+- **User:** 404/private, geo-blocked, and Go+ previews (refused before yt-dlp runs).
+- **Transient:** 403, 429, timeouts, network errors.
+- **Unknown:** everything else, including `Requested format is not available`.
+- **Warnings:** page-markup or oEmbed failures from `fetchSoundCloudTrack`, reported once per lookup.
 
 ## What is covered
 

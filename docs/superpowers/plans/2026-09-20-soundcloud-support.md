@@ -4062,7 +4062,7 @@ In `src/routes/+layout.svelte` and `src/app.html`, change "Download YouTube audi
 
 **Files:** `.claude/CLAUDE.md`, `README.md`, `docs/error-reporting.md`
 
-- [ ] **Step 1: Update `.claude/CLAUDE.md`.**
+- [x] **Step 1: Update `.claude/CLAUDE.md`.**
   - In the Project Overview, change "YouTube audio downloader" to "YouTube and SoundCloud audio downloader".
   - In "Before Committing", change "Test: valid URL → preview → download works" to "Test: a YouTube URL *and* a SoundCloud URL → preview → download works".
   - In the yt-dlp bullet "Every yt-dlp call is a YouTube request…", append: "SoundCloud downloads are the exception — not YouTube requests — but they take a slot in the same concurrency limiter."
@@ -4088,13 +4088,13 @@ In `src/routes/+layout.svelte` and `src/app.html`, change "Download YouTube audi
 - **The canary stays YouTube-only.** A SoundCloud canary would add scheduled wake-ups (Railway Cost Practices) for a source with no failure history here. Revisit if SoundCloud failures show up in Sentry.
 ```
 
-- [ ] **Step 2: Update `README.md`.** In the intro (line 3) and features (line 7), say YouTube and SoundCloud. In "How It Works" (line 105), change "User enters a YouTube URL" to "User enters a YouTube or SoundCloud URL". Replace the metadata sub-list under Features (lines 9–13) with the ID3 fields. List the ID3 fields: title, artist, album, year, genre, label, ISRC, remixer, catalog number, source URL, cover art.
-- [ ] **Step 3: Update `docs/error-reporting.md`.** In the "Expected failures are not issues" section (line 148), change `ERROR_RULES` to `YOUTUBE_RULES`, because Task 11 renamed it. Add a short SoundCloud subsection next to the YouTube categories:
+- [x] **Step 2: Update `README.md`.** In the intro (line 3) and features (line 7), say YouTube and SoundCloud. In "How It Works" (line 105), change "User enters a YouTube URL" to "User enters a YouTube or SoundCloud URL". Replace the metadata sub-list under Features (lines 9–13) with the ID3 fields. List the ID3 fields: title, artist, album, year, genre, label, ISRC, remixer, catalog number, source URL, cover art.
+- [x] **Step 3: Update `docs/error-reporting.md`.** In the "Expected failures are not issues" section (line 148), change `ERROR_RULES` to `YOUTUBE_RULES`, because Task 11 renamed it. Add a short SoundCloud subsection next to the YouTube categories:
   - **User:** 404/private, geo-blocked, and Go+ previews (refused before yt-dlp runs).
   - **Transient:** 403, 429, timeouts, network errors.
   - **Unknown:** everything else, including `Requested format is not available`.
   - **Warnings:** page-markup or oEmbed failures from `fetchSoundCloudTrack`, reported once per lookup.
-- [ ] **Step 4: Commit.** Git tracks the project instructions as `.claude/claude.md` (lowercase). On this Mac's case-insensitive filesystem, `git add .claude/CLAUDE.md` exits 0 but stages nothing, so use the tracked spelling:
+- [x] **Step 4: Commit.** Git tracks the project instructions as `.claude/claude.md` (lowercase). On this Mac's case-insensitive filesystem, `git add .claude/CLAUDE.md` exits 0 but stages nothing, so use the tracked spelling:
 
 ```bash
 git add .claude/claude.md README.md docs/error-reporting.md docs/superpowers/plans/2026-09-20-soundcloud-support.md

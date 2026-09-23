@@ -163,7 +163,9 @@ breadcrumbs.
 `classifyYtDlpError(message, "soundcloud")` uses `SOUNDCLOUD_RULES` instead of
 `YOUTUBE_RULES`:
 
-- **User:** 404/private, geo-blocked, and Go+ previews (refused before yt-dlp runs).
+- **User:** 404/private, geo-blocked, DRM-protected (SoundCloud serves no
+  downloadable format; this one fails inside yt-dlp), and Go+ previews (refused
+  before yt-dlp runs).
 - **Transient:** 403, 429, timeouts, network errors.
 - **Unknown:** everything else, including `Requested format is not available`.
 - **Warnings:** page-markup or oEmbed failures from `fetchSoundCloudTrack`, reported once per lookup.

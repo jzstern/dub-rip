@@ -1,4 +1,4 @@
-import { normalizeForMatch } from "./normalize-text";
+import { collapseWhitespace, normalizeForMatch } from "./normalize-text";
 
 /**
  * Splits a track title into the name of the song, its featured credits and its
@@ -134,7 +134,8 @@ export function parseTrackTitle(title: string): ParsedTitle {
 		if (tag) tags.push(tag);
 	};
 
-	let base = title.replace(/\s+/g, " ").trim();
+	/** Capped and collapsed first: the patterns below scan runs quadratically. */
+	let base = collapseWhitespace(title);
 	base = base.replace(BRACKET_GROUP, (_group, inner: string) => {
 		for (const segment of inner.split(SEGMENT_SEPARATOR)) collect(segment);
 		return "";
@@ -159,25 +160,20 @@ export function parseTrackTitle(title: string): ParsedTitle {
 	return { base: tidy(base), featured, tags };
 }
 
-function tagKeys(parsed: ParsedTitle, versionClass: VersionClass): string[] {
+function tagKey(parsed: ParsedTitle, versionClass: VersionClass): string {
 	return parsed.tags
 		.filter((tag) => tag.class === versionClass)
 		.map((tag) => `${tag.kind}:${tag.credit ?? ""}`)
-		.sort();
-}
-
-function sameKeys(left: string[], right: string[]): boolean {
-	return (
-		left.length === right.length && left.every((key, i) => key === right[i])
-	);
+		.sort()
+		.join(",");
 }
 
 /** Two titles share a key when they name the same recording, cut the same way. */
 export function identityKey(parsed: ParsedTitle): string {
 	return [
 		normalizeForMatch(parsed.base),
-		tagKeys(parsed, "identity").join(","),
-		tagKeys(parsed, "length").join(","),
+		tagKey(parsed, "identity"),
+		tagKey(parsed, "length"),
 	].join("|");
 }
 
@@ -186,7 +182,7 @@ export function sameVersion(
 	right: ParsedTitle,
 ): { identity: boolean; length: boolean } {
 	return {
-		identity: sameKeys(tagKeys(left, "identity"), tagKeys(right, "identity")),
-		length: sameKeys(tagKeys(left, "length"), tagKeys(right, "length")),
+		identity: tagKey(left, "identity") === tagKey(right, "identity"),
+		length: tagKey(left, "length") === tagKey(right, "length"),
 	};
 }

@@ -49,29 +49,66 @@ describe("searchITunes()", () => {
 		).toBe(true);
 	});
 
-	it("asks for five songs, not one", async () => {
-		// #given
-		const fetchMock = stubCatalogFetch();
-
+	it("asks for more than one result, so a cover cannot be the only answer", () => {
 		// #when
-		await searchITunes("Adele Hello");
+		const url = itunesSearchUrl("Adele Hello");
 
 		// #then
-		expect(fetchMock).toHaveBeenCalledWith(
-			itunesSearchUrl("Adele Hello"),
-			expect.anything(),
-		);
+		expect(url).toContain("limit=10");
 	});
 
-	it("returns nothing for an empty term, without calling out", async () => {
+	it("returns nothing for an empty term", async () => {
 		// #given
-		const fetchMock = stubCatalogFetch();
+		stubCatalogFetch();
 
 		// #when
 		const candidates = await searchITunes("   ");
 
 		// #then
-		expect([candidates, fetchMock.mock.calls.length]).toEqual([[], 0]);
+		expect(candidates).toEqual([]);
+	});
+
+	it("does not call out for an empty term", async () => {
+		// #given
+		const fetchMock = stubCatalogFetch();
+
+		// #when
+		await searchITunes("   ");
+
+		// #then
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["a plaintext scheme", "http://is1-ssl.mzstatic.com/100x100bb.jpg"],
+		["a file scheme", "file://mzstatic.com/etc/passwd"],
+		["another host", "https://evil.example/100x100bb.jpg"],
+		["a lookalike host", "https://a.mzstatic.com.evil.example/100x100bb.jpg"],
+	])("ignores artwork at %s", async (_name, artworkUrl100) => {
+		// #given — the allowlist is the only gate the later image fetch has
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => ({
+				ok: true,
+				status: 200,
+				json: async () => ({
+					results: [
+						{
+							kind: "song",
+							trackName: "Hello",
+							artistName: "Adele",
+							artworkUrl100,
+						},
+					],
+				}),
+			})),
+		);
+
+		// #when
+		const candidates = await searchITunes("Adele Hello");
+
+		// #then
+		expect(candidates[0]?.artworkUrl).toBeUndefined();
 	});
 
 	it.each([
@@ -118,33 +155,6 @@ describe("searchITunes()", () => {
 
 		// #then
 		expect(candidates).toEqual([]);
-	});
-
-	it("ignores artwork served from anywhere but Apple's CDN", async () => {
-		// #given
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async () => ({
-				ok: true,
-				status: 200,
-				json: async () => ({
-					results: [
-						{
-							kind: "song",
-							trackName: "Hello",
-							artistName: "Adele",
-							artworkUrl100: "https://evil.example/100x100bb.jpg",
-						},
-					],
-				}),
-			})),
-		);
-
-		// #when
-		const candidates = await searchITunes("Adele Hello");
-
-		// #then
-		expect(candidates[0]?.artworkUrl).toBeUndefined();
 	});
 
 	it("skips results that are not songs", async () => {

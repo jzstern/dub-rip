@@ -27,7 +27,8 @@ interface EvalCase {
 const cases = corpus.cases as EvalCase[];
 const tally = { correct: 0, wrong: 0, missed: 0 };
 
-function sameName(
+/** Catalogs append credited artists, so containment either way is right here. */
+function sameArtist(
 	left: string | undefined,
 	right: string | undefined,
 ): boolean {
@@ -35,6 +36,15 @@ function sameName(
 	const a = normalizeForMatch(left);
 	const b = normalizeForMatch(right);
 	return a === b || a.includes(b) || b.includes(a);
+}
+
+/** Exact: the title is already reduced to its base, so containment would hide a wrong match. */
+function sameTitle(
+	left: string | undefined,
+	right: string | undefined,
+): boolean {
+	if (!left || !right) return false;
+	return normalizeForMatch(left) === normalizeForMatch(right);
 }
 
 for (const testCase of cases) {
@@ -64,11 +74,11 @@ for (const testCase of cases) {
 		continue;
 	}
 	if (verdict.status === "matched") {
-		const titleMatches = sameName(
+		const titleMatches = sameTitle(
 			parseTrackTitle(verdict.metadata.title).base,
 			testCase.expectTitle,
 		);
-		const artistMatches = sameName(
+		const artistMatches = sameArtist(
 			verdict.metadata.artist,
 			testCase.expectArtist,
 		);

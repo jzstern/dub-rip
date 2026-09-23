@@ -59,6 +59,18 @@ export type CatalogVerdict =
 	  }
 	| { status: "unmatched"; reason: UnmatchedReason };
 
+export interface CatalogRequestOptions {
+	timeout?: number;
+}
+
+/** Shared by both adapters and the album enrichment, so a year means one thing. */
+export function releaseYear(
+	releaseDate: string | undefined,
+): number | undefined {
+	const year = Number.parseInt(releaseDate?.slice(0, 4) ?? "", 10);
+	return year > 1900 ? year : undefined;
+}
+
 export interface TrackQuery {
 	artist: string;
 	title: string;

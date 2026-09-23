@@ -135,6 +135,62 @@ describe("judgeCandidates() rejects what a search gets wrong", () => {
 	});
 });
 
+describe("judgeCandidates() distrusts an ISRC an uploader typed", () => {
+	const STAMPED = candidate({
+		artist: "Billie Eilish",
+		title: "bad guy",
+		album: "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+		isrc: "USUM71900764",
+	});
+
+	it("refuses an ISRC stamped onto an unrelated upload", () => {
+		// #given — an uploader put a famous release's ISRC on their own track
+		const query = {
+			artist: "Some Bedroom Producer",
+			title: "Untitled Jam 4",
+			isrc: "USUM71900764",
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [STAMPED]);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("still accepts it when the upload's own artist lines up", () => {
+		// #when — a distributor upload, where the ISRC and the credit came together
+		const verdict = judgeCandidates(
+			{
+				artist: "Billie Eilish",
+				title: "bad guy (Sped Up)",
+				isrc: "USUM71900764",
+			},
+			[STAMPED],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "isrc" });
+	});
+});
+
+describe("judgeCandidates() survives hostile input", () => {
+	it("does not stall on an artist made of whitespace", () => {
+		// #given — yt-dlp's `artist` can come from a description an uploader wrote
+		const query = { artist: `${" ".repeat(50_000)}x`, title: "bad guy" };
+		const candidates = Array.from({ length: 20 }, () =>
+			candidate({ artist: "Billie Eilish", title: "bad guy" }),
+		);
+
+		// #when
+		const startedAt = performance.now();
+		judgeCandidates(query, candidates);
+
+		// #then
+		expect(performance.now() - startedAt).toBeLessThan(250);
+	});
+});
+
 describe("judgeCandidates() accepts what it can prove", () => {
 	it("accepts a candidate carrying the upload's own ISRC", () => {
 		// #when

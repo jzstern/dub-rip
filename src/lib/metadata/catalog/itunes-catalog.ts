@@ -1,4 +1,7 @@
-import type { CatalogCandidate } from "./catalog-candidate";
+import type {
+	CatalogCandidate,
+	CatalogRequestOptions,
+} from "./catalog-candidate";
 
 /**
  * iTunes Search, which the artwork lookup already calls. It gives album,
@@ -19,7 +22,6 @@ const ARTWORK_HOST = /(?:^|\.)mzstatic\.com$/;
 const COMPILATION_ARTIST = "various artists";
 
 interface ITunesResult {
-	wrapperType?: unknown;
 	kind?: unknown;
 	trackName?: unknown;
 	artistName?: unknown;
@@ -44,12 +46,15 @@ function optionalString(value: unknown): string | undefined {
 function coverArtUrl(artworkUrl100: unknown): string | undefined {
 	const url = optionalString(artworkUrl100);
 	if (!url) return undefined;
+	const sized = url.replace("100x100bb", `${ARTWORK_SIZE}x${ARTWORK_SIZE}bb`);
 	try {
-		if (!ARTWORK_HOST.test(new URL(url).hostname)) return undefined;
+		const parsed = new URL(sized);
+		/** The scheme is checked too: this allowlist is the only gate the later fetch has. */
+		if (parsed.protocol !== "https:") return undefined;
+		return ARTWORK_HOST.test(parsed.hostname) ? sized : undefined;
 	} catch {
 		return undefined;
 	}
-	return url.replace("100x100bb", `${ARTWORK_SIZE}x${ARTWORK_SIZE}bb`);
 }
 
 function toCandidate(result: ITunesResult): CatalogCandidate | null {
@@ -76,10 +81,6 @@ function toCandidate(result: ITunesResult): CatalogCandidate | null {
 	};
 }
 
-export interface CatalogRequestOptions {
-	timeout?: number;
-}
-
 export async function searchITunes(
 	term: string,
 	{ timeout = DEFAULT_TIMEOUT_MS }: CatalogRequestOptions = {},
@@ -95,7 +96,9 @@ export async function searchITunes(
 		}
 		const body = (await response.json()) as { results?: ITunesResult[] };
 		if (!Array.isArray(body?.results)) return [];
+		/** `limit` is a request hint; the cap is ours, and it bounds the judging loop. */
 		return body.results
+			.slice(0, SEARCH_LIMIT)
 			.map(toCandidate)
 			.filter((candidate): candidate is CatalogCandidate => candidate !== null);
 	} catch (error) {

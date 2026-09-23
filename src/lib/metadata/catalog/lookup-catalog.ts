@@ -1,12 +1,13 @@
-import type {
-	CatalogCandidate,
-	CatalogVerdict,
-	TrackQuery,
+import {
+	type CatalogCandidate,
+	type CatalogVerdict,
+	releaseYear,
+	type TrackQuery,
 } from "./catalog-candidate";
 import { deezerAlbum, deezerTrackByIsrc, searchDeezer } from "./deezer-catalog";
 import { searchITunes } from "./itunes-catalog";
 import { judgeCandidates } from "./judge-candidates";
-import { normalizeForMatch } from "./normalize-text";
+import { collapseWhitespace, normalizeForMatch } from "./normalize-text";
 import { parseTrackTitle } from "./track-version";
 
 /**
@@ -43,13 +44,16 @@ export interface LookupOptions {
  */
 export function searchTerm(query: TrackQuery): string {
 	const parsed = parseTrackTitle(query.title);
+	/** `unknown` is the sentinel for a bracket we could not classify, not a word to search for. */
 	const versions = parsed.tags
 		.filter((tag) => tag.class !== "neutral")
-		.map((tag) => (tag.credit ? `${tag.credit} ${tag.kind}` : tag.kind));
-	return [query.artist, parsed.base, ...parsed.featured, ...versions]
-		.join(" ")
-		.replace(/\s+/g, " ")
-		.trim();
+		.flatMap((tag) => [
+			tag.credit ?? "",
+			tag.kind === "unknown" ? "" : tag.kind,
+		]);
+	return collapseWhitespace(
+		[query.artist, parsed.base, ...parsed.featured, ...versions].join(" "),
+	);
 }
 
 export function candidateCacheKey(query: TrackQuery): string {
@@ -101,11 +105,7 @@ async function enrichFromAlbum(
 			label: verdict.metadata.label ?? album.label,
 			genre: verdict.metadata.genre ?? album.genre,
 			album: album.isCompilation ? undefined : verdict.metadata.album,
-			year:
-				verdict.metadata.year ??
-				(album.releaseDate
-					? Number.parseInt(album.releaseDate.slice(0, 4), 10) || undefined
-					: undefined),
+			year: verdict.metadata.year ?? releaseYear(album.releaseDate),
 		},
 	};
 }

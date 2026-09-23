@@ -3,6 +3,7 @@ import {
 	candidateCacheKey,
 	fetchCatalogCandidates,
 	lookupCatalogMetadata,
+	searchTerm,
 } from "$lib/metadata/catalog/lookup-catalog";
 import { stubCatalogFetch } from "./catalog-fixtures";
 
@@ -32,14 +33,25 @@ describe("fetchCatalogCandidates()", () => {
 		const fetchMock = stubCatalogFetch();
 
 		// #when
-		const candidates = await fetchCatalogCandidates({
+		await fetchCatalogCandidates({
 			artist: "Billie Eilish",
 			title: "bad guy",
 			isrc: "USUM71900764",
 		});
 
 		// #then
-		expect([candidates.length, fetchMock.mock.calls.length]).toEqual([1, 1]);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps searching out of a title we could not classify", () => {
+		// #when — "unknown" is the sentinel for an unrecognised bracket, not a word
+		const term = searchTerm({
+			artist: "Lostin Powers",
+			title: "She so Heavy (SneakPreview)",
+		});
+
+		// #then
+		expect(term).toBe("Lostin Powers She so Heavy sneakpreview");
 	});
 
 	it("falls back to searching when the ISRC is unknown", async () => {

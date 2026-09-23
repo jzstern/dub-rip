@@ -1,0 +1,4229 @@
+{
+	"https://itunes.apple.com/search?term=Billie%20Eilish%20bad%20guy&entity=song&limit=10": {
+		"resultCount": 6,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "bad guy",
+				"artistName": "Billie Eilish",
+				"collectionName": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+				"releaseDate": "2019-03-29T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 194088,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/1a/37/d1/1a37d1b1-8508-54f2-f541-bf4e437dda76/19UMGIM05028.rgb.jpg/100x100bb.jpg",
+				"trackId": 1450695739,
+				"collectionId": 1450695723
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "bad guy",
+				"artistName": "Billie Eilish & Justin Bieber",
+				"collectionName": "bad guy - Single",
+				"releaseDate": "2019-07-11T07:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 194840,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/18/fd/ea/18fdeacc-c1fa-bfa4-50fa-1711382a6dc5/19UMGIM61861.rgb.jpg/100x100bb.jpg",
+				"trackId": 1472563571,
+				"collectionId": 1472563379
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "bad guy",
+				"artistName": "2CELLOS",
+				"collectionName": "Dedicated (Extended Edition)",
+				"releaseDate": "2021-09-17T12:00:00Z",
+				"primaryGenreName": "Classical Crossover",
+				"trackTimeMillis": 154657,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/f5/64/7a/f5647ae7-261b-66ca-2652-d24bb18840f2/886449823635.jpg/100x100bb.jpg",
+				"trackId": 1607806852,
+				"collectionId": 1607806839
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bad Guy",
+				"artistName": "Chloe Flower",
+				"collectionName": "Chloe Flower",
+				"releaseDate": "2021-07-16T12:00:00Z",
+				"primaryGenreName": "Classical Crossover",
+				"trackTimeMillis": 226840,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f1/3c/74/f13c74b0-eca0-a798-f0bf-c63f0ba96824/886449077182.jpg/100x100bb.jpg",
+				"trackId": 1564703451,
+				"collectionId": 1564703090
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "bad guy",
+				"artistName": "Vitamin String Quartet",
+				"collectionName": "VSQ Performs Billie Eilish",
+				"releaseDate": "2019-08-16T12:00:00Z",
+				"primaryGenreName": "Classical Crossover",
+				"trackTimeMillis": 195667,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/29/c4/9c/29c49c27-f2f6-0643-50e4-c071cdbf3671/1821.jpg/100x100bb.jpg",
+				"trackId": 1821509267,
+				"collectionId": 1821509265
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bad Guy (Arr. For Guitar)",
+				"artistName": "Luke Gaul",
+				"collectionName": "Upbeat Acoustic Guitar Covers",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2020-07-26T12:00:00Z",
+				"primaryGenreName": "Classical Crossover",
+				"trackTimeMillis": 148261,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/ae/54/a5/ae54a5ec-445c-c169-ce03-e2a25bf434e1/9008798339259_cover.jpg/100x100bb.jpg",
+				"trackId": 1524646624,
+				"collectionId": 1524646619
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Billie%20Eilish%20bad%20guy&limit=10": {
+		"total": 63,
+		"data": [
+			{
+				"id": 655095912,
+				"title": "bad guy",
+				"title_short": "bad guy",
+				"title_version": "",
+				"duration": 194,
+				"isrc": "USUM71900764",
+				"readable": true,
+				"artist": {
+					"id": 9635624,
+					"name": "Billie Eilish"
+				},
+				"album": {
+					"id": 91598612,
+					"title": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6630083f454d48eadb6a9b53f035d734/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6630083f454d48eadb6a9b53f035d734/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 711031072,
+				"title": "bad guy (with Justin Bieber)",
+				"title_short": "bad guy (with Justin Bieber)",
+				"title_version": "",
+				"duration": 194,
+				"isrc": "USUM71912813",
+				"readable": true,
+				"artist": {
+					"id": 9635624,
+					"name": "Billie Eilish"
+				},
+				"album": {
+					"id": 103327692,
+					"title": "bad guy (with Justin Bieber)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/c61dbf18d17f0fc143b6379fe90b6071/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/c61dbf18d17f0fc143b6379fe90b6071/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3398984041,
+				"title": "Billie Eilish - Bad Guy (Samy Jebari Remix)",
+				"title_short": "Billie Eilish - Bad Guy (Samy Jebari Remix)",
+				"title_version": "",
+				"duration": 156,
+				"isrc": "TRBSF2500162",
+				"readable": true,
+				"artist": {
+					"id": 8285964,
+					"name": "Samy Jebari"
+				},
+				"album": {
+					"id": 767274891,
+					"title": "Billie Eilish - Bad Guy (Samy Jebari Remix)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/5a28a2870f3596b89670e1d339e607ea/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/5a28a2870f3596b89670e1d339e607ea/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 661235352,
+				"title": "Bad Guy",
+				"title_short": "Bad Guy",
+				"title_version": "",
+				"duration": 193,
+				"isrc": "ATR981195822",
+				"readable": true,
+				"artist": {
+					"id": 63108832,
+					"name": "Elijah Eilish"
+				},
+				"album": {
+					"id": 92770632,
+					"title": "Bad Guy",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/43d95718d9f832b6e91066b661717031/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/43d95718d9f832b6e91066b661717031/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1178448282,
+				"title": "Bad Guy (Billie Eilish Cover)",
+				"title_short": "Bad Guy (Billie Eilish Cover)",
+				"title_version": "",
+				"duration": 184,
+				"isrc": "DEYQ12000041",
+				"readable": true,
+				"artist": {
+					"id": 1515000,
+					"name": "Russo Turisto"
+				},
+				"album": {
+					"id": 193444012,
+					"title": "Bad Guy (Billie Eilish Cover)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/ae0af44faa98ad3632901fc32d6fd628/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/ae0af44faa98ad3632901fc32d6fd628/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1913593597,
+				"title": "Bad Guy (Billie Eilish)",
+				"title_short": "Bad Guy (Billie Eilish)",
+				"title_version": "",
+				"duration": 192,
+				"isrc": "UK2PJ2021418",
+				"readable": true,
+				"artist": {
+					"id": 8075127,
+					"name": "Elephant Music"
+				},
+				"album": {
+					"id": 356585657,
+					"title": "Adaptations Volume 1",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6b8d42296c73e89cf9c8ba08f462641a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6b8d42296c73e89cf9c8ba08f462641a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 664195122,
+				"title": "Bad Guy (16-Bit Billie Eilish Emulation)",
+				"title_short": "Bad Guy (16-Bit Billie Eilish Emulation)",
+				"title_version": "",
+				"duration": 192,
+				"isrc": "AUXN21906572",
+				"readable": true,
+				"artist": {
+					"id": 14605457,
+					"name": "Arcade Player"
+				},
+				"album": {
+					"id": 93402782,
+					"title": "The Impossible Game Soundtrack, Vol. 9",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a2998a733c7a0fdd3abe6f277870c53a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a2998a733c7a0fdd3abe6f277870c53a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 660480602,
+				"title": "Bad Guy (8-Bit Billie Eilish Emulation)",
+				"title_short": "Bad Guy (8-Bit Billie Eilish Emulation)",
+				"title_version": "",
+				"duration": 191,
+				"isrc": "AUXN21906400",
+				"readable": true,
+				"artist": {
+					"id": 5845951,
+					"name": "8-Bit Arcade"
+				},
+				"album": {
+					"id": 92633062,
+					"title": "By Request, Vol. 23",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/dc5bb1b91ac33b7949628001151d17d3/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/dc5bb1b91ac33b7949628001151d17d3/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 761779072,
+				"title": "Bad Guy",
+				"title_short": "Bad Guy",
+				"title_version": "",
+				"duration": 161,
+				"isrc": "CAHQJ1935286",
+				"readable": true,
+				"artist": {
+					"id": 48984721,
+					"name": "Nightcore by Halocene"
+				},
+				"album": {
+					"id": 112329572,
+					"title": "Nightcore: Billie Eilish",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1a70465157e0f6e845707cb9b136e206/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/1a70465157e0f6e845707cb9b136e206/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 781411652,
+				"title": "bad guy",
+				"title_short": "bad guy",
+				"title_version": "",
+				"duration": 228,
+				"isrc": "USA2P1955703",
+				"readable": true,
+				"artist": {
+					"id": 5174833,
+					"name": "Midnite String Quartet"
+				},
+				"album": {
+					"id": 115845122,
+					"title": "MSQ Performs Billie Eilish",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7a7ae97e55bd7e2fc7a9182d395d36d2/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/7a7ae97e55bd7e2fc7a9182d395d36d2/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Tame%20Impala%20Dracula%20jennie%20remix&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Dracula",
+				"artistName": "Tame Impala",
+				"collectionName": "Dracula - Single",
+				"releaseDate": "2025-09-24T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 205309,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/36/be/b4/36beb41f-c644-55cb-9fbb-bf0622a66653/196873644783.jpg/100x100bb.jpg",
+				"trackId": 1842444457,
+				"collectionId": 1842444456
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Let It Happen",
+				"artistName": "Tame Impala",
+				"collectionName": "Currents",
+				"releaseDate": "2015-03-11T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 466893,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a8/2e/b4/a82eb490-f30a-a321-461a-0383c88fec95/15UMGIM23316.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440838060,
+				"collectionId": 1440838039
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Borderline",
+				"artistName": "Tame Impala",
+				"collectionName": "The Slow Rush",
+				"releaseDate": "2019-04-12T07:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 237800,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/65/e3/e7/65e3e740-b69f-f5cb-f2e6-7dedb5265ac9/19UMGIM96748.rgb.jpg/100x100bb.jpg",
+				"trackId": 1497230972,
+				"collectionId": 1497230760
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "New Person, Same Old Mistakes",
+				"artistName": "Tame Impala",
+				"collectionName": "Currents",
+				"releaseDate": "2015-07-17T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 362173,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a8/2e/b4/a82eb490-f30a-a321-461a-0383c88fec95/15UMGIM23316.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440838708,
+				"collectionId": 1440838039
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Disciples",
+				"artistName": "Tame Impala",
+				"collectionName": "Currents",
+				"releaseDate": "2015-04-29T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 108480,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/a8/2e/b4/a82eb490-f30a-a321-461a-0383c88fec95/15UMGIM23316.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440838503,
+				"collectionId": 1440838039
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Dracula (JENNIE Remix) [Workout Version 133 BPM]",
+				"artistName": "Power Music Workout",
+				"collectionName": "40 Best Running & Workout Songs 2026 (Fitness & Workout Music Ideal for Running and Jogging 129-153 BPM)",
+				"releaseDate": "2026-05-29T12:00:00Z",
+				"primaryGenreName": "Fitness & Workout",
+				"trackTimeMillis": 230893,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/28/86/15/288615d0-2360-12f2-1836-c35079ebd32f/735509850374.jpg/100x100bb.jpg",
+				"trackId": 6767653597,
+				"collectionId": 6767653594
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Let it Happen (Soulwax Remix)",
+				"artistName": "Tame Impala",
+				"collectionName": "Currents B-Sides & Remixes - EP",
+				"releaseDate": "2015-09-21T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 557680,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/64/48/5c/64485cc9-968c-68cc-764e-9a7c71733def/00602567155454.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440876460,
+				"collectionId": 1440875696
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Dracula (with JENNIE) [Instrumental]",
+				"artistName": "Tame Impala",
+				"collectionName": "Dracula (Instrumental) [with JENNIE] - Single",
+				"releaseDate": "2026-05-01T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 209773,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/52/f1/be/52f1bebc-1060-c8d2-ce06-c053ccff890a/196874356685.jpg/100x100bb.jpg",
+				"trackId": 6764618336,
+				"collectionId": 1895851964
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "DRACULA (JENNIE Remix)",
+				"artistName": "Shadowpulse",
+				"collectionName": "I Made Me Do It",
+				"releaseDate": "2026-07-20T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 100624,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/37/50/fc/3750fc16-8248-8968-c18f-dea0f29805ec/artwork.jpg/100x100bb.jpg",
+				"trackId": 6793011408,
+				"collectionId": 6793011135
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Dracula (Workout Version 128 BPM)",
+				"artistName": "Power Music Workout",
+				"collectionName": "Dracula - Single",
+				"releaseDate": "2026-05-05T12:00:00Z",
+				"primaryGenreName": "Fitness & Workout",
+				"trackTimeMillis": 245625,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/86/71/a9/8671a995-e350-08e2-adde-b5fe32bedc3f/ticket.ltlugxih.jpg/100x100bb.jpg",
+				"trackId": 6766260166,
+				"collectionId": 1896256692
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Tame%20Impala%20Dracula%20jennie%20remix&limit=10": {
+		"total": 4,
+		"data": [
+			{
+				"id": 3818963601,
+				"title": "Dracula (with JENNIE)",
+				"title_short": "Dracula (with JENNIE)",
+				"title_version": "",
+				"duration": 209,
+				"isrc": "USQX92600464",
+				"readable": true,
+				"artist": {
+					"id": 134790,
+					"name": "Tame Impala"
+				},
+				"album": {
+					"id": 910510411,
+					"title": "Dracula (with JENNIE)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/b868399da682f34dcd7d98af1c0de80b/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/b868399da682f34dcd7d98af1c0de80b/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3818963611,
+				"title": "Dracula",
+				"title_short": "Dracula",
+				"title_version": "",
+				"duration": 205,
+				"isrc": "USQX92504223",
+				"readable": true,
+				"artist": {
+					"id": 134790,
+					"name": "Tame Impala"
+				},
+				"album": {
+					"id": 910510411,
+					"title": "Dracula (with JENNIE)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/b868399da682f34dcd7d98af1c0de80b/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/b868399da682f34dcd7d98af1c0de80b/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4015091781,
+				"title": "Dracula (with JENNIE) (Boys Noize Disko Version)",
+				"title_short": "Dracula (with JENNIE)",
+				"title_version": "(Boys Noize Disko Version)",
+				"duration": 241,
+				"isrc": "USQX92602951",
+				"readable": true,
+				"artist": {
+					"id": 134790,
+					"name": "Tame Impala"
+				},
+				"album": {
+					"id": 980647761,
+					"title": "Dracula (with JENNIE) (Boys Noize Disko Version)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0f3c53511c226fc0fb9b769c5a389d54/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/0f3c53511c226fc0fb9b769c5a389d54/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3929965931,
+				"title": "Dracula (JENNIE Remix) (By Tame Impala, JENNIE) (Instrumental Karaoke Version)",
+				"title_short": "Dracula (JENNIE Remix) (By Tame Impala, JENNIE) (Instrumental Karaoke Version)",
+				"title_version": "",
+				"duration": 210,
+				"isrc": "QZYD92602857",
+				"readable": true,
+				"artist": {
+					"id": 248387262,
+					"name": "ZZang KARAOKE"
+				},
+				"album": {
+					"id": 950674521,
+					"title": "ZZang KARAOKE 2026 POP Vol.279",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/3ca2a941b251fe2188c536017aa057c4/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/3ca2a941b251fe2188c536017aa057c4/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Maroon%205%20Payphone%20twlght%20and%20sadbois%20archive%2002%20edit&entity=song&limit=10": {
+		"resultCount": 1,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Payphone (feat. Wiz Khalifa)",
+				"artistName": "Maroon 5",
+				"collectionName": "Overexposed (Deluxe Version)",
+				"releaseDate": "2012-04-16T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 231385,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/4c/9a/f4/4c9af4b6-31d4-c856-a834-26f73f48d4a5/12UMGIM26179.rgb.jpg/100x100bb.jpg",
+				"trackId": 1422675690,
+				"collectionId": 1422675688
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Maroon%205%20Payphone%20twlght%20and%20sadbois%20archive%2002%20edit&limit=10": {
+		"total": 0,
+		"data": []
+	},
+	"https://itunes.apple.com/search?term=Avicii%20Levels%20skrillex%20remix&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Skrillex Remix)",
+				"artistName": "Avicii",
+				"collectionName": "Levels (Remixes) - Single",
+				"releaseDate": "2011-12-20T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 281147,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/05/a3/ec/05a3ec6b-4afa-fc80-32ce-76b68cd7aced/00602527931753.rgb.jpg/100x100bb.jpg",
+				"trackId": 1444583049,
+				"collectionId": 1444583036
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels",
+				"artistName": "Avicii",
+				"collectionName": "Levels - EP",
+				"releaseDate": "2011-07-28T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 338867,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/67/38/43/67384338-9ed7-fc68-5927-93f1fcf4705d/11UMGIM36900.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440787349,
+				"collectionId": 1440787344
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Radio Edit)",
+				"artistName": "Avicii",
+				"collectionName": "Levels - EP",
+				"releaseDate": "2011-07-28T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 199907,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/67/38/43/67384338-9ed7-fc68-5927-93f1fcf4705d/11UMGIM36900.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440787347,
+				"collectionId": 1440787344
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Skrillex Remix)",
+				"artistName": "Avicii",
+				"collectionName": "Body By Jake: Boot Camp Workout (BPM 126-140)",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2011-12-20T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 278800,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/0e/78/87/0e7887ed-cc10-bff5-44d5-9f83b60e0c26/00600753424407.rgb.jpg/100x100bb.jpg",
+				"trackId": 1443233801,
+				"collectionId": 1443233262
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (feat. Cazzette) [Cazzette's NYC Mode Mix]",
+				"artistName": "Avicii",
+				"collectionName": "Levels (Remixes) - Single",
+				"releaseDate": "2011-12-20T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 354373,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/05/a3/ec/05a3ec6b-4afa-fc80-32ce-76b68cd7aced/00602527931753.rgb.jpg/100x100bb.jpg",
+				"trackId": 1444583214,
+				"collectionId": 1444583036
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Instrumental)",
+				"artistName": "Avicii",
+				"collectionName": "Levels - EP",
+				"releaseDate": "2011-07-28T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 338427,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/67/38/43/67384338-9ed7-fc68-5927-93f1fcf4705d/11UMGIM36900.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440787354,
+				"collectionId": 1440787344
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Radio Edit)",
+				"artistName": "Avicii",
+				"collectionName": "Avicii Forever",
+				"releaseDate": "2011-07-28T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 201933,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/4d/50/b8/4d50b864-b336-7616-a422-50e18f04022c/25UMGIM53730.rgb.jpg/100x100bb.jpg",
+				"trackId": 1807714115,
+				"collectionId": 1807714113
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Instrumental Radio Edit)",
+				"artistName": "Avicii",
+				"collectionName": "Levels - EP",
+				"releaseDate": "2011-07-28T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 199267,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/67/38/43/67384338-9ed7-fc68-5927-93f1fcf4705d/11UMGIM36900.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440787352,
+				"collectionId": 1440787344
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels",
+				"artistName": "Nick Jonas",
+				"collectionName": "Nick Jonas X2",
+				"releaseDate": "2015-08-21T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 167684,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/cf/af/76/cfaf7686-0bbd-d53a-c0d0-8cec6e2d88ac/15UMGIM69664.rgb.jpg/100x100bb.jpg",
+				"trackId": 1443195569,
+				"collectionId": 1443195246
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Levels (Live)",
+				"artistName": "Avicii",
+				"collectionName": "iTunes Festival: London 2013 - EP",
+				"releaseDate": "2013-11-06T08:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 138708,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/9a/24/b8/9a24b845-3b58-24cd-3363-64e8f2c691a5/00602537626182.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440849974,
+				"collectionId": 1440849601
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Avicii%20Levels%20skrillex%20remix&limit=10": {
+		"total": 2,
+		"data": [
+			{
+				"id": 15421140,
+				"title": "Levels (Skrillex Remix)",
+				"title_short": "Levels",
+				"title_version": "(Skrillex Remix)",
+				"duration": 281,
+				"isrc": "SEUM71101146",
+				"readable": true,
+				"artist": {
+					"id": 293585,
+					"name": "Avicii"
+				},
+				"album": {
+					"id": 1424066,
+					"title": "Levels (Remixes)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/261a76e0344b83f64b19433e3ef9976b/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/261a76e0344b83f64b19433e3ef9976b/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 98143616,
+				"title": "Levels By Avicii And Skrilex Remix Meets Metal",
+				"title_short": "Levels By Avicii And Skrilex Remix Meets Metal",
+				"duration": 249,
+				"isrc": "USE830976612",
+				"readable": true,
+				"artist": {
+					"id": 5382499,
+					"name": "Erock"
+				},
+				"album": {
+					"id": 10023886,
+					"title": "Pop Meets Metal Vol. 1",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/01f78ca4b1c212a3216120148dfe4457/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/01f78ca4b1c212a3216120148dfe4457/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Klaps%20Se%20Cura&entity=song&limit=10": {
+		"resultCount": 1,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Se Cura",
+				"artistName": "Klaps (BE)",
+				"collectionName": "Deadline Records Va 05",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2025-05-30T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 286345,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f6/ec/62/f6ec62b2-e980-643d-d8f1-03c025e208a6/4065328668505.png/100x100bb.jpg",
+				"trackId": 1812866997,
+				"collectionId": 1812866922
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Klaps%20Se%20Cura&limit=10": {
+		"total": 18,
+		"data": [
+			{
+				"id": 3355772121,
+				"title": "Se Cura",
+				"title_short": "Se Cura",
+				"title_version": "",
+				"duration": 286,
+				"isrc": "DEH742513913",
+				"readable": true,
+				"artist": {
+					"id": 88867362,
+					"name": "Klaps (BE)"
+				},
+				"album": {
+					"id": 753114201,
+					"title": "Deadline Records Va 05",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/baf290b84c13a707ed7a7845dd9b82cf/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/baf290b84c13a707ed7a7845dd9b82cf/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 117884584,
+				"title": "Corazon De Seda (feat. Ozuna)",
+				"title_short": "Corazon De Seda (feat. Ozuna)",
+				"duration": 187,
+				"isrc": "USDXS1500229",
+				"readable": true,
+				"artist": {
+					"id": 1319107,
+					"name": "Klasico"
+				},
+				"album": {
+					"id": 12241056,
+					"title": "Los Que Gustan",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/72cae5f16348bdce607c6145360f19c2/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/72cae5f16348bdce607c6145360f19c2/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 415478452,
+				"title": "Corazon de Seda (En Vivo) [feat. Ozuna]",
+				"title_short": "Corazon de Seda (En Vivo) [feat. Ozuna]",
+				"duration": 183,
+				"isrc": "USDXS1704014",
+				"readable": true,
+				"artist": {
+					"id": 1319107,
+					"name": "Klasico"
+				},
+				"album": {
+					"id": 49562752,
+					"title": "Corazon de Seda (En Vivo) [feat. Ozuna]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0dedae6269b4cd35eb445a95d19e952a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/0dedae6269b4cd35eb445a95d19e952a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 540677782,
+				"title": "Ja San Majko, Cura Fina",
+				"title_short": "Ja San Majko, Cura Fina",
+				"duration": 83,
+				"isrc": "HRA100401112",
+				"readable": true,
+				"artist": {
+					"id": 321779,
+					"name": "Klapa Trogir"
+				},
+				"album": {
+					"id": 70594912,
+					"title": "Spomeni Se Jedno Vrime",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/c0937318d5cfde5112e112e3f6db75bd/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/c0937318d5cfde5112e112e3f6db75bd/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1439284072,
+				"title": "Banco Caramelo",
+				"title_short": "Banco Caramelo",
+				"title_version": "",
+				"duration": 184,
+				"isrc": "BXG6R1900004",
+				"readable": true,
+				"artist": {
+					"id": 5939966,
+					"name": "MC Kapela"
+				},
+				"album": {
+					"id": 245767732,
+					"title": "Banco Caramelo",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/8da0ac7434a244f8389293892c9ecdff/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/8da0ac7434a244f8389293892c9ecdff/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1173827912,
+				"title": "Festa Linda",
+				"title_short": "Festa Linda",
+				"title_version": "",
+				"duration": 420,
+				"isrc": "BXG6R2001578",
+				"readable": true,
+				"artist": {
+					"id": 5939966,
+					"name": "MC Kapela"
+				},
+				"album": {
+					"id": 192567382,
+					"title": "Festa Linda",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/11f212f6798024e67aaf6676a73490d8/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/11f212f6798024e67aaf6676a73490d8/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 137033538,
+				"title": "Don Juan Cafajeste",
+				"title_short": "Don Juan Cafajeste",
+				"title_version": "",
+				"duration": 206,
+				"isrc": "QZ5AB1638063",
+				"readable": true,
+				"artist": {
+					"id": 5939966,
+					"name": "MC Kapela"
+				},
+				"album": {
+					"id": 14670992,
+					"title": "Don Juan Cafajeste",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/be53940c6fd91fac80cc173878cef0d8/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/be53940c6fd91fac80cc173878cef0d8/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1448349512,
+				"title": "O Golpe",
+				"title_short": "O Golpe",
+				"title_version": "",
+				"duration": 298,
+				"isrc": "BXG6R2100787",
+				"readable": true,
+				"artist": {
+					"id": 49302962,
+					"name": "DJ Naldinho"
+				},
+				"album": {
+					"id": 247827292,
+					"title": "O Golpe",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/415ef27c8cf1ad25722898b9b52fa010/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/415ef27c8cf1ad25722898b9b52fa010/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2665993072,
+				"title": "Os Cara Do 7",
+				"title_short": "Os Cara Do 7",
+				"title_version": "",
+				"duration": 140,
+				"isrc": "BXG6R2400091",
+				"readable": true,
+				"artist": {
+					"id": 5939966,
+					"name": "MC Kapela"
+				},
+				"album": {
+					"id": 548882802,
+					"title": "Os Cara Do 7",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6665f7ccc4ffe47a1722784ed40ce30b/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6665f7ccc4ffe47a1722784ed40ce30b/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1439284912,
+				"title": "Remédio de Bandido",
+				"title_short": "Remédio de Bandido",
+				"title_version": "",
+				"duration": 207,
+				"isrc": "BXG6R1800354",
+				"readable": true,
+				"artist": {
+					"id": 5939966,
+					"name": "MC Kapela"
+				},
+				"album": {
+					"id": 245768542,
+					"title": "Remédio de Bandido",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/dd093aae8481903ddf2bae8afc265c84/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/dd093aae8481903ddf2bae8afc265c84/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Daft%20Punk%20Get%20Lucky%20Pharrell%20Williams%20Nile%20Rodgers&entity=song&limit=10": {
+		"resultCount": 5,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Get Lucky",
+				"artistName": "Daft Punk, Pharrell Williams & Nile Rodgers",
+				"collectionName": "Random Access Memories (10th Anniversary Edition)",
+				"collectionArtistName": "Daft Punk",
+				"releaseDate": "2013-05-17T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 369615,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/86/b1/92/86b192cf-ceb6-6e51-9361-dc4a35e95d22/196589921154.jpg/100x100bb.jpg",
+				"trackId": 1673536443,
+				"collectionId": 1673536063
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Get Lucky",
+				"artistName": "Daft Punk, Pharrell Williams & Nile Rodgers",
+				"collectionName": "Random Access Memories",
+				"collectionArtistName": "Daft Punk",
+				"releaseDate": "2013-04-19T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 369629,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/e8/43/5f/e8435ffa-b6b9-b171-40ab-4ff3959ab661/886443919266.jpg/100x100bb.jpg",
+				"trackId": 617154366,
+				"collectionId": 617154241
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Get Lucky (feat. Pharrell Williams & Nile Rodgers) [Daft Punk Remix]",
+				"artistName": "Daft Punk",
+				"collectionName": "Get Lucky (feat. Pharrell Williams & Nile Rodgers) [Daft Punk Remix]",
+				"releaseDate": "2013-07-03T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 632694,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/ba/58/0c/ba580cb1-a7e2-4771-e1a9-244f32ba15a4/886444079006.jpg/100x100bb.jpg",
+				"trackId": 664332744,
+				"collectionId": 664332737
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Get Lucky (Drumless Edition) (feat. Pharrell Williams and Nile Rodgers)",
+				"artistName": "Daft Punk, Pharrell Williams & Nile Rodgers",
+				"collectionName": "Random Access Memories (Drumless Edition)",
+				"collectionArtistName": "Daft Punk",
+				"releaseDate": "2023-11-17T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 369747,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/c8/6d/11/c86d1183-9e36-fc2f-6490-80568ed056e0/196871342049.jpg/100x100bb.jpg",
+				"trackId": 1708115310,
+				"collectionId": 1708115055
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Get Lucky",
+				"artistName": "Dallas String Quartet",
+				"collectionName": "Between Us",
+				"releaseDate": "2013-11-27T12:00:00Z",
+				"primaryGenreName": "Classical",
+				"trackTimeMillis": 253426,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music/v4/66/b2/8b/66b28b4d-ae35-7ec6-8a2d-0d4c782885db/735885254728.jpg/100x100bb.jpg",
+				"trackId": 880327445,
+				"collectionId": 880327397
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Daft%20Punk%20Get%20Lucky%20Pharrell%20Williams%20Nile%20Rodgers&limit=10": {
+		"total": 4,
+		"data": [
+			{
+				"id": 66609426,
+				"title": "Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)",
+				"title_short": "Get Lucky",
+				"title_version": "(Radio Edit - feat. Pharrell Williams and Nile Rodgers)",
+				"duration": 248,
+				"isrc": "USQX91300809",
+				"readable": true,
+				"artist": {
+					"id": 27,
+					"name": "Daft Punk"
+				},
+				"album": {
+					"id": 6516139,
+					"title": "Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/bc49adb87758e0c8c4e508a9c5cce85d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/bc49adb87758e0c8c4e508a9c5cce85d/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 67238735,
+				"title": "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+				"title_short": "Get Lucky",
+				"title_version": "(feat. Pharrell Williams and Nile Rodgers)",
+				"duration": 367,
+				"isrc": "USQX91300108",
+				"readable": true,
+				"artist": {
+					"id": 27,
+					"name": "Daft Punk"
+				},
+				"album": {
+					"id": 6575789,
+					"title": "Random Access Memories",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/311bba0fc112d15f72c8b5a65f0456c1/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/311bba0fc112d15f72c8b5a65f0456c1/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3967714541,
+				"title": "Get Lucky (Feat. Pharrell Williams, Nile Rodgers) (By Daft Punk) (Instrumental Karaoke Version)",
+				"title_short": "Get Lucky (Feat. Pharrell Williams, Nile Rodgers) (By Daft Punk) (Instrumental Karaoke Version)",
+				"title_version": "",
+				"duration": 251,
+				"isrc": "QZYD92603512",
+				"readable": true,
+				"artist": {
+					"id": 248387262,
+					"name": "ZZang KARAOKE"
+				},
+				"album": {
+					"id": 963653061,
+					"title": "ZZang KARAOKE 2026 POP Vol.282",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9b5f17c7c8b1a60db9c65dfef507fb2c/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/9b5f17c7c8b1a60db9c65dfef507fb2c/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 82585944,
+				"title": "Get Lucky ('Daft Punk & Pharrell Williams & Nile Rodgers' Piano Accompaniment) [Professional Karaoke Backing Track]",
+				"title_short": "Get Lucky ('Daft Punk & Pharrell Williams & Nile Rodgers' Piano Accompaniment) [Professional Karaoke Backing Track]",
+				"title_version": "",
+				"duration": 248,
+				"isrc": "GBJSS1415481",
+				"readable": true,
+				"artist": {
+					"id": 6294120,
+					"name": "London Vocal Academy"
+				},
+				"album": {
+					"id": 8293328,
+					"title": "Get Lucky ('Daft Punk & Pharrell Williams & Nile Rodgers' Piano Accompaniment) [Professional Karaoke Backing Track]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a4a9948c98d7507fc9752be1602ef626/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a4a9948c98d7507fc9752be1602ef626/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Adele%20Hello&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello",
+				"artistName": "Adele",
+				"collectionName": "25",
+				"releaseDate": "2015-10-23T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 295502,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/08/8c/24/088c2405-2e33-801b-5c38-e967f2c01e69/191404113974.png/100x100bb.jpg",
+				"trackId": 1544494392,
+				"collectionId": 1544494115
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Set Fire to the Rain",
+				"artistName": "Adele",
+				"collectionName": "21",
+				"releaseDate": "2011-01-19T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 242974,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/eb/ca/25/ebca2596-cd1e-b295-91a3-771c868d0a79/191404113868.png/100x100bb.jpg",
+				"trackId": 1544491988,
+				"collectionId": 1544491232
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello (Live)",
+				"artistName": "Hello Adele Tribute",
+				"collectionName": "Hello (Live) - Single",
+				"releaseDate": "2019-06-14T12:00:00Z",
+				"primaryGenreName": "Soul",
+				"trackTimeMillis": 294186,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/e1/3a/fe/e13afe34-0459-896b-0469-e7fcc0de1bdc/0.jpg/100x100bb.jpg",
+				"trackId": 1467505161,
+				"collectionId": 1467505158
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello",
+				"artistName": "Lionel Richie",
+				"collectionName": "20th Century Masters - The Millennium Collection: The Best of Lionel Richie",
+				"releaseDate": "1983-01-01T12:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 249267,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/0d/c0/a3/0dc0a301-d9e5-2980-5141-d8ddb1571398/00602498607497.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440757799,
+				"collectionId": 1440757546
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Adele - Hello - Piano Cover",
+				"artistName": "Katrina Hundred",
+				"collectionName": "Adele - Piano Covers",
+				"releaseDate": "2024-10-02T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 302338,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/fe/59/79/fe597909-d831-9ffa-b7a1-2413d89aaa44/8721253045687.png/100x100bb.jpg",
+				"trackId": 1771984198,
+				"collectionId": 1771984194
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Adele Hello (Amapiano Version)",
+				"artistName": "DJ JULIAN TYLER SA & WMD PIXNO",
+				"collectionName": "King Of Kings",
+				"collectionArtistName": "DJ JULIAN TYLER SA",
+				"releaseDate": "2023-03-10T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 215581,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/60/43/2c/60432cd5-0dff-e446-9da9-a2c77c992ef7/artwork.jpg/100x100bb.jpg",
+				"trackId": 1803815490,
+				"collectionId": 1803815486
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello",
+				"artistName": "Lullaby Baby Trio",
+				"collectionName": "Lullaby Renditions of Adele",
+				"releaseDate": "2015-12-01T12:00:00Z",
+				"primaryGenreName": "Children's Music",
+				"trackTimeMillis": 260101,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/c6/ac/17/c6ac1775-5db0-faf5-75ac-258570377040/859716129181_cover.jpg/100x100bb.jpg",
+				"trackId": 1064984520,
+				"collectionId": 1064984512
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello",
+				"artistName": "KES",
+				"collectionName": "Folklore Riddim - EP",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2017-11-08T12:00:00Z",
+				"primaryGenreName": "Modern Dancehall",
+				"trackTimeMillis": 198857,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/ab/ce/83/abce83be-2d67-3f0c-2ec9-66ed7005b54d/955.jpg/100x100bb.jpg",
+				"trackId": 1642062089,
+				"collectionId": 1642062086
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello",
+				"artistName": "Rockabye Baby!",
+				"collectionName": "Lullaby Renditions of Adele",
+				"releaseDate": "2016-04-29T12:00:00Z",
+				"primaryGenreName": "Lullabies",
+				"trackTimeMillis": 223199,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music69/v4/77/28/4e/77284ece-11de-68e1-ddc6-870af64fb734/9720_300dpi.jpg/100x100bb.jpg",
+				"trackId": 1096931545,
+				"collectionId": 1096931533
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Hello",
+				"artistName": "Lionel Richie",
+				"collectionName": "Can't Slow Down",
+				"releaseDate": "1983-10-11T12:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 248401,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/8a/60/4f/8a604fba-247c-d4e2-25b0-ed5b230fe948/00602537021598.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440809049,
+				"collectionId": 1440808868
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Adele%20Hello&limit=10": {
+		"total": 298,
+		"data": [
+			{
+				"id": 117935730,
+				"title": "Hello (Reggae Cover)",
+				"title_short": "Hello (Reggae Cover)",
+				"duration": 238,
+				"isrc": "USCGH1628393",
+				"readable": true,
+				"artist": {
+					"id": 253980,
+					"name": "Conkarah"
+				},
+				"album": {
+					"id": 12248276,
+					"title": "Hello (Reggae Cover)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/8a0ffa48010ef96caf6d7ef3c984ddff/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/8a0ffa48010ef96caf6d7ef3c984ddff/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 786244052,
+				"title": "Hello (Adele Remix)",
+				"title_short": "Hello (Adele Remix)",
+				"title_version": "",
+				"duration": 145,
+				"isrc": "TCAEM1929391",
+				"readable": true,
+				"artist": {
+					"id": 10365806,
+					"name": "FJ OUTLAW"
+				},
+				"album": {
+					"id": 116426542,
+					"title": "Lyrical Narcan (The Mixtape)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f850409a73e1a97302326a36bf065b02/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f850409a73e1a97302326a36bf065b02/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 376730901,
+				"title": "Someone Like You",
+				"title_short": "Someone Like You",
+				"duration": 286,
+				"isrc": "UKG8V1600024",
+				"readable": true,
+				"artist": {
+					"id": 12258842,
+					"name": "Hello I'm Adele"
+				},
+				"album": {
+					"id": 43639051,
+					"title": "Someone Like You",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/35becca9e8a8ea0267ff467f7832d214/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/35becca9e8a8ea0267ff467f7832d214/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 125011740,
+				"title": "Hello (Adele Extended Fitness Version Dance Remix)",
+				"title_short": "Hello (Adele Extended Fitness Version Dance Remix)",
+				"duration": 305,
+				"isrc": "GBHAE1685405",
+				"readable": true,
+				"artist": {
+					"id": 10386868,
+					"name": "Dance Guru vol 1"
+				},
+				"album": {
+					"id": 13140884,
+					"title": "Best Of The Best Remixes",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/ee62ebb336ccfb3f0bee29d10e7757b0/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/ee62ebb336ccfb3f0bee29d10e7757b0/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3750716722,
+				"title": "#HELLO (ADELE TRIBUTE)",
+				"title_short": "#HELLO",
+				"title_version": "(ADELE TRIBUTE)",
+				"duration": 290,
+				"isrc": "QMRSZ1600664",
+				"readable": true,
+				"artist": {
+					"id": 188,
+					"name": "Joe"
+				},
+				"album": {
+					"id": 889000372,
+					"title": "#MYNAMEISJOETHOMAS",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7bd3d75292678b30c769c12a04ac914c/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/7bd3d75292678b30c769c12a04ac914c/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 128446811,
+				"title": "Hello (Remix to Adele)",
+				"title_short": "Hello",
+				"title_version": "(Remix to Adele)",
+				"duration": 253,
+				"isrc": "BET231551015",
+				"readable": true,
+				"artist": {
+					"id": 5468135,
+					"name": "Cvdb"
+				},
+				"album": {
+					"id": 13567435,
+					"title": "On the Dancefloor",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6f97ed3304cb1eed87d5fb04a583472e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6f97ed3304cb1eed87d5fb04a583472e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 119148302,
+				"title": "Hello (Originally Performed by Adele) [Piano Version] [Half Speed]",
+				"title_short": "Hello (Originally Performed by Adele) [Piano Version] [Half Speed]",
+				"title_version": "",
+				"duration": 501,
+				"isrc": "USE831527495",
+				"readable": true,
+				"artist": {
+					"id": 9732498,
+					"name": "Piano Learning Tracks"
+				},
+				"album": {
+					"id": 12403626,
+					"title": "Hello (Originally Performed by Adele) [Piano Version]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/4745c68bfaa88984b2533c94dfe3cfac/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/4745c68bfaa88984b2533c94dfe3cfac/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 120726068,
+				"title": "Adele Medley (Someone Like You / Hello / Set Fire to the Rain / Rolling in the Deep)",
+				"title_short": "Adele Medley (Someone Like You / Hello / Set Fire to the Rain / Rolling in the Deep)",
+				"title_version": "",
+				"duration": 253,
+				"isrc": "USCGJ1608616",
+				"readable": true,
+				"artist": {
+					"id": 1133264,
+					"name": "KO"
+				},
+				"album": {
+					"id": 12598234,
+					"title": "Adele Medley (Someone Like You / Hello / Set Fire to the Rain / Rolling in the Deep)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/04828eaac6790278ad9be601dc004246/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/04828eaac6790278ad9be601dc004246/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 346975901,
+				"title": "Rolling In The Deep",
+				"title_short": "Rolling In The Deep",
+				"duration": 228,
+				"isrc": "UKG8V1600025",
+				"readable": true,
+				"artist": {
+					"id": 12258842,
+					"name": "Hello I'm Adele"
+				},
+				"album": {
+					"id": 39507061,
+					"title": "Rolling In The Deep",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/66a4bf0751de50d0e76640eaf55570d7/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/66a4bf0751de50d0e76640eaf55570d7/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 112149924,
+				"title": "Hello (Piano Version) [Original Performed by Adele]",
+				"title_short": "Hello (Piano Version) [Original Performed by Adele]",
+				"duration": 250,
+				"isrc": "ES7931500223",
+				"readable": true,
+				"artist": {
+					"id": 5523567,
+					"name": "Lang Project"
+				},
+				"album": {
+					"id": 11630124,
+					"title": "Piano Hits 2015",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/d6f7e4638191896a911a5b7e3b50ce4d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/d6f7e4638191896a911a5b7e3b50ce4d/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Kendrick%20Lamar%20HUMBLE.&entity=song&limit=10": {
+		"resultCount": 9,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "HUMBLE.",
+				"artistName": "Kendrick Lamar",
+				"collectionName": "DAMN.",
+				"releaseDate": "2017-03-30T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 177000,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/ab/16/ef/ab16efe9-e7f1-66ec-021c-5592a23f0f9e/17UMGIM88793.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440882165,
+				"collectionId": 1440881722
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "HUMBLE.",
+				"artistName": "Kendrick Lamar",
+				"collectionName": "DAMN. COLLECTORS EDITION.",
+				"releaseDate": "2017-03-30T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 177000,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/94/28/36/94283609-93bb-db1c-e997-44e82c157e90/00602567261216.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440907873,
+				"collectionId": 1440907513
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Don't Wanna Know (feat. Kendrick Lamar) [BRAVVO Remix]",
+				"artistName": "Maroon 5",
+				"collectionName": "Don't Wanna Know (feat. Kendrick Lamar) [BRAVVO Remix] - Single",
+				"releaseDate": "2017-01-06T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 207613,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/85/d6/cc/85d6cc27-85f2-6bfe-dca7-a966e2bc0cee/00602557378047.rgb.jpg/100x100bb.jpg",
+				"trackId": 1445291877,
+				"collectionId": 1445291873
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Humble (In the Style of Kendrick Lamar) [Karaoke Version]",
+				"artistName": "Instrumental King",
+				"collectionName": "Humble (In the Style of Kendrick Lamar) [Karaoke Version] - Single",
+				"releaseDate": "2017-04-03T12:00:00Z",
+				"primaryGenreName": "Karaoke",
+				"trackTimeMillis": 176000,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music111/v4/56/4c/d2/564cd2df-c33c-f413-ce1a-7180bb7c771f/888915364895_cover.jpg/100x100bb.jpg",
+				"trackId": 1222785669,
+				"collectionId": 1222785208
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Humble (Originally Performed by Kendrick Lamar) [Instrumental Version]",
+				"artistName": "Karaoke Freaks",
+				"collectionName": "Humble (Originally Performed by Kendrick Lamar) [Instrumental Version] - Single",
+				"releaseDate": "2017-03-31T12:00:00Z",
+				"primaryGenreName": "Karaoke",
+				"trackTimeMillis": 175332,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/00/fb/5d/00fb5de6-4587-24ba-08d8-5cca44da9b4f/8433391383988.jpg/100x100bb.jpg",
+				"trackId": 1222682969,
+				"collectionId": 1222682962
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "HUMBLE (feat. Karen Briggs)",
+				"artistName": "Unwrapped",
+				"collectionName": "Unwrapped Vol. 9: The Songs of Kendrick Lamar Reimagined",
+				"releaseDate": "2025-02-07T12:00:00Z",
+				"primaryGenreName": "Jazz",
+				"trackTimeMillis": 67600,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/0a/7a/b4/0a7ab40a-3c0c-22e4-ffc7-20196d0e1a62/25SYMIM17923.rgb.jpg/100x100bb.jpg",
+				"trackId": 1793867898,
+				"collectionId": 1793867669
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "HUMBLE.",
+				"artistName": "Twinkle Twinkle Little Rock Star",
+				"collectionName": "Lullaby Versions of Kendrick Lamar",
+				"releaseDate": "2025-08-15T12:00:00Z",
+				"primaryGenreName": "Hip-Hop",
+				"trackTimeMillis": 172018,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/4e/8d/67/4e8d67e1-8cb8-e761-f39d-6362e8ceb0ae/198704631979_Cover.jpg/100x100bb.jpg",
+				"trackId": 1828811601,
+				"collectionId": 1828811398
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Humble",
+				"artistName": "Lil Baby",
+				"collectionName": "My Turn (Deluxe)",
+				"releaseDate": "2020-05-01T07:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 191583,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/9b/60/27/9b60278b-be33-9726-84d7-322718eacc1a/20UMGIM30254.rgb.jpg/100x100bb.jpg",
+				"trackId": 1509850827,
+				"collectionId": 1509850659
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Humble",
+				"artistName": "Ian Munsick",
+				"collectionName": "Coyote Cry",
+				"releaseDate": "2021-01-15T12:00:00Z",
+				"primaryGenreName": "Country",
+				"trackTimeMillis": 220656,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/05/cd/25/05cd25c5-2881-53bc-5fd0-49aa6bca458e/093624884118.jpg/100x100bb.jpg",
+				"trackId": 1553356614,
+				"collectionId": 1553356608
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Kendrick%20Lamar%20HUMBLE.&limit=10": {
+		"total": 27,
+		"data": [
+			{
+				"id": 350171311,
+				"title": "HUMBLE.",
+				"title_short": "HUMBLE.",
+				"title_version": "",
+				"duration": 177,
+				"isrc": "USUM71703085",
+				"readable": true,
+				"artist": {
+					"id": 525046,
+					"name": "Kendrick Lamar"
+				},
+				"album": {
+					"id": 39949511,
+					"title": "DAMN.",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7ce6b8452fae425557067db6e6a1cad5/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/7ce6b8452fae425557067db6e6a1cad5/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 412241052,
+				"title": "HUMBLE. (SKRILLEX REMIX)",
+				"title_short": "HUMBLE.",
+				"title_version": "(SKRILLEX REMIX)",
+				"duration": 156,
+				"isrc": "USUM71710562",
+				"readable": true,
+				"artist": {
+					"id": 525643,
+					"name": "Skrillex"
+				},
+				"album": {
+					"id": 49049112,
+					"title": "HUMBLE. (SKRILLEX REMIX)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/264b3b6ba639ab6a22c4c781c5f3cbba/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/264b3b6ba639ab6a22c4c781c5f3cbba/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 350171251,
+				"title": "DNA.",
+				"title_short": "DNA.",
+				"title_version": "",
+				"duration": 185,
+				"isrc": "USUM71703079",
+				"readable": true,
+				"artist": {
+					"id": 525046,
+					"name": "Kendrick Lamar"
+				},
+				"album": {
+					"id": 39949511,
+					"title": "DAMN.",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7ce6b8452fae425557067db6e6a1cad5/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/7ce6b8452fae425557067db6e6a1cad5/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 460475962,
+				"title": "Dedication (feat. Kendrick Lamar)",
+				"title_short": "Dedication (feat. Kendrick Lamar)",
+				"title_version": "",
+				"duration": 245,
+				"isrc": "USAT21705205",
+				"readable": true,
+				"artist": {
+					"id": 257128,
+					"name": "Nipsey Hussle"
+				},
+				"album": {
+					"id": 56765112,
+					"title": "Victory Lap",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/aeb3dc33bd8e78a2f9c04cded6812b4a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/aeb3dc33bd8e78a2f9c04cded6812b4a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 361977791,
+				"title": "\"HUMBLE\" Parody of Kendrick Lamar's \"HUMBLE\"",
+				"title_short": "\"HUMBLE\" Parody of Kendrick Lamar's \"HUMBLE\"",
+				"title_version": "",
+				"duration": 145,
+				"isrc": "US3DF1715786",
+				"readable": true,
+				"artist": {
+					"id": 1211299,
+					"name": "The Key of Awesome"
+				},
+				"album": {
+					"id": 41613411,
+					"title": "\"HUMBLE\" Parody of Kendrick Lamar's \"HUMBLE\"",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/294681c5e53da58604b9ac1ca411e769/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/294681c5e53da58604b9ac1ca411e769/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3962165331,
+				"title": "humble by kendrick lamar",
+				"title_short": "humble by kendrick lamar",
+				"title_version": "",
+				"duration": 73,
+				"isrc": "QZWFG2614729",
+				"readable": true,
+				"artist": {
+					"id": 366193212,
+					"name": "John AND Jimmy..."
+				},
+				"album": {
+					"id": 962069291,
+					"title": "Memories of the Mustard Store",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/25c5594b9525158e1be5aa4fd42753b7/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/25c5594b9525158e1be5aa4fd42753b7/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3212870261,
+				"title": "HUMBLE",
+				"title_short": "HUMBLE",
+				"title_version": "",
+				"duration": 68,
+				"isrc": "USHBR2501013",
+				"readable": true,
+				"artist": {
+					"id": 378021,
+					"name": "Unwrapped"
+				},
+				"album": {
+					"id": 706338331,
+					"title": "Unwrapped Vol. 9: The Songs of Kendrick Lamar Reimagined",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/42ac6e57cb247cb7a84595030453a86a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/42ac6e57cb247cb7a84595030453a86a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2751243521,
+				"title": "HUMBLE. (8-Bit Kendrick lamar Emulation)",
+				"title_short": "HUMBLE.",
+				"title_version": "(8-Bit Kendrick lamar Emulation)",
+				"duration": 173,
+				"isrc": "AUXN22450415",
+				"readable": true,
+				"artist": {
+					"id": 5845951,
+					"name": "8-Bit Arcade"
+				},
+				"album": {
+					"id": 573544661,
+					"title": "By Request, Vol. 255",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/5b491e8aa898e4cc4ca4df02b83add62/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/5b491e8aa898e4cc4ca4df02b83add62/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 377028501,
+				"title": "Humble (Fitness Dance Version)",
+				"title_short": "Humble (Fitness Dance Version)",
+				"duration": 236,
+				"isrc": "FR59R1768257",
+				"readable": true,
+				"artist": {
+					"id": 11650639,
+					"name": "Barberry Records"
+				},
+				"album": {
+					"id": 43687641,
+					"title": "Humble (Homage to Kendrick Lamar)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a7c6238d5c8f2d6ccb4f58c5a8e54b08/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a7c6238d5c8f2d6ccb4f58c5a8e54b08/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 69110422,
+				"title": "Rossi Wine",
+				"title_short": "Rossi Wine",
+				"title_version": "",
+				"duration": 252,
+				"isrc": "USA2P1310769",
+				"readable": true,
+				"artist": {
+					"id": 4318189,
+					"name": "Droop-E"
+				},
+				"album": {
+					"id": 6772599,
+					"title": "Hungry and Humble",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0409c10d98f1592c0dc91ef4da68247f/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/0409c10d98f1592c0dc91ef4da68247f/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=The%20Chainsmokers%20Don't%20Let%20Me%20Down%20Daya%20hipst3r%20edit&entity=song&limit=10": {
+		"resultCount": 0,
+		"results": []
+	},
+	"https://api.deezer.com/search?q=The%20Chainsmokers%20Don't%20Let%20Me%20Down%20Daya%20hipst3r%20edit&limit=10": {
+		"total": 0,
+		"data": []
+	},
+	"https://itunes.apple.com/search?term=Queen%20Bohemian%20Rhapsody&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody",
+				"artistName": "Queen",
+				"collectionName": "A Night At The Opera (Deluxe Edition)",
+				"releaseDate": "1975-10-31T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 355155,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/8b/0a/ea/8b0aea60-6f4a-195b-5958-cdf459c2333b/602527644271.jpg/100x100bb.jpg",
+				"trackId": 6781024437,
+				"collectionId": 6781024026
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody",
+				"artistName": "Queen",
+				"collectionName": "A Night At The Opera",
+				"releaseDate": "1975-10-31T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 355155,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/dd/86/92/dd86925d-484d-8ee7-3985-ef3264214269/602527644264.jpg/100x100bb.jpg",
+				"trackId": 6781023657,
+				"collectionId": 6781023399
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody",
+				"artistName": "Queen",
+				"collectionName": "Bohemian Rhapsody (The Original Soundtrack)",
+				"releaseDate": "1975-10-31T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 354947,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/62/2e/97/622e97c4-d620-2ae1-2a47-a32e16a01492/602567988847.jpg/100x100bb.jpg",
+				"trackId": 6781027645,
+				"collectionId": 6781027361
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody (Operatic Section / 2011 A Cappella Mix)",
+				"artistName": "Queen",
+				"collectionName": "A Night At The Opera (Deluxe Edition)",
+				"releaseDate": "1975-11-21T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 64969,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/8b/0a/ea/8b0aea60-6f4a-195b-5958-cdf459c2333b/602527644271.jpg/100x100bb.jpg",
+				"trackId": 6781024442,
+				"collectionId": 6781024026
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody",
+				"artistName": "Queen",
+				"collectionName": "Greatest Hits",
+				"releaseDate": "1975-10-31T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 355145,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b0/ca/05/b0ca05aa-29c9-4e01-5a16-f6fa06bce05c/602527594347.jpg/100x100bb.jpg",
+				"trackId": 6781080302,
+				"collectionId": 6781080300
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody",
+				"artistName": "Queen",
+				"collectionName": "The Platinum Collection",
+				"releaseDate": "1975-10-31T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 355467,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/15/c7/55/15c755bc-7603-3ce3-e243-e59f1f9863ea/602527724171.jpg/100x100bb.jpg",
+				"trackId": 6781080934,
+				"collectionId": 6781080933
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody (Live Aid)",
+				"artistName": "Queen",
+				"collectionName": "Bohemian Rhapsody (The Original Soundtrack)",
+				"releaseDate": "2018-10-19T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 147840,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/62/2e/97/622e97c4-d620-2ae1-2a47-a32e16a01492/602567988847.jpg/100x100bb.jpg",
+				"trackId": 6781027700,
+				"collectionId": 6781027361
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody (Live in Budapest)",
+				"artistName": "Queen",
+				"collectionName": "Queen Budapest (Live)",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 330333,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/51/50/2c/51502c9e-de70-1100-569e-6b50cec92150/196874612422.jpg/100x100bb.jpg",
+				"trackId": 6792889841,
+				"collectionId": 6792889537
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody (Live At Wembley Stadium / July 1986)",
+				"artistName": "Queen",
+				"collectionName": "Live at Wembley Stadium",
+				"releaseDate": "1990-12-10T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 350613,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/0b/37/48/0b374857-3ff1-809b-73f9-5bdd717fc4f2/602527584355.jpg/100x100bb.jpg",
+				"trackId": 6781081746,
+				"collectionId": 6781081544
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Bohemian Rhapsody (Muppets Version)",
+				"artistName": "The Muppets & Queen",
+				"collectionName": "Bohemian Rhapsody (Muppets Version) - Single",
+				"collectionArtistName": "Queen & The Muppets",
+				"releaseDate": "1992-01-14T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 277200,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/92/23/20/92232012-0052-8d6e-b543-f459dac30718/00050087158682.rgb.jpg/100x100bb.jpg",
+				"trackId": 1446857494,
+				"collectionId": 1446857318
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Queen%20Bohemian%20Rhapsody&limit=10": {
+		"total": 179,
+		"data": [
+			{
+				"id": 4091936771,
+				"title": "Bohemian Rhapsody (Live Aid)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live Aid)",
+				"duration": 148,
+				"isrc": "GBUM71805979",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007321401,
+					"title": "Bohemian Rhapsody (The Original Soundtrack)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/5bbfab8ae2def08b9d58932b5e6121a4/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/5bbfab8ae2def08b9d58932b5e6121a4/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4091937401,
+				"title": "Bohemian Rhapsody",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "",
+				"duration": 358,
+				"isrc": "GBUM71029604",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007321681,
+					"title": "A Night At The Opera",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0b56f4eee05fa1ea753c5654b2cdb70c/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/0b56f4eee05fa1ea753c5654b2cdb70c/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4092342471,
+				"title": "Bohemian Rhapsody (Live At Wembley Stadium / July 1986)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live At Wembley Stadium / July 1986)",
+				"duration": 351,
+				"isrc": "GBCEE0300050",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007460301,
+					"title": "Live at Wembley Stadium",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/bffe9bbf3a5270200d59f9537c5581ed/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/bffe9bbf3a5270200d59f9537c5581ed/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1306700592,
+				"title": "Bohemian Rhapsody / Radio Ga Ga (Live at Wembley Stadium, 13th July 1985)",
+				"title_short": "Bohemian Rhapsody / Radio Ga Ga",
+				"title_version": "(Live at Wembley Stadium, 13th July 1985)",
+				"duration": 390,
+				"isrc": "UK6821836636",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 219784782,
+					"title": "Queen at Live Aid (Live at Wembley Stadium, 13th July 1985)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/2b567395f755ddda32ddae1eea5796ef/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/2b567395f755ddda32ddae1eea5796ef/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4092314011,
+				"title": "Bohemian Rhapsody (Live At Milton Keynes Bowl / June 1982)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live At Milton Keynes Bowl / June 1982)",
+				"duration": 338,
+				"isrc": "GBCEE0400076",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007451941,
+					"title": "On Fire: Live At The Bowl",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/365fa3f10e91934609df4b97d66e765a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/365fa3f10e91934609df4b97d66e765a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4092335271,
+				"title": "Bohemian Rhapsody (Live)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live)",
+				"duration": 328,
+				"isrc": "GBCEE0700025",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007458461,
+					"title": "Queen Rock Montreal",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/3af5b7c86864d78664a2fb03f304e70c/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/3af5b7c86864d78664a2fb03f304e70c/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4092345051,
+				"title": "Bohemian Rhapsody (Live)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live)",
+				"duration": 330,
+				"isrc": "GBUM71205813",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007461201,
+					"title": "Hungarian Rhapsody (Live In Budapest / 1986)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9a09ec1415ae5fb8f46fe458da8e123e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/9a09ec1415ae5fb8f46fe458da8e123e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1140885422,
+				"title": "Bohemian Rhapsody (Live At Fire Fight Australia, ANZ Stadium, Sydney, Australia, 2020)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live At Fire Fight Australia, ANZ Stadium, Sydney, Australia, 2020)",
+				"duration": 143,
+				"isrc": "GBUM72004114",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 186080352,
+					"title": "Live At Fire Fight Australia",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/914621defeacd37a071bcdae31d8c778/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/914621defeacd37a071bcdae31d8c778/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4092340211,
+				"title": "Bohemian Rhapsody (Live, European Tour / 1979)",
+				"title_short": "Bohemian Rhapsody",
+				"title_version": "(Live, European Tour / 1979)",
+				"duration": 352,
+				"isrc": "GBCEG0100046",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007459621,
+					"title": "Live Killers",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/43f44e680dbe28480fda2f8c0666c834/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/43f44e680dbe28480fda2f8c0666c834/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 4091936641,
+				"title": "Killer Queen",
+				"title_short": "Killer Queen",
+				"title_version": "",
+				"duration": 182,
+				"isrc": "GBUM71029606",
+				"readable": true,
+				"artist": {
+					"id": 412,
+					"name": "Queen"
+				},
+				"album": {
+					"id": 1007321401,
+					"title": "Bohemian Rhapsody (The Original Soundtrack)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/5bbfab8ae2def08b9d58932b5e6121a4/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/5bbfab8ae2def08b9d58932b5e6121a4/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Onlynumbers%20Occult&entity=song&limit=10": {
+		"resultCount": 1,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Occult",
+				"artistName": "Onlynumbers",
+				"collectionName": "Occult - Single",
+				"releaseDate": "2026-07-17T12:00:00Z",
+				"primaryGenreName": "Hardcore",
+				"trackTimeMillis": 180000,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/e3/23/5e/e3235ed5-73bd-2502-028b-4e60878aed10/cover.jpg/100x100bb.jpg",
+				"trackId": 6789133294,
+				"collectionId": 6789133196
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Onlynumbers%20Occult&limit=10": {
+		"total": 1,
+		"data": [
+			{
+				"id": 4143441011,
+				"title": "Occult",
+				"title_short": "Occult",
+				"title_version": "",
+				"duration": 180,
+				"isrc": "FRX282671500",
+				"readable": true,
+				"artist": {
+					"id": 14330391,
+					"name": "Onlynumbers"
+				},
+				"album": {
+					"id": 1024980151,
+					"title": "Occult",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/3a882057ef59d611c21ab23ff41fa494/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/3a882057ef59d611c21ab23ff41fa494/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Rick%20Astley%20Never%20Gonna%20Give%20You%20Up&entity=song&limit=10": {
+		"resultCount": 9,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody",
+				"releaseDate": "1987-07-27T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 213573,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/ce/6d/5b/ce6d5b48-8c36-b990-3b9c-81862fadb459/0859381157694.jpg/100x100bb.jpg",
+				"trackId": 1559885421,
+				"collectionId": 1559885420
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (Cake Mix)",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody (Deluxe Edition - 2022 Remaster)",
+				"releaseDate": "1987-01-01T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 347427,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/b3/21/d3/b321d3e4-edfe-124b-d0cd-a64ad1df3290/4050538793840.jpg/100x100bb.jpg",
+				"trackId": 1612648434,
+				"collectionId": 1612648318
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (Escape to New York Mix)",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody (Deluxe Edition - 2022 Remaster)",
+				"releaseDate": "1987-01-01T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 422600,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/b3/21/d3/b321d3e4-edfe-124b-d0cd-a64ad1df3290/4050538793840.jpg/100x100bb.jpg",
+				"trackId": 1612648440,
+				"collectionId": 1612648318
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (Phil Harding 12\" Mix)",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody (Deluxe Edition - 2022 Remaster)",
+				"releaseDate": "1987-01-01T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 441280,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/b3/21/d3/b321d3e4-edfe-124b-d0cd-a64ad1df3290/4050538793840.jpg/100x100bb.jpg",
+				"trackId": 1612648427,
+				"collectionId": 1612648318
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (Pianoforte)",
+				"artistName": "Rick Astley",
+				"collectionName": "The Best Of Me: Never Edition",
+				"releaseDate": "1987-01-01T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 209413,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/9e/2a/db9e2ae0-cb9f-f2a9-2774-de399dff2580/4099964133639.jpg/100x100bb.jpg",
+				"trackId": 1773293593,
+				"collectionId": 1773292758
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up",
+				"artistName": "Rick Astley",
+				"collectionName": "The Best of Me",
+				"releaseDate": "1987-01-01T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 213960,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/17/3c/cb/173ccb70-6d48-24cc-3b5a-ff41560a0fda/4050538545074.jpg/100x100bb.jpg",
+				"trackId": 1485596041,
+				"collectionId": 1485596039
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (2022 Remaster)",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody (Deluxe Edition - 2022 Remaster)",
+				"releaseDate": "1987-07-27T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 213560,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/b3/21/d3/b321d3e4-edfe-124b-d0cd-a64ad1df3290/4050538793840.jpg/100x100bb.jpg",
+				"trackId": 1612648319,
+				"collectionId": 1612648318
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (2022 Remaster)",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody (2022 Remaster)",
+				"releaseDate": "1987-01-01T08:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 213560,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/de/eb/63/deeb63c1-7bc0-9153-cfa3-fd9e4929aacf/4050538826562.jpg/100x100bb.jpg",
+				"trackId": 1624945512,
+				"collectionId": 1624945511
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Gonna Give You Up (Pianoforte)",
+				"artistName": "Rick Astley",
+				"collectionName": "Whenever You Need Somebody (Deluxe Edition - 2022 Remaster)",
+				"releaseDate": "1987-01-01T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 209413,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/b3/21/d3/b321d3e4-edfe-124b-d0cd-a64ad1df3290/4050538793840.jpg/100x100bb.jpg",
+				"trackId": 1612648423,
+				"collectionId": 1612648318
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Rick%20Astley%20Never%20Gonna%20Give%20You%20Up&limit=10": {
+		"total": 46,
+		"data": [
+			{
+				"id": 3786363752,
+				"title": "Never Gonna Give You Up (Pianoforte)",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "(Pianoforte)",
+				"duration": 213,
+				"isrc": "GB5KW1903177",
+				"readable": true,
+				"artist": {
+					"id": 6160,
+					"name": "Rick Astley"
+				},
+				"album": {
+					"id": 901480252,
+					"title": "The Best of Me",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1fcfca61ca4e05027612a1af865b2e03/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/1fcfca61ca4e05027612a1af865b2e03/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3816551372,
+				"title": "Never Gonna Give You Up (Cake Mix)",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "(Cake Mix)",
+				"duration": 347,
+				"isrc": "GBARL8700068",
+				"readable": true,
+				"artist": {
+					"id": 6160,
+					"name": "Rick Astley"
+				},
+				"album": {
+					"id": 909591702,
+					"title": "Whenever You Need Somebody (Deluxe Edition / Remastered 2022)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3816551432,
+				"title": "Never Gonna Give You Up (Escape to New York Mix) (Escape to New York Mix)",
+				"title_short": "Never Gonna Give You Up (Escape to New York Mix)",
+				"title_version": "(Escape to New York Mix)",
+				"duration": 423,
+				"isrc": "GBARL8700008",
+				"readable": true,
+				"artist": {
+					"id": 6160,
+					"name": "Rick Astley"
+				},
+				"album": {
+					"id": 909591702,
+					"title": "Whenever You Need Somebody (Deluxe Edition / Remastered 2022)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3816551312,
+				"title": "Never Gonna Give You Up (Phil Harding 12\" Mix)",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "(Phil Harding 12\" Mix)",
+				"duration": 444,
+				"isrc": "GBARL1001562",
+				"readable": true,
+				"artist": {
+					"id": 6160,
+					"name": "Rick Astley"
+				},
+				"album": {
+					"id": 909591702,
+					"title": "Whenever You Need Somebody (Deluxe Edition / Remastered 2022)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3816551402,
+				"title": "Never Gonna Give You Up (Escape from Newton Mix)",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "(Escape from Newton Mix)",
+				"duration": 386,
+				"isrc": "GBARL0600788",
+				"readable": true,
+				"artist": {
+					"id": 6160,
+					"name": "Rick Astley"
+				},
+				"album": {
+					"id": 909591702,
+					"title": "Whenever You Need Somebody (Deluxe Edition / Remastered 2022)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3816551472,
+				"title": "Never Gonna Give You Up (Instrumental)",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "(Instrumental)",
+				"duration": 379,
+				"isrc": "GBARL0600785",
+				"readable": true,
+				"artist": {
+					"id": 6160,
+					"name": "Rick Astley"
+				},
+				"album": {
+					"id": 909591702,
+					"title": "Whenever You Need Somebody (Deluxe Edition / Remastered 2022)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3545557331,
+				"title": "Never Gonna Give You Up Remix",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "Remix",
+				"duration": 187,
+				"isrc": "AUXN22533604",
+				"readable": true,
+				"artist": {
+					"id": 14722967,
+					"name": "Remix Kingz"
+				},
+				"album": {
+					"id": 817739171,
+					"title": "Never Gonna Give You Up Remix",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f6d880b434f3205aaf3f6a3941f8c9e1/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f6d880b434f3205aaf3f6a3941f8c9e1/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 94514498,
+				"title": "Never Gonna Give You Up By Rick Astley Meets Metal",
+				"title_short": "Never Gonna Give You Up By Rick Astley Meets Metal",
+				"title_version": "",
+				"duration": 205,
+				"isrc": "USE830959559",
+				"readable": true,
+				"artist": {
+					"id": 5382499,
+					"name": "Erock"
+				},
+				"album": {
+					"id": 9612712,
+					"title": "Meets Metal Vol. 1 (The Early Year)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/12ebcbdd486b4882989ee196d5ab38fc/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/12ebcbdd486b4882989ee196d5ab38fc/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 8518713,
+				"title": "Never Gonna Give You Up (Rick Astley)",
+				"title_short": "Never Gonna Give You Up (Rick Astley)",
+				"title_version": "",
+				"duration": 268,
+				"isrc": "USX9P0955743",
+				"readable": true,
+				"artist": {
+					"id": 166604,
+					"name": "Stegosaurus Rex"
+				},
+				"album": {
+					"id": 784177,
+					"title": "The Dino Soars",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/2ebf79f75f42c2aa2962c4f94ea82690/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/2ebf79f75f42c2aa2962c4f94ea82690/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2204972537,
+				"title": "Never Gonna Give You Up (8-Bit Rick Astley Emulation)",
+				"title_short": "Never Gonna Give You Up",
+				"title_version": "(8-Bit Rick Astley Emulation)",
+				"duration": 235,
+				"isrc": "AUXN22303059",
+				"readable": true,
+				"artist": {
+					"id": 5845951,
+					"name": "8-Bit Arcade"
+				},
+				"album": {
+					"id": 420897637,
+					"title": "By Request, Vol. 205",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0196316229f0c62607316f63cdbabaa9/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/0196316229f0c62607316f63cdbabaa9/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Macklemore%20%26%20Ryan%20Lewis%20Can't%20Hold%20Us%20Ray%20Dalton&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us (feat. Ray Dalton)",
+				"artistName": "Macklemore & Ryan Lewis",
+				"collectionName": "The Heist",
+				"releaseDate": "2011-08-16T07:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 258343,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/44/40/83/44408300-636f-8cae-d508-9dd96db48cea/707541528191.jpg/100x100bb.jpg",
+				"trackId": 560097549,
+				"collectionId": 560097246
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us (feat. Ray Dalton)",
+				"artistName": "Macklemore & Ryan Lewis",
+				"collectionName": "The Heist",
+				"releaseDate": "2011-08-16T07:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 258432,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/5e/5f/81/5e5f81c7-849e-63f6-6ffd-8801145bfd97/707541525398.jpg/100x100bb.jpg",
+				"trackId": 560148920,
+				"collectionId": 560148910
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us (feat. Ray Dalton)",
+				"artistName": "Macklemore & Ryan Lewis",
+				"collectionName": "The Heist (Deluxe Edition)",
+				"releaseDate": "2011-08-16T07:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 258432,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/91/c1/b5/91c1b5cc-d4f1-da61-d3dc-2dd93e6b0a7d/707541525299.jpg/100x100bb.jpg",
+				"trackId": 560097694,
+				"collectionId": 560097651
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us (in style of Macklemore & Ryan Lewis, Ray Dalton) - Instrumental",
+				"artistName": "Songs That Don't Suck",
+				"collectionName": "Can't Hold Us (in style of Macklemore & Ryan Lewis, Ray Dalton) - Instrumental - Single",
+				"releaseDate": "2013-07-27T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 256836,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music4/v4/94/78/3f/94783f44-29e7-4517-c745-bf0bf202ac59/cover.jpg/100x100bb.jpg",
+				"trackId": 680364107,
+				"collectionId": 680364099
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us",
+				"artistName": "Pentatonix",
+				"collectionName": "PTX, Vol. II - EP",
+				"releaseDate": "2013-11-05T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 197329,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music4/v4/2d/70/11/2d70110c-b5cc-a3a8-6afa-c419aca885eb/886444622547.jpg/100x100bb.jpg",
+				"trackId": 877651713,
+				"collectionId": 877651699
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us",
+				"artistName": "Pentatonix",
+				"collectionName": "PTX",
+				"releaseDate": "2014-09-19T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 197333,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music3/v4/51/a1/15/51a1155e-c045-8e97-93a7-f1d8e0fdc958/886444800426.jpg/100x100bb.jpg",
+				"trackId": 910434366,
+				"collectionId": 910434307
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us",
+				"artistName": "Max Schneider",
+				"collectionName": "Can't Hold Us - Single",
+				"releaseDate": "2013-05-27T12:00:00Z",
+				"primaryGenreName": "Singer/Songwriter",
+				"trackTimeMillis": 260137,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/88/23/27/882327d6-7cb6-6ab1-dc33-3b80fbc4c125/holdusmax.jpg/100x100bb.jpg",
+				"trackId": 654650805,
+				"collectionId": 654650689
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us (DJ Shocker Remix Radio Edit)",
+				"artistName": "Power Music Workout",
+				"collectionName": "Top Radio Hits 4 Workout Mixes",
+				"releaseDate": "2013-03-22T12:00:00Z",
+				"primaryGenreName": "Fitness & Workout",
+				"trackTimeMillis": 379063,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/06/5a/e1/065ae104-2d26-0fe7-dba3-be0aa3005061/TopRadiHits4WOM_2400.jpg/100x100bb.jpg",
+				"trackId": 625582566,
+				"collectionId": 625581140
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us",
+				"artistName": "Madilyn",
+				"collectionName": "The Covers, Vol. 5",
+				"releaseDate": "2013-04-26T12:00:00Z",
+				"primaryGenreName": "Singer/Songwriter",
+				"trackTimeMillis": 219512,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/26/98/95/269895d6-bacc-a46b-0fd4-dcf4a2eb3c65/859709990682_MBTheCoversV.jpg/100x100bb.jpg",
+				"trackId": 1647443549,
+				"collectionId": 1647443548
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Can't Hold Us",
+				"artistName": "KIDZ BOP Kids",
+				"collectionName": "Kidz Bop 24",
+				"releaseDate": "2013-07-15T12:00:00Z",
+				"primaryGenreName": "Children's Music",
+				"trackTimeMillis": 234600,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/05/4e/b5/054eb5d3-6e96-4e85-cc78-09918727809a/00793018934336.rgb.jpg/100x100bb.jpg",
+				"trackId": 1443079515,
+				"collectionId": 1443078691
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Macklemore%20%26%20Ryan%20Lewis%20Can't%20Hold%20Us%20Ray%20Dalton&limit=10": {
+		"total": 9,
+		"data": [
+			{
+				"id": 61424044,
+				"title": "Can't Hold Us (feat. Ray Dalton)",
+				"title_short": "Can't Hold Us (feat. Ray Dalton)",
+				"title_version": "",
+				"duration": 258,
+				"isrc": "GMM881200002",
+				"readable": true,
+				"artist": {
+					"id": 152291,
+					"name": "Macklemore"
+				},
+				"album": {
+					"id": 6019334,
+					"title": "The Heist",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/238f1c36e8445fd162d1d53b8181ecb5/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/238f1c36e8445fd162d1d53b8181ecb5/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 68420624,
+				"title": "Can't Hold Us - Tribute to Macklemore Ryan Lewis and Ray Dalton",
+				"title_short": "Can't Hold Us - Tribute to Macklemore Ryan Lewis and Ray Dalton",
+				"title_version": "",
+				"duration": 269,
+				"isrc": "USVEI1270601",
+				"readable": true,
+				"artist": {
+					"id": 4905631,
+					"name": "Can't Hold Us"
+				},
+				"album": {
+					"id": 6701522,
+					"title": "Can't Hold Us - Tribute to Macklemore Ryan Lewis and Ray Dalton",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/bf87ac4a0f7368c839a85dfc5e8927f0/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/bf87ac4a0f7368c839a85dfc5e8927f0/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 68420625,
+				"title": "Can't Hold Us - Tribute to Macklemore Ryan Lewis and Ray Dalton (Instrumental Version)",
+				"title_short": "Can't Hold Us - Tribute to Macklemore Ryan Lewis and Ray Dalton (Instrumental Version)",
+				"title_version": "",
+				"duration": 269,
+				"isrc": "USVEI1270602",
+				"readable": true,
+				"artist": {
+					"id": 4905631,
+					"name": "Can't Hold Us"
+				},
+				"album": {
+					"id": 6701522,
+					"title": "Can't Hold Us - Tribute to Macklemore Ryan Lewis and Ray Dalton",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/bf87ac4a0f7368c839a85dfc5e8927f0/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/bf87ac4a0f7368c839a85dfc5e8927f0/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 88042703,
+				"title": "Can't Hold Us (8-bit tribute to Macklemore, Ryan Lewis & Ray Dalton)",
+				"title_short": "Can't Hold Us (8-bit tribute to Macklemore, Ryan Lewis & Ray Dalton)",
+				"title_version": "",
+				"duration": 265,
+				"isrc": "USE830936205",
+				"readable": true,
+				"artist": {
+					"id": 5277358,
+					"name": "The Greatest Bits"
+				},
+				"album": {
+					"id": 8892785,
+					"title": "Billboard Bits, Vol. 1",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/01e70f465b6458a19d34db5fa9042162/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/01e70f465b6458a19d34db5fa9042162/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 87114985,
+				"title": "Can't Hold Us (Originally Performed by Macklemore, Ryan Lewis & Ray Dalton) [Instrumental]",
+				"title_short": "Can't Hold Us (Originally Performed by Macklemore, Ryan Lewis & Ray Dalton) [Instrumental]",
+				"title_version": "",
+				"duration": 259,
+				"isrc": "QMBZ91409683",
+				"readable": true,
+				"artist": {
+					"id": 6774357,
+					"name": "DJ Can't Hold Us"
+				},
+				"album": {
+					"id": 8790559,
+					"title": "Can't Hold Us (Originally Performed by Macklemore, Ryan Lewis & Ray Dalton) [Instrumental]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/c756c83af6dff468918ae8668f6ed171/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/c756c83af6dff468918ae8668f6ed171/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1878931837,
+				"title": "Can't Hold Us (In the Style of Macklemore & Ryan Lewis Feat. Ray Dalton)",
+				"title_short": "Can't Hold Us (In the Style of Macklemore & Ryan Lewis Feat. Ray Dalton)",
+				"title_version": "",
+				"duration": 258,
+				"isrc": "USK4W0004275",
+				"readable": true,
+				"artist": {
+					"id": 535866,
+					"name": "Stingray"
+				},
+				"album": {
+					"id": 349249077,
+					"title": "2010's Radio Hits",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/2617c23bf074ce73c0c3a05afaddb6f2/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/2617c23bf074ce73c0c3a05afaddb6f2/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 73035187,
+				"title": "Can't Hold Us (Instrumental Karaoke) [Originally Performed by Macklemore & Ryan Lewis Feat. Ray Dalton]",
+				"title_short": "Can't Hold Us (Instrumental Karaoke) [Originally Performed by Macklemore & Ryan Lewis Feat. Ray Dalton]",
+				"title_version": "",
+				"duration": 256,
+				"isrc": "QMDA61361046",
+				"readable": true,
+				"artist": {
+					"id": 5264029,
+					"name": "Sing Like The Famous!"
+				},
+				"album": {
+					"id": 7185849,
+					"title": "Can't Hold Us (Instrumental Karaoke) [Originally Performed by Macklemore & Ryan Lewis Feat. Ray Dalton]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/11d447176f5ea28c6986662ac0a1f66e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/11d447176f5ea28c6986662ac0a1f66e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 67634902,
+				"title": "Can't Hold Us (Karaoke Version) (Originally Performed By Macklemore & Ryan Lewis & Ray Dalton)",
+				"title_short": "Can't Hold Us (Karaoke Version)",
+				"title_version": "(Originally Performed By Macklemore & Ryan Lewis & Ray Dalton)",
+				"duration": 257,
+				"isrc": "DEHB51231614",
+				"readable": true,
+				"artist": {
+					"id": 4512965,
+					"name": "Clara Oaks"
+				},
+				"album": {
+					"id": 6621307,
+					"title": "Can't Hold Us (Karaoke Version)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/d1ef7cff9cbaae4403d00339a3ecc6dc/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/d1ef7cff9cbaae4403d00339a3ecc6dc/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 69196376,
+				"title": "Can't Hold Us (Tribute in the Style of Macklemore & Ryan Lewis & Ray Dalton) Ringtone",
+				"title_short": "Can't Hold Us (Tribute in the Style of Macklemore & Ryan Lewis & Ray Dalton) Ringtone",
+				"title_version": "",
+				"duration": 27,
+				"isrc": "FR6V81860401",
+				"readable": true,
+				"artist": {
+					"id": 4992278,
+					"name": "DJ MixMasters"
+				},
+				"album": {
+					"id": 6781278,
+					"title": "Pop Chart Ringtones, Vol. 2",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/00e815bcdc57ad8da1e4f748dabe6dd1/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/00e815bcdc57ad8da1e4f748dabe6dd1/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Eminem%20Lose%20Yourself&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself",
+				"artistName": "Eminem",
+				"collectionName": "8 Mile (Music from and Inspired By the Motion Picture)",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2002-10-29T08:00:00Z",
+				"primaryGenreName": "Soundtrack",
+				"trackTimeMillis": 321960,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/08/23/fc/0823fcd9-cb44-695b-32bf-b3bf51d9f800/00606949351229.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440903439,
+				"collectionId": 1440903339
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself (Instrumental)",
+				"artistName": "Eminem",
+				"collectionName": "8 Mile (Music From And Inspired By The Motion Picture (Expanded Edition))",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2002-01-01T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 323787,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/60/6d/47/606d47e4-fc4e-eee7-eebf-b1db921b1b9d/22UMGIM82604.rgb.jpg/100x100bb.jpg",
+				"trackId": 1649859279,
+				"collectionId": 1649858043
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Eminem (Lose Yourself) [Epic Version]",
+				"artistName": "TM.",
+				"collectionName": "Eminem (Lose Yourself) [Epic Version] - Single",
+				"releaseDate": "2024-12-04T12:00:00Z",
+				"primaryGenreName": "Instrumental",
+				"trackTimeMillis": 138995,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/5e/71/8c/5e718c8d-e97d-19fc-b502-f8ec16bf87ab/859798534286_cover.jpg/100x100bb.jpg",
+				"trackId": 1783944410,
+				"collectionId": 1783944015
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself",
+				"artistName": "Eminem",
+				"collectionName": "SHADYXV",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2002-10-22T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 320573,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/a0/93/7f/a0937f91-ca3f-5ce8-e053-95eaed3d92fb/00602547130129.rgb.jpg/100x100bb.jpg",
+				"trackId": 1443175650,
+				"collectionId": 1443175502
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself (Soundtrack Version) [Edited Version]",
+				"artistName": "Eminem",
+				"collectionName": "Curtain Call: The Hits",
+				"releaseDate": "2002-10-22T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 321213,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/27/79/d5/2779d529-ff10-c15d-1c50-08cd46dd1237/06UMGIM17625.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440723561,
+				"collectionId": 1440723318
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself (Medieval Bardcore Version)",
+				"artistName": "Beedle The Bardcore",
+				"collectionName": "Medieval Eminem",
+				"releaseDate": "2021-08-03T12:00:00Z",
+				"primaryGenreName": "Instrumental",
+				"trackTimeMillis": 198408,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/f9/92/ab/f992abad-9437-aee2-b9dd-4e0c2ef6d475/198001393693.png/100x100bb.jpg",
+				"trackId": 1579469213,
+				"collectionId": 1579469212
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself (Demo Version)",
+				"artistName": "Eminem",
+				"collectionName": "SHADYXV",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2014-11-24T12:00:00Z",
+				"primaryGenreName": "Hip-Hop/Rap",
+				"trackTimeMillis": 180253,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/a0/93/7f/a0937f91-ca3f-5ce8-e053-95eaed3d92fb/00602547130129.rgb.jpg/100x100bb.jpg",
+				"trackId": 1443175779,
+				"collectionId": 1443175502
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself (Punk Remix) [As Made Famous By Eminem]",
+				"artistName": "Cut Down Clay",
+				"collectionName": "Hip Hop Goes Punk",
+				"releaseDate": "2012-02-02T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 306364,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/23/3c/2f/233c2fc9-d7ec-7f49-3b26-d8bfde9cdbae/mzi.dgvarmlt.jpg/100x100bb.jpg",
+				"trackId": 499865862,
+				"collectionId": 499865762
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself (Instrumental)",
+				"artistName": "Can You Flow?",
+				"collectionName": "Can You Flow? Presents Instrumental Renditions of Eminem's Greatest Hits",
+				"releaseDate": "2006-10-31T12:00:00Z",
+				"primaryGenreName": "Hip-Hop",
+				"trackTimeMillis": 291947,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music7/v4/4d/c5/89/4dc589f9-15e0-893b-aad2-1b9c94564aa6/1410_300dpi.jpg/100x100bb.jpg",
+				"trackId": 1002132692,
+				"collectionId": 1002132685
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Lose Yourself",
+				"artistName": "Rockabye Baby!",
+				"collectionName": "Lullaby Renditions of Eminem",
+				"releaseDate": "2014-10-28T12:00:00Z",
+				"primaryGenreName": "Children's Music",
+				"trackTimeMillis": 194720,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music1/v4/0e/52/8a/0e528a50-a9db-8535-daea-a1a7aefbad8e/9703_300dpi.jpg/100x100bb.jpg",
+				"trackId": 910752867,
+				"collectionId": 910752789
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Eminem%20Lose%20Yourself&limit=10": {
+		"total": 79,
+		"data": [
+			{
+				"id": 1109731,
+				"title": "Lose Yourself",
+				"title_short": "Lose Yourself",
+				"title_version": "",
+				"duration": 326,
+				"isrc": "USIR10211559",
+				"readable": true,
+				"artist": {
+					"id": 13,
+					"name": "Eminem"
+				},
+				"album": {
+					"id": 119606,
+					"title": "Curtain Call: The Hits",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e2b36a9fda865cb2e9ed1476b6291a7d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/e2b36a9fda865cb2e9ed1476b6291a7d/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1976613577,
+				"title": "Lose Yourself (Original Demo Version)",
+				"title_short": "Lose Yourself",
+				"title_version": "(Original Demo Version)",
+				"duration": 180,
+				"isrc": "USUM71416305",
+				"readable": true,
+				"artist": {
+					"id": 13,
+					"name": "Eminem"
+				},
+				"album": {
+					"id": 368443007,
+					"title": "8 Mile (Music From And Inspired By The Motion Picture Expanded Edition)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a16423673867af8c78f5f6a5337529fd/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a16423673867af8c78f5f6a5337529fd/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3131343851,
+				"title": "Eminem (Lose Yourself)[Epic Version]",
+				"title_short": "Eminem (Lose Yourself)[Epic Version]",
+				"title_version": "",
+				"duration": 139,
+				"isrc": "TCAJB2432776",
+				"readable": true,
+				"artist": {
+					"id": 13399333,
+					"name": "TM."
+				},
+				"album": {
+					"id": 680776751,
+					"title": "Eminem (Lose Yourself)[Epic Version]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e1e0dac92d9a8af5816f5011b83e0f36/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/e1e0dac92d9a8af5816f5011b83e0f36/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 103121202,
+				"title": "Lose Yourself (From \"8 Mile\")",
+				"title_short": "Lose Yourself (From \"8 Mile\")",
+				"title_version": "",
+				"duration": 266,
+				"isrc": "GBPS81525674",
+				"readable": true,
+				"artist": {
+					"id": 13,
+					"name": "Eminem"
+				},
+				"album": {
+					"id": 10719388,
+					"title": "Best Ever Soundtracks",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/572c482ba64339e66e03bd27f5b5aecd/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/572c482ba64339e66e03bd27f5b5aecd/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 556853932,
+				"title": "Lose Yourself",
+				"title_short": "Lose Yourself",
+				"title_version": "",
+				"duration": 257,
+				"isrc": "NLSU31800030",
+				"readable": true,
+				"artist": {
+					"id": 5739668,
+					"name": "Maria Fiselier"
+				},
+				"album": {
+					"id": 73548932,
+					"title": "Beste Zangers Seizoen 11 (Aflevering 4 - Hoofdartiest Davina Michelle)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f708e4e5970387ec49ff239fa4654212/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/f708e4e5970387ec49ff239fa4654212/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1005114182,
+				"title": "Lose Yourself (Tabata)",
+				"title_short": "Lose Yourself (Tabata)",
+				"title_version": "",
+				"duration": 242,
+				"isrc": "TCADY1823998",
+				"readable": true,
+				"artist": {
+					"id": 1389928,
+					"name": "Tabata Songs"
+				},
+				"album": {
+					"id": 157342982,
+					"title": "Tabata Songs Classics",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/b94439a25230905eb2fdf267ed4c5550/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/b94439a25230905eb2fdf267ed4c5550/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 936565722,
+				"title": "Lose Yourself (cover Eminem)",
+				"title_short": "Lose Yourself (cover Eminem)",
+				"title_version": "",
+				"duration": 328,
+				"isrc": "FRDCX2020190",
+				"readable": true,
+				"artist": {
+					"id": 91998902,
+					"name": "Art'Skull"
+				},
+				"album": {
+					"id": 143199522,
+					"title": "Blackwaters",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/35fc8b8e4fda412660dba544c385d0ea/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/35fc8b8e4fda412660dba544c385d0ea/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3856073971,
+				"title": "Lose yourself- Eminem (Sohtech rework)",
+				"title_short": "Lose yourself- Eminem (Sohtech rework)",
+				"title_version": "",
+				"duration": 304,
+				"isrc": "QZK6F2699691",
+				"readable": true,
+				"artist": {
+					"id": 363269802,
+					"name": "Sohtech"
+				},
+				"album": {
+					"id": 923177811,
+					"title": "Lose yourself- Eminem (Sohtech rework)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7aa32b4316232134d97561fd65e8ed28/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/7aa32b4316232134d97561fd65e8ed28/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 135254718,
+				"title": "Lose Yourself (Instrumental)",
+				"title_short": "Lose Yourself (Instrumental)",
+				"title_version": "",
+				"duration": 336,
+				"isrc": "USHM81670292",
+				"readable": true,
+				"artist": {
+					"id": 9094752,
+					"name": "Sparsh Shah"
+				},
+				"album": {
+					"id": 14442560,
+					"title": "Purhythm (Tribute to Eminem)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/8c1b27717f21c0dd3db5525df9e495d3/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/8c1b27717f21c0dd3db5525df9e495d3/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 575114612,
+				"title": "8 Mile - Lose Yourself - Main Theme",
+				"title_short": "8 Mile - Lose Yourself - Main Theme",
+				"title_version": "",
+				"duration": 320,
+				"isrc": "USLZJ1889094",
+				"readable": true,
+				"artist": {
+					"id": 11206176,
+					"name": "Geek Music"
+				},
+				"album": {
+					"id": 76841792,
+					"title": "8 Mile - Lose Yourself - Main Theme",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/38e15bdcacaf7f9ead6bb3e04443072b/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/38e15bdcacaf7f9ead6bb3e04443072b/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Coldplay%20Yellow&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow",
+				"artistName": "Coldplay",
+				"collectionName": "Parachutes",
+				"releaseDate": "2000-06-26T07:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 269208,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f5/93/8c/f5938c49-964c-31d1-4b33-78b634f71fb7/190295978075.jpg/100x100bb.jpg",
+				"trackId": 1122782283,
+				"collectionId": 1122782080
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow (Live)",
+				"artistName": "Coldplay",
+				"collectionName": "Live 2012",
+				"releaseDate": "2012-11-19T08:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 411973,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/8d/27/16/8d2716ea-4e3a-466f-5aa7-cf750e762bb6/5099941647356_1500x1500_300dpi.jpg/100x100bb.jpg",
+				"trackId": 693573510,
+				"collectionId": 693573205
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow (Coldplay)",
+				"artistName": "MelodiousTones",
+				"collectionName": "Yellow (Coldplay) - Single",
+				"releaseDate": "2021-01-27T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 264751,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/a8/10/24/a8102451-5844-5782-5eec-77a6eb759648/artwork.jpg/100x100bb.jpg",
+				"trackId": 1551939412,
+				"collectionId": 1551939411
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow (Live In Sydney)",
+				"artistName": "Coldplay",
+				"collectionName": "Live 2003",
+				"releaseDate": "2003-11-01T08:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 336667,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/9a/cf/a3/9acfa331-2f92-0edf-2ca9-2765c33d3598/724359534558.jpg/100x100bb.jpg",
+				"trackId": 695901201,
+				"collectionId": 695900885
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow (Coldplay) [Fingerstyle]",
+				"artistName": "Daniel Padim",
+				"collectionName": "Yellow (Coldplay) [Fingerstyle] - Single",
+				"releaseDate": "2019-06-24T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 251067,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music113/v4/58/76/68/58766874-c1f0-d25b-0c0b-0fdc993d034e/artwork.jpg/100x100bb.jpg",
+				"trackId": 1469850783,
+				"collectionId": 1469850782
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Coldplay - Yellow - Piano Instrumental",
+				"artistName": "Piano Instrumentals & Piano Covers",
+				"collectionName": "Coldplay - Piano Instrumentals (Piano Covers) - EP",
+				"releaseDate": "2023-05-20T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 273488,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/4a/79/3d/4a793d83-b547-114e-2250-ac9972bd9d51/8721056002351.png/100x100bb.jpg",
+				"trackId": 1711268621,
+				"collectionId": 1711268615
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow",
+				"artistName": "Vitamin String Quartet",
+				"collectionName": "Vitamin String Quartet Performs Coldplay",
+				"releaseDate": "2002-11-26T12:00:00Z",
+				"primaryGenreName": "Pop/Rock",
+				"trackTimeMillis": 218160,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/a9/91/eb/a991eb00-4adb-3cae-0219-04521a852cad/8476_cover_2014_300dpi.jpg/100x100bb.jpg",
+				"trackId": 953646989,
+				"collectionId": 953646976
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow",
+				"artistName": "Rockabye Baby!",
+				"collectionName": "Lullaby Renditions of Coldplay",
+				"releaseDate": "2006-08-29T12:00:00Z",
+				"primaryGenreName": "Lullabies",
+				"trackTimeMillis": 265560,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music3/v4/2b/dc/01/2bdc01eb-1192-5896-7514-e3d0f03778d4/9604_300dpi.jpg/100x100bb.jpg",
+				"trackId": 982330970,
+				"collectionId": 982330967
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow (Live In Buenos Aires)",
+				"artistName": "Coldplay",
+				"collectionName": "Live In Buenos Aires",
+				"releaseDate": "2018-12-07T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 350467,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/1b/28/6b/1b286b92-a0ef-d94f-ba3a-e9b9072530f5/190295530983.jpg/100x100bb.jpg",
+				"trackId": 1438770434,
+				"collectionId": 1438770205
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Yellow",
+				"artistName": "Coldplay",
+				"collectionName": "Yellow - Single",
+				"releaseDate": "2000-06-26T07:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 266773,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/76/4b/b3/764bb354-721e-f9cc-9eac-961d6c7ac97d/dj.cqayyyex.jpg/100x100bb.jpg",
+				"trackId": 695721392,
+				"collectionId": 695721212
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Coldplay%20Yellow&limit=10": {
+		"total": 139,
+		"data": [
+			{
+				"id": 3128096,
+				"title": "Yellow",
+				"title_short": "Yellow",
+				"title_version": "",
+				"duration": 266,
+				"isrc": "GBAYE0000267",
+				"readable": true,
+				"artist": {
+					"id": 892,
+					"name": "Coldplay"
+				},
+				"album": {
+					"id": 301663,
+					"title": "Parachutes",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/970dce98eeea6729244c0ae71707a83d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/970dce98eeea6729244c0ae71707a83d/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 599314052,
+				"title": "Yellow (Live in Buenos Aires)",
+				"title_short": "Yellow",
+				"title_version": "(Live in Buenos Aires)",
+				"duration": 350,
+				"isrc": "GBAYE1800780",
+				"readable": true,
+				"artist": {
+					"id": 892,
+					"name": "Coldplay"
+				},
+				"album": {
+					"id": 80900852,
+					"title": "Live in Buenos Aires",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1bc81da3e04b66ccc4faa35fa3c2e74f/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/1bc81da3e04b66ccc4faa35fa3c2e74f/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 62031182,
+				"title": "Yellow (Live)",
+				"title_short": "Yellow",
+				"title_version": "(Live)",
+				"duration": 411,
+				"isrc": "GBAYE1202183",
+				"readable": true,
+				"artist": {
+					"id": 892,
+					"name": "Coldplay"
+				},
+				"album": {
+					"id": 6082458,
+					"title": "Live 2012",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/eb56003f4c40510f1de1920a2ebc6efb/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/eb56003f4c40510f1de1920a2ebc6efb/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3089669,
+				"title": "Yellow (Live in Sydney)",
+				"title_short": "Yellow",
+				"title_version": "(Live in Sydney)",
+				"duration": 336,
+				"isrc": "GBAYE0301688",
+				"readable": true,
+				"artist": {
+					"id": 892,
+					"name": "Coldplay"
+				},
+				"album": {
+					"id": 299223,
+					"title": "Live 2003",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/23a9aca630a3f64fb5cc7bc928084837/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/23a9aca630a3f64fb5cc7bc928084837/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3157591,
+				"title": "Help Is Round the Corner",
+				"title_short": "Help Is Round the Corner",
+				"title_version": "",
+				"duration": 156,
+				"isrc": "GBAYE0000412",
+				"readable": true,
+				"artist": {
+					"id": 892,
+					"name": "Coldplay"
+				},
+				"album": {
+					"id": 303586,
+					"title": "Yellow",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6501bd06032fbd397bc1ad06233f5392/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6501bd06032fbd397bc1ad06233f5392/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 3157592,
+				"title": "No More Keeping My Feet on the Ground",
+				"title_short": "No More Keeping My Feet on the Ground",
+				"title_version": "",
+				"duration": 271,
+				"isrc": "GBAYE9802297",
+				"readable": true,
+				"artist": {
+					"id": 892,
+					"name": "Coldplay"
+				},
+				"album": {
+					"id": 303586,
+					"title": "Yellow",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6501bd06032fbd397bc1ad06233f5392/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6501bd06032fbd397bc1ad06233f5392/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 700878652,
+				"title": "Yellow (Coldplay) [Fingerstyle]",
+				"title_short": "Yellow (Coldplay) [Fingerstyle]",
+				"title_version": "",
+				"duration": 251,
+				"isrc": "QZFYZ1910333",
+				"readable": true,
+				"artist": {
+					"id": 12598113,
+					"name": "Daniel Padim"
+				},
+				"album": {
+					"id": 101276912,
+					"title": "Yellow (Coldplay) [Fingerstyle]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/cd46ed50b2e5e90f1f63ce527119ae01/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/cd46ed50b2e5e90f1f63ce527119ae01/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2286852757,
+				"title": "Coldplay - Yellow - Piano Cover",
+				"title_short": "Coldplay - Yellow - Piano Cover",
+				"title_version": "",
+				"duration": 273,
+				"isrc": "SE5XG2345516",
+				"readable": true,
+				"artist": {
+					"id": 214011037,
+					"name": "Coldplay Piano Covers"
+				},
+				"album": {
+					"id": 442262887,
+					"title": "Coldplay - Piano Covers",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/dac1a66a3502f984d78fffb6f007f0fe/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/dac1a66a3502f984d78fffb6f007f0fe/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 128320115,
+				"title": "Yellow (in the style of Coldplay)",
+				"title_short": "Yellow (in the style of Coldplay)",
+				"duration": 278,
+				"isrc": "BGA261613718",
+				"readable": true,
+				"artist": {
+					"id": 10680439,
+					"name": "Pop Music Workshop"
+				},
+				"album": {
+					"id": 13551843,
+					"title": "Free guitar backing tracks Vol.3",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6877f35377ad3727aca8f63af2fd1043/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6877f35377ad3727aca8f63af2fd1043/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1230899392,
+				"title": "Yellow (Coldplay)",
+				"title_short": "Yellow (Coldplay)",
+				"title_version": "",
+				"duration": 264,
+				"isrc": "QZFZ42137397",
+				"readable": true,
+				"artist": {
+					"id": 120582272,
+					"name": "MelodiousTones"
+				},
+				"album": {
+					"id": 204827392,
+					"title": "Yellow (Coldplay)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1a0dd951de3457fa3c7b467168d5d151/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/1a0dd951de3457fa3c7b467168d5d151/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Metallica%20Enter%20Sandman&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman",
+				"artistName": "Metallica",
+				"collectionName": "Metallica (Deluxe Box Set)",
+				"releaseDate": "1991-07-29T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 331560,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2e/94/95/2e9495d7-dfe3-ddc8-87ef-6ef797a60218/850007452056.png/100x100bb.jpg",
+				"trackId": 1572051818,
+				"collectionId": 1572051816
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Live)",
+				"artistName": "Metallica",
+				"collectionName": "M72 World Tour: Mexico City",
+				"releaseDate": "2025-03-13T07:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 406210,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/54/09/42/54094202-0cf0-6411-b7b4-0ab8c54d3267/810083963082.png/100x100bb.jpg",
+				"trackId": 1801286009,
+				"collectionId": 1801286006
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Radio Edit)",
+				"artistName": "Metallica",
+				"collectionName": "Metallica (Deluxe Box Set)",
+				"releaseDate": "1991-08-12T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 242081,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2e/94/95/2e9495d7-dfe3-ddc8-87ef-6ef797a60218/850007452056.png/100x100bb.jpg",
+				"trackId": 1572051972,
+				"collectionId": 1572051816
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Live at Tushino Airfield, Moscow, Russia, 09/28/91)",
+				"artistName": "Metallica",
+				"collectionName": "Metallica (Deluxe Box Set)",
+				"releaseDate": "1991-08-12T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 321413,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2e/94/95/2e9495d7-dfe3-ddc8-87ef-6ef797a60218/850007452056.png/100x100bb.jpg",
+				"trackId": 1572051834,
+				"collectionId": 1572051816
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Live)",
+				"artistName": "Metallica",
+				"collectionName": "Metallica Through the Never (Music from the Motion Picture)",
+				"releaseDate": "2013-09-24T07:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 381667,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music6/v4/0e/f0/c5/0ef0c567-7802-d4d8-ebf0-9d35e88a77e0/Metallica_TTN_Soundtrack_RGB.jpg/100x100bb.jpg",
+				"trackId": 679167193,
+				"collectionId": 679166887
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Live at Wembley Stadium, London, England, 04/20/92)",
+				"artistName": "Metallica",
+				"collectionName": "Metallica (Deluxe Box Set)",
+				"releaseDate": "1991-08-12T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 418677,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/2e/94/95/2e9495d7-dfe3-ddc8-87ef-6ef797a60218/850007452056.png/100x100bb.jpg",
+				"trackId": 1572051830,
+				"collectionId": 1572051816
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Live)",
+				"artistName": "Metallica",
+				"collectionName": "The 25th Anniversary Rock & Roll Hall of Fame Concerts (Live) [Bonus Track Version]",
+				"collectionArtistName": "Various Artists",
+				"releaseDate": "2010-11-02T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 374120,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music/a6/0c/62/mzi.lgslzypa.jpg/100x100bb.jpg",
+				"trackId": 399596294,
+				"collectionId": 399596065
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman (Live)",
+				"artistName": "Metallica & San Francisco Symphony",
+				"collectionName": "S&M2 (Live)",
+				"collectionArtistName": "Metallica",
+				"releaseDate": "2020-08-28T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 525759,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/bd/81/8e/bd818ef8-a6bc-5bef-2f23-feb21614c8be/850007452285.png/100x100bb.jpg",
+				"trackId": 1515553797,
+				"collectionId": 1515553520
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman",
+				"artistName": "Weezer",
+				"collectionName": "The Metallica Blacklist",
+				"collectionArtistName": "Metallica",
+				"releaseDate": "2021-08-03T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 334187,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ed/fe/b0/edfeb093-1dc2-86ff-db02-69912e370255/810083960050.png/100x100bb.jpg",
+				"trackId": 1572050310,
+				"collectionId": 1572050303
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Enter Sandman",
+				"artistName": "Metallica",
+				"collectionName": "Metallica (Remastered)",
+				"releaseDate": "1991-07-29T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 331560,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/9e/80/1b/9e801b06-67fa-0990-2d15-85480ad3cd46/850007452025.png/100x100bb.jpg",
+				"trackId": 1572046436,
+				"collectionId": 1572046434
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Metallica%20Enter%20Sandman&limit=10": {
+		"total": 121,
+		"data": []
+	},
+	"https://itunes.apple.com/search?term=The%20Weeknd%20Blinding%20Lights&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights (Remix)",
+				"artistName": "The Weeknd & ROSALÍA",
+				"collectionName": "Blinding Lights (Remix) - Single",
+				"releaseDate": "2020-12-04T12:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 216123,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/61/e7/3f/61e73f94-018d-5f50-50ec-8521952bc72e/20UM1IM11629.rgb.jpg/100x100bb.jpg",
+				"trackId": 1542842761,
+				"collectionId": 1542842760
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights",
+				"artistName": "The Weeknd",
+				"collectionName": "After Hours",
+				"releaseDate": "2019-11-29T08:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 200046,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/6f/bc/e6/6fbce6c4-c38c-72d8-4fd0-66cfff32f679/20UMGIM12176.rgb.jpg/100x100bb.jpg",
+				"trackId": 1499378607,
+				"collectionId": 1499378108
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights",
+				"artistName": "The Weeknd",
+				"collectionName": "After Hours (Deluxe)",
+				"releaseDate": "2019-11-29T08:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 200046,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/03/e1/67/03e167d6-ee05-eb32-55e9-c5040f55a8bf/20UMGIM21166.rgb.jpg/100x100bb.jpg",
+				"trackId": 1505683988,
+				"collectionId": 1505683705
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights (Live)",
+				"artistName": "The Weeknd",
+				"collectionName": "Live At SoFi Stadium",
+				"releaseDate": "2023-03-03T12:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 253365,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/03/2d/c1/032dc13a-dce4-672a-b501-d16d3b31be07/23UMGIM20988.rgb.jpg/100x100bb.jpg",
+				"trackId": 1676308593,
+				"collectionId": 1676301803
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights",
+				"artistName": "The Weeknd",
+				"collectionName": "After Hours",
+				"releaseDate": "2019-11-29T08:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 200046,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/2b/b9/fe/2bb9fef5-d7f3-8345-25a9-db0e79fde4e4/20UMGIM11048.rgb.jpg/100x100bb.jpg",
+				"trackId": 1499386265,
+				"collectionId": 1499385848
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights",
+				"artistName": "The Weeknd",
+				"collectionName": "The Highlights",
+				"releaseDate": "2019-11-29T08:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 200046,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/dc/e9/95/dce995ab-5287-cba4-4966-46d16bf1c072/21UMGIM06667.rgb.jpg/100x100bb.jpg",
+				"trackId": 1550875220,
+				"collectionId": 1550875218
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights (Major Lazer Remix) [feat. Major Lazer]",
+				"artistName": "The Weeknd",
+				"collectionName": "Blinding Lights (Major Lazer Remix) [feat. Major Lazer] - Single",
+				"releaseDate": "2020-04-17T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 197961,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music123/v4/c7/fe/ec/c7feec6a-36df-9c30-f5f5-200e1015e0ad/20UMGIM28108.rgb.jpg/100x100bb.jpg",
+				"trackId": 1508046220,
+				"collectionId": 1508046217
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights",
+				"artistName": "The Weeknd",
+				"collectionName": "The Highlights (Deluxe)",
+				"releaseDate": "2020-03-20T07:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 200046,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/3d/32/7f/3d327fc3-271d-e4a1-a956-52fdb93c2d62/24UMGIM13979.rgb.jpg/100x100bb.jpg",
+				"trackId": 1729919128,
+				"collectionId": 1729918970
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights",
+				"artistName": "Rockabye Baby!",
+				"collectionName": "Lullaby Renditions of the Weeknd",
+				"releaseDate": "2021-09-10T12:00:00Z",
+				"primaryGenreName": "Children's Music",
+				"trackTimeMillis": 186093,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/09/4a/e6/094ae6ab-9d0d-421b-55a8-97909d73dcd6/1692.jpg/100x100bb.jpg",
+				"trackId": 1580605680,
+				"collectionId": 1580605679
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Blinding Lights (feat. Chromatics) [Chromatics Remix]",
+				"artistName": "The Weeknd",
+				"collectionName": "After Hours (Remixes) - EP",
+				"releaseDate": "2020-03-23T07:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 261239,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/71/12/03/711203e0-f7b9-9f4e-caff-540736fda45c/20UMGIM25005.rgb.jpg/100x100bb.jpg",
+				"trackId": 1505682603,
+				"collectionId": 1505682596
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=The%20Weeknd%20Blinding%20Lights&limit=10": {
+		"total": 75,
+		"data": [
+			{
+				"id": 908604612,
+				"title": "Blinding Lights",
+				"title_short": "Blinding Lights",
+				"title_version": "",
+				"duration": 200,
+				"isrc": "USUG11904206",
+				"readable": true,
+				"artist": {
+					"id": 4050205,
+					"name": "The Weeknd"
+				},
+				"album": {
+					"id": 137217782,
+					"title": "After Hours",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/fd00ebd6d30d7253f813dba3bb1c66a9/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/fd00ebd6d30d7253f813dba3bb1c66a9/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1161752782,
+				"title": "Blinding Lights (Remix)",
+				"title_short": "Blinding Lights",
+				"title_version": "(Remix)",
+				"duration": 216,
+				"isrc": "USUG12004507",
+				"readable": true,
+				"artist": {
+					"id": 4050205,
+					"name": "The Weeknd"
+				},
+				"album": {
+					"id": 190172832,
+					"title": "Blinding Lights (Remix)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/555be3736048d8370077be6e4cb6a369/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/555be3736048d8370077be6e4cb6a369/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2166259437,
+				"title": "Blinding Lights (Live)",
+				"title_short": "Blinding Lights",
+				"title_version": "(Live)",
+				"duration": 253,
+				"isrc": "USUG12301431",
+				"readable": true,
+				"artist": {
+					"id": 4050205,
+					"name": "The Weeknd"
+				},
+				"album": {
+					"id": 411519667,
+					"title": "Live At SoFi Stadium",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/17bf5f732c2943ad4cb2bf3778b806cc/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/17bf5f732c2943ad4cb2bf3778b806cc/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1078622732,
+				"title": "Blinding Lights (Chromatics Remix)",
+				"title_short": "Blinding Lights",
+				"title_version": "(Chromatics Remix)",
+				"duration": 261,
+				"isrc": "USUG12001115",
+				"readable": true,
+				"artist": {
+					"id": 4050205,
+					"name": "The Weeknd"
+				},
+				"album": {
+					"id": 172920142,
+					"title": "Blinding Lights",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/cf22674710be326f668dfb27d5af9576/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/cf22674710be326f668dfb27d5af9576/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1078622722,
+				"title": "Blinding Lights (Major Lazer Remix)",
+				"title_short": "Blinding Lights",
+				"title_version": "(Major Lazer Remix)",
+				"duration": 198,
+				"isrc": "USUG12001402",
+				"readable": true,
+				"artist": {
+					"id": 4050205,
+					"name": "The Weeknd"
+				},
+				"album": {
+					"id": 172920142,
+					"title": "Blinding Lights",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/cf22674710be326f668dfb27d5af9576/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/cf22674710be326f668dfb27d5af9576/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2282985187,
+				"title": "Blinding Lights The Weeknd",
+				"title_short": "Blinding Lights The Weeknd",
+				"title_version": "",
+				"duration": 185,
+				"isrc": "QM3DF2209090",
+				"readable": true,
+				"artist": {
+					"id": 164098067,
+					"name": "Pancadão GD Som"
+				},
+				"album": {
+					"id": 441197957,
+					"title": "Seleção 26",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/fe2c5c88f84c9812428ea0fa558625f3/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/fe2c5c88f84c9812428ea0fa558625f3/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1146504462,
+				"title": "Blinding Lights (Original by The Weeknd)",
+				"title_short": "Blinding Lights",
+				"title_version": "(Original by The Weeknd)",
+				"duration": 195,
+				"isrc": "CH7812071410",
+				"readable": true,
+				"artist": {
+					"id": 113360572,
+					"name": "Piano Cover by Lily Morgan"
+				},
+				"album": {
+					"id": 187268082,
+					"title": "Blinding Lights (Original by The Weeknd)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1f5c1228f36bcb0cb16072dab082ec18/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/1f5c1228f36bcb0cb16072dab082ec18/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 862500012,
+				"title": "Blinding Lights (The Weeknd Cover Mix)",
+				"title_short": "Blinding Lights",
+				"title_version": "(The Weeknd Cover Mix)",
+				"duration": 197,
+				"isrc": "FRX281966069",
+				"readable": true,
+				"artist": {
+					"id": 88692512,
+					"name": "Alba"
+				},
+				"album": {
+					"id": 128964352,
+					"title": "Blinding Lights (The Weeknd Cover Mix)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/4c0c99c25a7ba692dc7606252e41cba4/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/4c0c99c25a7ba692dc7606252e41cba4/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1207753142,
+				"title": "Blinding Lights (8-Bit The Weeknd Emulation)",
+				"title_short": "Blinding Lights (8-Bit The Weeknd Emulation)",
+				"title_version": "",
+				"duration": 197,
+				"isrc": "AUXN22119845",
+				"readable": true,
+				"artist": {
+					"id": 5845951,
+					"name": "8-Bit Arcade"
+				},
+				"album": {
+					"id": 199862662,
+					"title": "By Request, Vol. 114",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/d793963acf33c3108fa6b37d441d5773/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/d793963acf33c3108fa6b37d441d5773/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2674904042,
+				"title": "Blinding lights The Weeknd (Piano arrangement)",
+				"title_short": "Blinding lights The Weeknd (Piano arrangement)",
+				"title_version": "",
+				"duration": 174,
+				"isrc": "QZES72407203",
+				"readable": true,
+				"artist": {
+					"id": 253774772,
+					"name": "Piano Off"
+				},
+				"album": {
+					"id": 551576892,
+					"title": "Blinding lights The Weeknd (Piano arrangement)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/5dc57ba259b8d4a449662d2dc1f3e16d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/5dc57ba259b8d4a449662d2dc1f3e16d/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Artist%20Title&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Title",
+				"artistName": "Wandering Artist",
+				"collectionName": "Never Play Again (Original Game Soundtrack)",
+				"releaseDate": "2024-10-28T12:00:00Z",
+				"primaryGenreName": "Soundtrack",
+				"trackTimeMillis": 96760,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/5b/17/7e/5b177e1d-34f6-f471-1876-6118d77ad65d/artwork.jpg/100x100bb.jpg",
+				"trackId": 1777167539,
+				"collectionId": 1777167538
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Make Them Remember",
+				"artistName": "Drake",
+				"collectionName": "ICEMAN",
+				"releaseDate": "2026-05-15T12:00:00Z",
+				"primaryGenreName": "Hip-Hop",
+				"trackTimeMillis": 323713,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/7f/39/61/7f396123-be56-bc11-eaab-976441808e58/26UMGIM63622.rgb.jpg/100x100bb.jpg",
+				"trackId": 6769649665,
+				"collectionId": 6769649287
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Say Never",
+				"artistName": "Brandy",
+				"collectionName": "Never Say Never",
+				"releaseDate": "1998-06-09T07:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 309467,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/b1/52/c5/b152c569-f81f-4005-7b61-5b54b855564d/s06.hfdwpdak.jpg/100x100bb.jpg",
+				"trackId": 20913102,
+				"collectionId": 20913004
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "my man...",
+				"artistName": "Queen Naija & Mariah the Scientist",
+				"collectionName": "30.",
+				"collectionArtistName": "Queen Naija",
+				"releaseDate": "2025-10-23T12:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 148146,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/ef/ea/22/efea222c-5553-84d8-9d11-0eec161fada5/25UM1IM35270.rgb.jpg/100x100bb.jpg",
+				"trackId": 1843464966,
+				"collectionId": 1843464957
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "my man...",
+				"artistName": "Queen Naija & Mariah the Scientist",
+				"collectionName": "30.",
+				"collectionArtistName": "Queen Naija",
+				"releaseDate": "2025-10-23T12:00:00Z",
+				"primaryGenreName": "R&B/Soul",
+				"trackTimeMillis": 148146,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b0/ba/65/b0ba65be-f480-b17e-4a92-01de7e9d236d/25UM1IM35257.rgb.jpg/100x100bb.jpg",
+				"trackId": 1847712856,
+				"collectionId": 1847712697
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "This Song Has No Title (2014 Remaster)",
+				"artistName": "Elton John",
+				"collectionName": "Goodbye Yellow Brick Road (2014 Remaster)",
+				"releaseDate": "1973-10-05T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 143394,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/b3/60/b6/b360b655-4d28-179d-d0d4-4e128ebdf4c9/13UAEIM19273.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440863124,
+				"collectionId": 1440863013
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Title",
+				"artistName": "Visual",
+				"collectionName": "Artist Focus",
+				"releaseDate": "2018-03-27T12:00:00Z",
+				"primaryGenreName": "Trance",
+				"trackTimeMillis": 444184,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/bf/85/58/bf85585f-4fee-21a8-d8af-fc8443c32bf6/cover.jpg/100x100bb.jpg",
+				"trackId": 1397046803,
+				"collectionId": 1397046799
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "This Song Has No Title",
+				"artistName": "Elton John",
+				"collectionName": "Goodbye Yellow Brick Road (40th Anniversary Celebration / Super Deluxe Edition) [2014 Remaster]",
+				"releaseDate": "1973-10-05T07:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 143394,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/dc/02/ee/dc02ee4a-ff56-75df-64d4-9afcf8c0885d/18UMGIM35649.rgb.jpg/100x100bb.jpg",
+				"trackId": 1484998285,
+				"collectionId": 1484997755
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "This Song Has No Title (Remastered 2014)",
+				"artistName": "Elton John",
+				"collectionName": "Goodbye Yellow Brick Road (Deluxe)",
+				"releaseDate": "1973-10-05T12:00:00Z",
+				"primaryGenreName": "Rock",
+				"trackTimeMillis": 143394,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/a2/e6/d6/a2e6d692-4166-1b2d-b935-34cf60a4a70f/13UAEIM26828.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440883269,
+				"collectionId": 1440883261
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Fake My Own Death And Go Platinum",
+				"artistName": "Psychostick",
+				"collectionName": "We Couldn't Think of a Title",
+				"releaseDate": "2003-05-16T12:00:00Z",
+				"primaryGenreName": "Metal",
+				"trackTimeMillis": 296877,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f4/f3/1a/f4f31a83-58cd-b817-de74-4a81ab103edc/3245.jpg/100x100bb.jpg",
+				"trackId": 1870852783,
+				"collectionId": 1870852199
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Artist%20Title&limit=10": {
+		"total": 58,
+		"data": [
+			{
+				"id": 69034616,
+				"title": "Main Title: De Guella / The Green Leaves of Summer",
+				"title_short": "Main Title: De Guella / The Green Leaves of Summer",
+				"title_version": "",
+				"duration": 132,
+				"isrc": "GBSMU1354421",
+				"readable": true,
+				"artist": {
+					"id": 4983048,
+					"name": "Dimitri Tiomkin (conductor), United Artists Studio Orchestra"
+				},
+				"album": {
+					"id": 6764606,
+					"title": "The Alamo (1960 Film Score)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/c65833493a93d8fdf7628e70ef5cdb9a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/c65833493a93d8fdf7628e70ef5cdb9a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 109801934,
+				"title": "Titel",
+				"title_short": "Titel",
+				"title_version": "",
+				"duration": 210,
+				"isrc": "NLB819708609",
+				"readable": true,
+				"artist": {
+					"id": 4373396,
+					"name": "Artiest"
+				},
+				"album": {
+					"id": 11439346,
+					"title": "Pedro,s Pizza",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9815888841f9978a9143b9ed535719b2/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/9815888841f9978a9143b9ed535719b2/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 2045430017,
+				"title": "Demo Title",
+				"title_short": "Demo Title",
+				"title_version": "",
+				"duration": 240,
+				"isrc": "ITZ072114890",
+				"readable": true,
+				"artist": {
+					"id": 422696,
+					"name": "Demo Artist"
+				},
+				"album": {
+					"id": 382447207,
+					"title": "Intense Morning Meditation Vibes",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/66dfeaa2cd467f8659fad8fcb4088195/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/66dfeaa2cd467f8659fad8fcb4088195/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 103116250,
+				"title": "La légende de Jimmy",
+				"title_short": "La légende de Jimmy",
+				"duration": 215,
+				"isrc": "FRR261503030",
+				"readable": true,
+				"artist": {
+					"id": 450109,
+					"name": "Pat Benesta"
+				},
+				"album": {
+					"id": 10718638,
+					"title": "Ma playlist années 90 (100 hits)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/4b077e0197e4a15c4395f4a12762a7ea/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/4b077e0197e4a15c4395f4a12762a7ea/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 237393,
+				"title": "A titre posthume",
+				"title_short": "A titre posthume",
+				"title_version": "",
+				"duration": 354,
+				"isrc": "SR8W10500026",
+				"readable": true,
+				"artist": {
+					"id": 2521,
+					"name": "Assassin"
+				},
+				"album": {
+					"id": 42813,
+					"title": "L'homicide volontaire",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a2aff6dcd3bb15c705592eaa9be9395e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a2aff6dcd3bb15c705592eaa9be9395e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 105413940,
+				"title": "Main Title/The Aristocats",
+				"title_short": "Main Title/The Aristocats",
+				"title_version": "",
+				"duration": 174,
+				"isrc": "USWD11570411",
+				"readable": true,
+				"artist": {
+					"id": 54288,
+					"name": "Maurice Chevalier"
+				},
+				"album": {
+					"id": 10980912,
+					"title": "Walt Disney Records The Legacy Collection: The Aristocats",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7d61bc104ac9db27f5bdd33acc640253/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/7d61bc104ac9db27f5bdd33acc640253/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 759718742,
+				"title": "Epilogue",
+				"title_short": "Epilogue",
+				"title_version": "",
+				"duration": 197,
+				"isrc": "QZHN51947953",
+				"readable": true,
+				"artist": {
+					"id": 54405792,
+					"name": "Faster Is Faster"
+				},
+				"album": {
+					"id": 111996632,
+					"title": "No Title No Artist",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 759718752,
+				"title": "Horseshoe Cleb",
+				"title_short": "Horseshoe Cleb",
+				"title_version": "",
+				"duration": 224,
+				"isrc": "QZHN51947954",
+				"readable": true,
+				"artist": {
+					"id": 54405792,
+					"name": "Faster Is Faster"
+				},
+				"album": {
+					"id": 111996632,
+					"title": "No Title No Artist",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 759718762,
+				"title": "Mile Highway",
+				"title_short": "Mile Highway",
+				"title_version": "",
+				"duration": 258,
+				"isrc": "QZHN51947955",
+				"readable": true,
+				"artist": {
+					"id": 54405792,
+					"name": "Faster Is Faster"
+				},
+				"album": {
+					"id": 111996632,
+					"title": "No Title No Artist",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 759718772,
+				"title": "Theme Two, in Retrograde",
+				"title_short": "Theme Two, in Retrograde",
+				"title_version": "",
+				"duration": 226,
+				"isrc": "QZHN51947956",
+				"readable": true,
+				"artist": {
+					"id": 54405792,
+					"name": "Faster Is Faster"
+				},
+				"album": {
+					"id": 111996632,
+					"title": "No Title No Artist",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/ac302210ead2384d35af3687031c013e/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://api.deezer.com/track/isrc:USUM71900764": {
+		"id": 655095912,
+		"title": "bad guy",
+		"title_short": "bad guy",
+		"title_version": "",
+		"duration": 194,
+		"isrc": "USUM71900764",
+		"release_date": "2019-03-29",
+		"readable": true,
+		"artist": {
+			"id": 9635624,
+			"name": "Billie Eilish"
+		},
+		"album": {
+			"id": 91598612,
+			"title": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+			"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6630083f454d48eadb6a9b53f035d734/1000x1000-000000-80-0-0.jpg",
+			"cover_big": "https://cdn-images.dzcdn.net/images/cover/6630083f454d48eadb6a9b53f035d734/500x500-000000-80-0-0.jpg"
+		}
+	},
+	"https://api.deezer.com/album/91598612": {
+		"id": 91598612,
+		"title": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+		"label": "Darkroom/Interscope Records",
+		"record_type": "album",
+		"release_date": "2019-03-29",
+		"genres": {
+			"data": [
+				{
+					"id": 85,
+					"name": "Alternative",
+					"picture": "https://api.deezer.com/genre/85/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602577427640",
+		"artist": {
+			"id": 9635624,
+			"name": "Billie Eilish",
+			"picture": "https://api.deezer.com/artist/9635624/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/9635624/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6630083f454d48eadb6a9b53f035d734/1000x1000-000000-80-0-0.jpg"
+	}
+}

@@ -1,6 +1,6 @@
 # Canonical track metadata from music catalogs
 
-**Status:** design approved 2026-09-22. Stage A implemented; Stage B waits for SoundCloud Phase 2.
+**Status:** design approved 2026-09-22. **Stage A is implemented** on `docs/metadata-lookup-design` and measured (see *Measured results*); it is inert until wired. Stage B waits for SoundCloud Phase 2 and a go-ahead from the human.
 
 **Goal:** stop deriving a track's identity from the words an uploader typed. Look the track up in a music catalog and, when the match is provably the same recording, use the catalog's title, artist, album, year, label, ISRC and genre instead.
 
@@ -58,15 +58,17 @@ All are new files under `src/lib/metadata/catalog/`. Only the two clients touch 
 | `itunes-catalog.ts` | `searchITunes(term, opts)` → up to 5 candidates. |
 | `deezer-catalog.ts` | `searchDeezer`, `deezerTrackByIsrc`, `deezerAlbum`. |
 | `judge-candidates.ts` | Pure. `judgeCandidates(query, candidates, evidence)` → verdict. |
-| `lookup-catalog.ts` | Orchestration and the candidate cache. |
+| `lookup-catalog.ts` | Orchestration. It takes an optional cache port, so Stage A ships no cache of its own and Stage B passes Phase 2's `single-flight-cache.ts` in. |
 
 ### Evidence grows; the cache holds candidates
 
 The cache stores **candidates**, not verdicts, keyed by the normalized `artist|title|isrc` with a 10-minute TTL. Each stage re-judges the cached candidates with whatever it knows by then, which costs nothing and lets the verdict improve.
 
+The cache is a **port**, not a module: `lookupCatalogMetadata` takes an optional `{ get(key, factory, ttlMs) }`. Stage A ships uncached, since Phase 2 creates `single-flight-cache.ts`, and Stage B passes that in. Without a port the lookup still works, one fetch at a time.
+
 | Stage | Evidence available | Network vs today |
 | --- | --- | --- |
-| Preview (YouTube) | ISRC, or iTunes and Deezer agreeing | none — the two searches artwork already runs, with `limit=5` instead of 1 |
+| Preview (YouTube) | iTunes and Deezer agreeing (YouTube never supplies an ISRC) | none — the two searches artwork already runs, with `limit=5` instead of 1 |
 | Preview (SoundCloud) | the page's ISRC and duration | none, or one Deezer ISRC call instead of the searches |
 | `/details` (YouTube) | + duration, from the **existing** yt-dlp call | none |
 | Download | same as `/details` | + one Deezer `/album/{id}` (~300 ms) for label and genre; one fewer iTunes search |
@@ -112,7 +114,7 @@ No match means today's behavior, unchanged.
 
 | ID3 field | On match | Fallback |
 | --- | --- | --- |
-| Title, artist (and the filename) | catalog | heuristic |
+| Title, artist (and the filename) | catalog | today's order: `details.track` / `details.artist` (yt-dlp's parsed Topic metadata), then the heuristic |
 | Album (TALB) | catalog, unless it is a compilation (`Various Artists`, Deezer `record_type: compile`) | `details.album`, then the title |
 | Year (TYER) | catalog release year | `details` year |
 | Genre (TCON) | iTunes `primaryGenreName`, else the Deezer album genre — either beats YouTube's "Music" | `details.genre` |
@@ -120,7 +122,7 @@ No match means today's behavior, unchanged.
 | ISRC (TSRC) | SoundCloud's own ISRC when present, else the catalog's | platform only |
 | Remixer (TPE4) | `extractRemixer` on the catalog title | same, on the heuristic title |
 
-SoundCloud's own label and ISRC win because the distributor supplied them for that exact upload.
+SoundCloud's own label and ISRC win because the distributor supplied them as clean fields for that exact upload. A **YouTube** label does not: `details.label` is scraped out of a free-text `℗` line ("℗ 2009 Mau5trap Recordings under exclusive license in North America to Ultra Records, Inc."), so on a match the Deezer album label beats it.
 
 ### Error handling
 
@@ -129,18 +131,39 @@ SoundCloud's own label and ISRC win because the distributor supplied them for th
 - One log line per verdict — `[catalog] matched via=duration source=deezer` or `[catalog] unmatched reason=version-mismatch` — gives a production match rate without Sentry noise. A miss is normal, as artwork misses are (`docs/error-reporting.md`).
 - Sentry sees only exceptions from our own parsing or judging, at `warning` with `service: "catalog"`. Those mean a bug.
 - Transient failures are not cached; empty results are.
+- The `service: "catalog"` tag gets documented in `docs/error-reporting.md` during **Stage B**. That file is in Phase 2's File map, so a Stage A edit would halt its controller.
 - No rate-limit queue at current traffic. The shared cache takes iTunes from 2 searches per track to 1, against its ~20/min limit.
 
 ### Testing
 
-- Everything runs offline against recorded responses in `tests/fixtures/catalog/`; `scripts/record-catalog-fixtures.mjs` refreshes them.
+- Everything runs offline against recorded responses in `tests/fixtures/catalog/`; `scripts/record-catalog-fixtures.ts` refreshes them (TypeScript, run by Bun, so it shares the real URL builders and can't drift from them).
 - Unit tests cover the version classifier, normalization, both clients including their error shapes, and the judge.
 - Every dangerous case above is a named regression row: the JENNIE remix, the Payphone bootleg, the Marea edit, the Levels compilation, the bad guy ISRC, `Klaps (BE)`, and Get Lucky's radio edit against the album version.
-- `scripts/eval-catalog-lookup.mjs` runs a labeled corpus of real uploads against the live APIs and reports the match rate and any wrong match. **Zero wrong matches is the gate** before Stage B is wired.
+- `scripts/eval-catalog-lookup.ts` runs the labelled corpus in `tests/fixtures/catalog/eval-corpus.json` against the live APIs and reports the match rate and any wrong match. **Zero wrong matches is the gate** before Stage B is wired; the script exits non-zero if one appears.
 - `youtube-identity-characterization.test.ts` does not change. A separate canonical characterization test records what those titles become after a lookup.
 - Goal: no existing `expect` changes. Canonical fields are added to responses only on a match, and `resolveArtworkUrl` keeps its signature. Anything unavoidable gets listed for approval in the Stage B plan.
 
 ---
+
+## Measured results (Stage A, 2026-09-23)
+
+`bun scripts/eval-catalog-lookup.ts` against the live APIs, 25 labelled cases:
+
+**22/25 as expected · 0 wrong · 3 missed of 16 matchable.**
+
+- Every case that must not match, did not: the Payphone bootleg, the Hipst3r edit, the Ed Marquis bootleg, a DJ edit, an unreleased SoundCloud edit, an unreleased original mix, and a remix the stores don't carry under that name.
+- Underground SoundCloud-style releases matched on duration and filled label, genre and year: `Klaps – Se Cura` (Deadline Rec, Electronic, 2025), `Onlynumbers – Occult`, `THISO – Back The F Up`.
+- The three misses are all recall, never wrong data: `Adele – Hello`, `Rick Astley – Never Gonna Give You Up` and `Metallica – Enter Sandman (Remastered)`. In each, iTunes returns the right recording first while **Deezer's top 10 contains only covers, karaoke and alternate mixes**, so no two catalogs agree. At download time a duration match can still rescue them for audio uploads; for music videos it cannot, because the video is longer than the track.
+
+Three things changed during implementation, each measured:
+
+| Change | Why | Effect |
+| --- | --- | --- |
+| Search limit 10, not 5 | Deezer's first five results for a famous song are frequently covers | more agreement, no extra calls |
+| The search term drops neutral text | "Bohemian Rhapsody (Official Video Remastered)" made the catalogs answer with lullaby and Muppet versions | that row went from miss to match |
+| Fields missing on the chosen release are filled from the other catalog's copy of the same recording | Deezer names recordings best but its search results carry no release date and no genre, while iTunes carries both | `year` and `genre` went from empty to filled on every agreement match, with no extra call |
+
+If recall on mainstream music videos matters more than the current strictness, the open question is whether a single catalog's exact artist + title + version match should be enough on its own. The version check, not the agreement rule, is what rejects every bootleg above — but that change needs a human decision, not an implementer's.
 
 ## Sequencing around SoundCloud Phase 2
 

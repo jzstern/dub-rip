@@ -1,0 +1,197 @@
+{
+	"note": "Ground truth for scripts/eval-catalog-lookup.ts. `expect` is what SHOULD happen, not what does: a wrong match is a precision failure and fails the run, while a miss is a recall number to watch. Titles are compared on their base form, so a catalog's feat. credits and version wording do not matter.",
+	"cases": [
+		{
+			"name": "Adele music video",
+			"artist": "Adele",
+			"title": "Hello",
+			"expect": "match",
+			"expectArtist": "Adele",
+			"expectTitle": "Hello"
+		},
+		{
+			"name": "Daft Punk official audio",
+			"artist": "Daft Punk",
+			"title": "Get Lucky ft. Pharrell Williams, Nile Rodgers",
+			"expect": "match",
+			"expectArtist": "Daft Punk",
+			"expectTitle": "Get Lucky"
+		},
+		{
+			"name": "Macklemore feat credit",
+			"artist": "Macklemore & Ryan Lewis",
+			"title": "Can't Hold Us feat. Ray Dalton",
+			"expect": "match",
+			"expectArtist": "Macklemore",
+			"expectTitle": "Can't Hold Us"
+		},
+		{
+			"name": "Eminem",
+			"artist": "Eminem",
+			"title": "Lose Yourself",
+			"expect": "match",
+			"expectArtist": "Eminem",
+			"expectTitle": "Lose Yourself"
+		},
+		{
+			"name": "Coldplay",
+			"artist": "Coldplay",
+			"title": "Yellow",
+			"expect": "match",
+			"expectArtist": "Coldplay",
+			"expectTitle": "Yellow"
+		},
+		{
+			"name": "Rick Astley",
+			"artist": "Rick Astley",
+			"title": "Never Gonna Give You Up",
+			"expect": "match",
+			"expectArtist": "Rick Astley",
+			"expectTitle": "Never Gonna Give You Up"
+		},
+		{
+			"name": "Queen topic upload",
+			"artist": "Queen",
+			"title": "Bohemian Rhapsody",
+			"expect": "match",
+			"expectArtist": "Queen",
+			"expectTitle": "Bohemian Rhapsody"
+		},
+		{
+			"name": "Queen with video noise",
+			"artist": "Queen",
+			"title": "Bohemian Rhapsody (Official Video Remastered)",
+			"expect": "match",
+			"expectArtist": "Queen",
+			"expectTitle": "Bohemian Rhapsody"
+		},
+		{
+			"name": "Metallica remaster",
+			"artist": "Metallica",
+			"title": "Enter Sandman (Remastered)",
+			"expect": "match",
+			"expectArtist": "Metallica",
+			"expectTitle": "Enter Sandman"
+		},
+		{
+			"name": "The Weeknd",
+			"artist": "The Weeknd",
+			"title": "Blinding Lights",
+			"expect": "match",
+			"expectArtist": "The Weeknd",
+			"expectTitle": "Blinding Lights"
+		},
+		{
+			"name": "Kendrick Lamar punctuation",
+			"artist": "Kendrick Lamar",
+			"title": "HUMBLE.",
+			"expect": "match",
+			"expectArtist": "Kendrick Lamar",
+			"expectTitle": "HUMBLE"
+		},
+		{
+			"name": "official remix on a remixes single",
+			"artist": "Avicii",
+			"title": "Levels (Skrillex Remix)",
+			"durationSeconds": 281,
+			"expect": "match",
+			"expectArtist": "Avicii",
+			"expectTitle": "Levels"
+		},
+		{
+			"name": "SoundCloud distributor upload with ISRC",
+			"artist": "Billie Eilish",
+			"title": "bad guy",
+			"isrc": "USUM71900764",
+			"durationSeconds": 194,
+			"expect": "match",
+			"expectArtist": "Billie Eilish",
+			"expectTitle": "bad guy"
+		},
+		{
+			"name": "underground release on a label compilation",
+			"artist": "Klaps",
+			"title": "Se Cura",
+			"durationSeconds": 286,
+			"expect": "match",
+			"expectArtist": "Klaps",
+			"expectTitle": "Se Cura"
+		},
+		{
+			"name": "underground single",
+			"artist": "Onlynumbers",
+			"title": "Occult",
+			"durationSeconds": 180,
+			"expect": "match",
+			"expectArtist": "Onlynumbers",
+			"expectTitle": "Occult"
+		},
+		{
+			"name": "underground Deezer-only release",
+			"artist": "THISO",
+			"title": "Back The F Up",
+			"durationSeconds": 333,
+			"expect": "match",
+			"expectArtist": "THISO",
+			"expectTitle": "Back The F Up"
+		},
+		{
+			"name": "placeholder title",
+			"artist": "Artist",
+			"title": "Title",
+			"expect": "none"
+		},
+		{
+			"name": "bootleg edit of a hit",
+			"artist": "Maroon 5",
+			"title": "Payphone [TWLGHT & SadBois Archive Edit 02]",
+			"durationSeconds": 231,
+			"expect": "none"
+		},
+		{
+			"name": "named edit of a hit",
+			"artist": "The Chainsmokers",
+			"title": "Don't Let Me Down ft. Daya (Hipst3r Edit)",
+			"expect": "none"
+		},
+		{
+			"name": "bootleg of a hit",
+			"artist": "Rihanna",
+			"title": "Don't Stop The Music (Ed Marquis Bootleg)",
+			"expect": "none"
+		},
+		{
+			"name": "DJ edit of a hit",
+			"artist": "Fred again..",
+			"title": "Marea (We've Lost Dancing) (Some DJ Edit)",
+			"expect": "none"
+		},
+		{
+			"name": "remix the stores do not carry under that name",
+			"artist": "Tame Impala",
+			"title": "Dracula (JENNIE Remix)",
+			"expect": "none"
+		},
+		{
+			"name": "unreleased SoundCloud edit",
+			"artist": "Lostin Powers",
+			"title": "She so Heavy (SneakPreview) Adrian Ackers Blueprint 1",
+			"durationSeconds": 245,
+			"expect": "none"
+		},
+		{
+			"name": "unreleased original mix",
+			"artist": "George Loukas",
+			"title": "On My Knees (Original Mix)",
+			"durationSeconds": 360,
+			"expect": "none"
+		},
+		{
+			"name": "SoundCloud upload whose store cut differs",
+			"artist": "blk.",
+			"title": "I Cant Fail",
+			"durationSeconds": 201,
+			"expect": "none"
+		}
+	]
+}

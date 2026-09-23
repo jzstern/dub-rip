@@ -3743,7 +3743,7 @@ export function prepareDownload(
 - Modify: `tests/unit/api/preview.test.ts` (one mock-factory line; one D7 assertion at line 100)
 - Test: `tests/unit/api/preview-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -3872,9 +3872,9 @@ describe("POST /api/preview/details — SoundCloud", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement the preview route.** In `src/routes/api/preview/+server.ts`:
+- [x] **Step 3: Implement the preview route.** In `src/routes/api/preview/+server.ts`:
 
 1. **Imports.** Replace `import { extractVideoId } from "$lib/video-utils";` with:
 
@@ -3978,12 +3978,12 @@ Everything after that line stays as it is.
 			// read, which fetchSoundCloudTrack already reported.
 ```
 
-- [ ] **Step 4: Fixture and D7 updates in `tests/unit/api/preview.test.ts`.**
+- [x] **Step 4: Fixture and D7 updates in `tests/unit/api/preview.test.ts`.**
   - Add `buildWatchUrl: vi.fn((id: string) => \`https://www.youtube.com/watch?v=${id}\`),` to the `vi.mock("$lib/video-utils", …)` factory. `parseMediaLink` now calls it.
   - Change the `expect(data.error).toBe("Invalid YouTube URL");` line to `expect(data.error).toBe("Paste a YouTube video or SoundCloud track link");`. It's line 100 at `d07e423`, and line 101 once the factory line above is added, so find it by its text.
 
-- [ ] **Step 5: Run the tests.** `bun run test:run tests/unit/api` → PASS.
-- [ ] **Step 6: Commit** `feat(soundcloud): preview and details for SoundCloud tracks`.
+- [x] **Step 5: Run the tests.** `bun run test:run tests/unit/api` → PASS.
+- [x] **Step 6: Commit** `feat(soundcloud): preview and details for SoundCloud tracks`.
 
 ### Task 18: Client validation, copy and e2e
 

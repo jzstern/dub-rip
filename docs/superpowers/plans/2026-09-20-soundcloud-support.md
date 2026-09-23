@@ -3290,7 +3290,7 @@ In `src/lib/download-pipeline/finalize-mp3.ts`:
 - Modify: `tests/unit/api/download-stream.test.ts:116` and `:135` (D7 only)
 - Test: `tests/unit/api/download-stream-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -3415,9 +3415,9 @@ describe("GET /api/download-stream — SoundCloud", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.** The route returns 400 `Invalid YouTube URL` for SoundCloud links.
+- [x] **Step 2: Run it to see it fail.** The route returns 400 `Invalid YouTube URL` for SoundCloud links.
 
-- [ ] **Step 3: Create `src/lib/download-pipeline/prepare-download.ts`.** The YouTube half is today's route code (lines 124–203 on `origin/main` at `d07e423`) moved behind a function. It differs from that code in only three ways:
+- [x] **Step 3: Create `src/lib/download-pipeline/prepare-download.ts`.** The YouTube half is today's route code (lines 124–203 on `origin/main` at `d07e423`) moved behind a function. It differs from that code in only three ways:
   - `if (videoId)` is gone, because it was always true.
   - The oEmbed uploader is returned as `uploader` instead of being only logged.
   - D9 applies.
@@ -3650,7 +3650,7 @@ export function prepareDownload(
 }
 ```
 
-- [ ] **Step 4: Rewrite the route to use it.** Edits to `src/routes/api/download-stream/+server.ts`. Line numbers are for `origin/main` at `d07e423`, plus the few lines Phase 1's Task 6 added.
+- [x] **Step 4: Rewrite the route to use it.** Edits to `src/routes/api/download-stream/+server.ts`. Line numbers are for `origin/main` at `d07e423`, plus the few lines Phase 1's Task 6 added.
 
 1. **Imports.**
    - Remove: `env`, `tryYtDlpDownload`, `getVideoDetails`, the whole `$lib/video-metadata` import, `buildWatchUrl` / `extractVideoId`, the whole `$lib/youtube-metadata` import, and `ensureBgutilPlugin`.
@@ -3733,8 +3733,8 @@ export function prepareDownload(
 
 8. **D7 test updates.** In `tests/unit/api/download-stream.test.ts`, change the two `expect(text).toBe("Invalid YouTube URL")` lines (116, 135) to `expect(text).toBe("Paste a YouTube video or SoundCloud track link")`.
 
-- [ ] **Step 5: Run the route tests.** `bun run test:run tests/unit/api` → PASS, the new file included. `download-stream.test.ts`, `download-stream-reporting.test.ts` and PR #134's `download-stream-title-fallback.test.ts` must all pass with no other edits. Their `$lib/video-utils` mocks still drive the route, because `media-link.ts` imports `extractVideoId` and `buildWatchUrl` from that module.
-- [ ] **Step 6: Commit** `feat(soundcloud): download SoundCloud tracks; move per-source prep out of the route`.
+- [x] **Step 5: Run the route tests.** `bun run test:run tests/unit/api` → PASS, the new file included. `download-stream.test.ts`, `download-stream-reporting.test.ts` and PR #134's `download-stream-title-fallback.test.ts` must all pass with no other edits. Their `$lib/video-utils` mocks still drive the route, because `media-link.ts` imports `extractVideoId` and `buildWatchUrl` from that module.
+- [x] **Step 6: Commit** `feat(soundcloud): download SoundCloud tracks; move per-source prep out of the route`.
 
 ### Task 17: The preview and details routes
 

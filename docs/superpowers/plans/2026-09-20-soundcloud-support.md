@@ -4106,9 +4106,9 @@ Expected: `--stat` lists `.claude/claude.md`, `README.md` and `docs/error-report
 
 ### Task 20: Verification and PR
 
-- [ ] **Step 1: Audit test edits.** The expect audit (Guardrail rule 2) must show only the three D7 statements.
-- [ ] **Step 2: Run the pre-commit agents** (`code-simplifier:code-simplifier`, then `security-auditor`). Point the security audit at `resolve-media-link.ts` (redirect handling), `soundcloud-url.ts` (host and path validation) and the artwork fetches (the `sndcdn.com` host check). Commit any fixes, then re-run `bun run test:run`.
-- [ ] **Step 3: Check against real tracks locally.** Start the dev server with `preview_start`. Then:
+- [x] **Step 1: Audit test edits.** The expect audit (Guardrail rule 2) must show only the three D7 statements.
+- [x] **Step 2: Run the pre-commit agents** (`code-simplifier:code-simplifier`, then `security-auditor`). Point the security audit at `resolve-media-link.ts` (redirect handling), `soundcloud-url.ts` (host and path validation) and the artwork fetches (the `sndcdn.com` host check). Commit any fixes, then re-run `bun run test:run`.
+- [x] **Step 3: Check against real tracks locally.** Start the dev server with `preview_start`. Then:
   - Preview, then download, `https://soundcloud.com/billieeilish/bad-guy`, and inspect the file:
 
 ```bash
@@ -4121,7 +4121,7 @@ node -e 'const t=require("node-id3").read(process.argv[1]); delete t.image; dele
   - Paste a `/sets/` link and a profile link. Expected: Download stays disabled.
   - Paste `https://soundcloud.com/billieeilish/does-not-exist-xyz`. Expected: "Track is unavailable or private".
   - YouTube regression: download `https://www.youtube.com/watch?v=jNQXAC9IVRw`. Expected (Phase 1's output, which is `main` by now): title "Me at the zoo", artist "jawed", album "Me at the zoo", and `audioSourceUrl: "https://www.youtube.com/watch?v=jNQXAC9IVRw"`. Year and genre appear if yt-dlp's details succeed. There should be no publisher, ISRC or remixer.
-- [ ] **Step 4: Open the PR, then test in its PR environment.** Railway creates `dub-rip-pr-<N>`. Download a SoundCloud track there. SoundCloud's behavior toward Railway's datacenter IPs is untested.
+- [x] **Step 4: Open the PR, then test in its PR environment.** Railway creates `dub-rip-pr-<N>`. Download a SoundCloud track there. SoundCloud's behavior toward Railway's datacenter IPs is untested.
   - If the logs show `SoundCloud track page returned 403` (or 429), **stop and report.** The page is blocked from Railway, and the metadata design needs revisiting. The fallback candidate is SoundCloud's api-v2 `resolve` with a scraped `client_id`, which is what yt-dlp does.
   - If yt-dlp itself gets 403s, record it the same way.
 - [ ] **Step 5: After merging, confirm on dub.rip.** Production leaves through different egress IPs than PR environments, so a pass in the PR environment is not a pass in production (memory `dub-rip-pr-env-not-prod-ip`). Download one SoundCloud track and one YouTube video on production.

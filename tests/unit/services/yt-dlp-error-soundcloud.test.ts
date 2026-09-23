@@ -60,6 +60,25 @@ describe("classifyYtDlpError() for SoundCloud", () => {
 		});
 	});
 
+	it("classifies a DRM-protected track as an expected user-side failure, not the generic unknown message", () => {
+		// #given
+		const stderr =
+			"WARNING: [soundcloud] 597146499: hls_mp3 format not found\nERROR: [soundcloud] 597146499: This video is DRM protected";
+
+		// #when
+		const classified = classifyYtDlpError(stderr, "soundcloud");
+
+		// #then
+		expect(classified).toEqual({
+			message: "SoundCloud won't allow this track to be downloaded.",
+			retryable: false,
+			category: "user",
+		});
+		expect(classified.message).not.toBe(
+			"Download failed. Please try a different track.",
+		);
+	});
+
 	it.each([
 		"ERROR: [youtube] q9lZ4p5YRkY: Sign in to confirm you’re not a bot.",
 		"ERROR: HTTP Error 403: Forbidden",

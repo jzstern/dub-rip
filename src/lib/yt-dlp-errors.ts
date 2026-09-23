@@ -138,11 +138,27 @@ const SOUNDCLOUD_REFUSED_MESSAGE =
  * deliberately absent: Go+ previews are refused before yt-dlp ever runs
  * (soundCloudRefusal), so one reaching here is a real format change and
  * belongs in `unknown`, where Sentry sees it.
+ *
+ * DRM is different from a Go+ preview and gets its own rule, `category:
+ * "user"`: `soundCloudRefusal` (soundcloud-metadata.ts) only refuses tracks
+ * flagged `isPreviewOnly` or `isGeoBlocked` before yt-dlp ever runs, so a
+ * DRM-protected track reaches yt-dlp and fails there — SoundCloud serves no
+ * downloadable format for it (confirmed with `bin/yt-dlp -F` against a known
+ * DRM track: `hls_mp3 format not found` then `This video is DRM protected`).
+ * That is normal operation for a track SoundCloud restricts, not a defect, so
+ * it belongs in `user`, not the `unknown` bucket the generic rule would give
+ * it — an `unknown` here would open a Sentry issue for expected behavior.
  */
 const SOUNDCLOUD_RULES: ErrorRule[] = [
 	{
 		pattern: /http error 404|404 not found/,
 		message: "This track was removed, or it's private.",
+		retryable: false,
+		category: "user",
+	},
+	{
+		pattern: /drm protected/,
+		message: "SoundCloud won't allow this track to be downloaded.",
 		retryable: false,
 		category: "user",
 	},

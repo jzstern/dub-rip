@@ -164,7 +164,7 @@ describe("classifyYtDlpError() reporting category", () => {
 		];
 
 		// #when
-		const results = userFailures.map(classifyYtDlpError);
+		const results = userFailures.map((message) => classifyYtDlpError(message));
 
 		// #then
 		expect(results.every((result) => !result.retryable)).toBe(true);
@@ -182,7 +182,9 @@ describe("classifyYtDlpError() reporting category", () => {
 		];
 
 		// #when
-		const results = transientFailures.map(classifyYtDlpError);
+		const results = transientFailures.map((message) =>
+			classifyYtDlpError(message),
+		);
 
 		// #then
 		expect(results.every((result) => result.retryable)).toBe(true);

@@ -3,29 +3,20 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
-import { env } from "$env/dynamic/private";
 import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
 import { pathExists } from "$lib/download-pipeline/path-exists";
+import {
+	prepareDownload,
+	sendTitleInfo,
+} from "$lib/download-pipeline/prepare-download";
 import { METADATA_PROCESSING_PERCENT } from "$lib/download-pipeline/progress-stages";
 import { titleFromVideoDetails } from "$lib/download-pipeline/title-from-video-details";
-import { tryYtDlpDownload } from "$lib/download-pipeline/try-yt-dlp";
 import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
+import { type MediaLinkKind, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import { resolveMediaLink } from "$lib/resolve-media-link";
 import { retryWithBackoff } from "$lib/retry";
 import { YT_DLP_METHOD } from "$lib/types";
-import { getVideoDetails } from "$lib/video-details-cache";
-import {
-	fetchThumbnailBuffer,
-	type ThumbnailImage,
-	type VideoDetails,
-} from "$lib/video-metadata";
-import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
-import { waitForBgutilPot } from "$lib/wait-for-bgutil-pot";
-import {
-	fetchYouTubeMetadata,
-	YouTubeMetadataError,
-} from "$lib/youtube-metadata";
-import { ensureBgutilPlugin } from "$lib/yt-dlp-binary";
 import { YtDlpQueueFullError } from "$lib/yt-dlp-concurrency";
 import {
 	type ClassifiedYtDlpError,
@@ -40,72 +31,6 @@ const QUEUE_FULL_MESSAGE =
 	"The downloader is busy right now. Please try again in a moment.";
 
 /**
- * Railway's log timestamps put the sidecar's cold start at up to ~9 s (an upper
- * bound; see waitForBgutilPot). A wait well past that is a sidecar that is down,
- * not starting, and holding the user longer would only delay the failure they
- * are going to get.
- */
-const SIDECAR_WAKE_CAP_MS = 12_000;
-
-/**
- * A warm sidecar answers in milliseconds. A first ping that answered but took
- * this long is still a cold start worth a log line — a ping can hang for most of
- * its 3 s timeout and then succeed, which needs no second attempt to count.
- */
-const SLOW_WAKE_LOG_MS = 250;
-
-/**
- * `POST /api/preview` nudges the sleeping bgutil-pot sidecar awake while the
- * user reads the preview, but that ping is fire-and-forget, so a click before
- * the sidecar listens still reaches yt-dlp while it is booting. yt-dlp then
- * cannot fetch a PO token, YouTube bot-checks the `web` player request, and the
- * failure is indistinguishable from a throttled IP. The retry below used to be
- * the only thing recovering it (2026-09-17 00:59:41: a direct curl of this
- * route with no preview; the first attempt failed, the retry minted a token and
- * succeeded). How often browser users reach this route that early is
- * unmeasured: after a paste the page's first contact with the sidecar is
- * `/api/preview/details`, not this route.
- *
- * Waiting here turns that into a deterministic start. It never fails the
- * download: if the sidecar stays silent the attempt goes ahead anyway and the
- * retry loop is still the safety net.
- */
-async function waitForSidecar(
-	bgutilPotUrl: string,
-	videoId: string,
-	signal: AbortSignal,
-	send: (data: Record<string, unknown>) => void,
-): Promise<void> {
-	const wake = await waitForBgutilPot(bgutilPotUrl, {
-		maxWaitMs: SIDECAR_WAKE_CAP_MS,
-		signal,
-		onWaiting: () =>
-			send({ type: "status", message: "Waking up the downloader..." }),
-	});
-
-	if (wake.awake) {
-		if (wake.attempts > 1 || wake.waitedMs >= SLOW_WAKE_LOG_MS) {
-			console.info(
-				`bgutil-pot answered /ping after ${wake.attempts} attempts, ${wake.waitedMs}ms`,
-			);
-		}
-		return;
-	}
-	if (signal.aborted) return;
-
-	const summary = `${wake.attempts} attempts, ${wake.waitedMs}ms`;
-	console.warn(
-		`bgutil-pot did not answer /ping before the download: ${summary}`,
-	);
-	Sentry.addBreadcrumb({
-		category: "download",
-		level: "warning",
-		message: "bgutil-pot did not answer /ping before the download started",
-		data: { videoId, attempts: wake.attempts, waitedMs: wake.waitedMs },
-	});
-}
-
-/**
  * Videos that can never be downloaded (private, age-restricted, copyright)
  * are normal operation, not defects, so they stay breadcrumbs — reporting
  * them buried the real failures and burned quota. Transient infrastructure
@@ -117,6 +42,7 @@ function reportDownloadFailure(
 	error: Error,
 	classified: ClassifiedYtDlpError,
 	videoId: string,
+	source: MediaLinkKind,
 ): void {
 	if (classified.category === "user") {
 		Sentry.addBreadcrumb({
@@ -134,6 +60,7 @@ function reportDownloadFailure(
 			service: "download-stream",
 			operation: "download",
 			category: classified.category,
+			source,
 		},
 		extra: { videoId },
 	});
@@ -146,12 +73,12 @@ export const GET: RequestHandler = async ({ url }) => {
 		return new Response("URL parameter required", { status: 400 });
 	}
 
-	const videoId = extractVideoId(videoUrl);
-	if (!videoId) {
-		return new Response("Invalid YouTube URL", { status: 400 });
+	const link = await resolveMediaLink(videoUrl);
+	if (!link) {
+		return new Response(UNSUPPORTED_LINK_MESSAGE, { status: 400 });
 	}
 
-	const normalizedUrl = buildWatchUrl(videoId);
+	const videoId = link.id;
 	const abortController = new AbortController();
 
 	const stream = new ReadableStream({
@@ -188,120 +115,35 @@ export const GET: RequestHandler = async ({ url }) => {
 			const outputPath = join(tempDir, randomId);
 
 			try {
-				send({ type: "status", message: "Getting video info..." });
-
-				if (env.BGUTIL_POT_URL) {
-					await waitForSidecar(
-						env.BGUTIL_POT_URL,
-						videoId,
-						abortController.signal,
-						send,
-					);
-					if (abortController.signal.aborted) {
-						throw (
-							abortController.signal.reason ?? new Error("Download aborted")
-						);
-					}
-				}
-
-				const titleState = {
-					videoTitle: "",
-					artist: "",
-					trackTitle: "",
-				};
-				let uploader = "";
-				const sendTitleInfo = () => {
-					send({
-						type: "info",
-						title: titleState.videoTitle,
-						artist: titleState.artist,
-						track: titleState.trackTitle,
-					});
-				};
-
-				const detailsPromise: Promise<VideoDetails | null> = getVideoDetails(
-					videoId,
-					normalizedUrl,
-				).catch(() => null);
-				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
-					? fetchThumbnailBuffer(videoId).catch(() => null)
-					: Promise.resolve(null);
-
-				if (videoId) {
-					try {
-						const metadata = await fetchYouTubeMetadata(videoId);
-						titleState.videoTitle = metadata.videoTitle;
-						titleState.artist = metadata.artist;
-						titleState.trackTitle = metadata.trackTitle;
-						uploader = metadata.uploader;
-
-						console.log("Got metadata from oEmbed:", {
-							videoTitle: titleState.videoTitle,
-							artist: titleState.artist,
-							trackTitle: titleState.trackTitle,
-							uploader: metadata.uploader,
-						});
-
-						sendTitleInfo();
-					} catch (err) {
-						if (err instanceof YouTubeMetadataError) {
-							console.log("oEmbed metadata failed:", err.message);
-							if (err.isUnavailable) {
-								send({
-									type: "error",
-									message: "Video not found or unavailable",
-								});
-								closeStream();
-								return;
-							}
-						} else {
-							console.error("Metadata fetch error:", err);
-						}
-					}
-				}
-
-				send({ type: "status", message: "Starting download..." });
-
-				if (!env.BGUTIL_POT_URL) {
-					send({
-						type: "error",
-						message:
-							"Server is misconfigured: BGUTIL_POT_URL is not set. Downloads cannot run without the bgutil-pot sidecar.",
-					});
-					Sentry.captureMessage("BGUTIL_POT_URL is unset", {
-						level: "error",
-						tags: {
-							service: "download-stream",
-							operation: "bgutil-pot-config",
-						},
-					});
+				const prepared = await prepareDownload(
+					link,
+					send,
+					abortController.signal,
+				);
+				if (!prepared) {
 					closeStream();
 					return;
 				}
+				const { titleState } = prepared;
 
 				const debugMode = url.searchParams.get("debug") === "1";
 				const ytDlp = await getYTDlp();
 				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
-				const pluginDir = await ensureBgutilPlugin();
-				const bgutilPotUrl = env.BGUTIL_POT_URL;
 
 				await retryWithBackoff(
 					() =>
-						tryYtDlpDownload({
-							videoUrl: normalizedUrl,
+						prepared.runAttempt({
 							outputPath,
-							bgutilPotUrl,
 							ffmpegPath: ffmpegInstaller.path,
-							pluginDir,
 							debugMode,
 							ytDlp,
-							send,
 							signal: abortController.signal,
 						}),
 					{
 						isRetryable: (error) =>
 							isRetryableYtDlpError(
 								error instanceof Error ? error.message : String(error),
+								link.kind,
 							),
 						onRetry: () => {
 							send({ type: "status", message: "Retrying download..." });
@@ -334,9 +176,9 @@ export const GET: RequestHandler = async ({ url }) => {
 				if (!titleState.videoTitle) {
 					Object.assign(
 						titleState,
-						titleFromVideoDetails(await detailsPromise),
+						titleFromVideoDetails(await prepared.detailsPromise),
 					);
-					if (titleState.videoTitle) sendTitleInfo();
+					if (titleState.videoTitle) sendTitleInfo(send, titleState);
 				}
 
 				console.log("Video title:", titleState.videoTitle);
@@ -361,12 +203,13 @@ export const GET: RequestHandler = async ({ url }) => {
 					trackTitle: titleState.trackTitle,
 					downloadMethod: YT_DLP_METHOD,
 					videoId,
-					detailsPromise,
-					thumbnailPromise,
+					detailsPromise: prepared.detailsPromise,
+					thumbnailPromise: prepared.thumbnailPromise,
 					send,
 					signal: abortController.signal,
-					uploader,
-					sourceUrl: normalizedUrl,
+					uploader: prepared.uploader,
+					sourceUrl: link.canonicalUrl,
+					soundCloudArtwork: prepared.soundCloudArtwork,
 				});
 
 				// The file is deliberately left on disk: the browser fetches it from
@@ -418,8 +261,13 @@ export const GET: RequestHandler = async ({ url }) => {
 							: new Error(`Unknown download error: ${String(error)}`);
 					const rawMessage =
 						error instanceof Error ? error.message : "Unknown error";
-					const classified = classifyYtDlpError(rawMessage);
-					reportDownloadFailure(normalizedError, classified, videoId);
+					const classified = classifyYtDlpError(rawMessage, link.kind);
+					reportDownloadFailure(
+						normalizedError,
+						classified,
+						videoId,
+						link.kind,
+					);
 					try {
 						send({ type: "error", message: classified.message });
 					} catch (sendErr) {

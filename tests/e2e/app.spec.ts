@@ -41,6 +41,57 @@ test.describe("dub-rip App", () => {
 			await expect(input).toHaveValue(url);
 		}
 	});
+
+	test("should accept a SoundCloud track link", async ({ page }) => {
+		// #given
+		await page.route("**/api/preview/details", (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({ success: true, duration: 194 }),
+			}),
+		);
+		await page.route("**/api/preview", (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: "application/json",
+				body: JSON.stringify({
+					success: true,
+					videoTitle: "bad guy",
+					artist: "Billie Eilish",
+					title: "bad guy",
+					thumbnail: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+					duration: 194,
+				}),
+			}),
+		);
+		await page.goto("/");
+
+		// #when
+		await page
+			.locator('input[data-slot="input"]')
+			.fill("https://soundcloud.com/billieeilish/bad-guy");
+
+		// #then
+		await expect(page.getByRole("button", { name: "Download" })).toBeEnabled({
+			timeout: 5000,
+		});
+	});
+
+	test("should keep Download disabled for a SoundCloud playlist link", async ({
+		page,
+	}) => {
+		// #given
+		await page.goto("/");
+
+		// #when
+		await page
+			.locator('input[data-slot="input"]')
+			.fill("https://soundcloud.com/billieeilish/sets/when-we-all-fall-asleep");
+
+		// #then
+		await expect(page.getByRole("button", { name: "Download" })).toBeDisabled();
+	});
 });
 
 test.describe("Video Preview Flow", () => {

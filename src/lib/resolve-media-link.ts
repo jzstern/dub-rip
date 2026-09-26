@@ -22,7 +22,7 @@ async function resolveShortLink(code: string): Promise<MediaLink | null> {
 				category: "soundcloud",
 				level: "info",
 				message: "Share link did not resolve to a track",
-				data: { code, status: response.status },
+				data: { status: response.status },
 			});
 			return null;
 		}
@@ -31,7 +31,6 @@ async function resolveShortLink(code: string): Promise<MediaLink | null> {
 		Sentry.captureException(error, {
 			level: "warning",
 			tags: { service: "soundcloud", operation: "resolve-short-link" },
-			extra: { code },
 		});
 		return null;
 	}

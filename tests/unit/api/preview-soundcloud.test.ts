@@ -146,4 +146,19 @@ describe("POST /api/preview/details — SoundCloud", () => {
 		// #then
 		expect(await response.json()).toEqual({ success: true, duration: 201 });
 	});
+
+	it("returns 200 with no duration field when the oEmbed fallback found the track but no duration", async () => {
+		// #given
+		getSoundCloudTrackMock.mockResolvedValue({
+			...TRACK,
+			durationSeconds: undefined,
+		});
+
+		// #when
+		const response = await detailsPOST(eventFor("https://soundcloud.com/a/b"));
+
+		// #then
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true });
+	});
 });

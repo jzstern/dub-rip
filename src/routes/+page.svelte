@@ -111,7 +111,12 @@ async function loadPreview(targetUrl: string) {
 				return res.json();
 			})
 			.then((details) => {
-				if (url === targetUrl && preview && details?.success) {
+				if (
+					url === targetUrl &&
+					preview &&
+					details?.success &&
+					typeof details.duration === "number"
+				) {
 					preview = {
 						...preview,
 						duration: details.duration,
@@ -122,7 +127,7 @@ async function loadPreview(targetUrl: string) {
 				console.error("Details error:", err);
 				reportClientIssue(err, {
 					operation: "preview-details-fetch",
-					extra: { targetUrl },
+					extra: { mediaKind: parseMediaLink(targetUrl)?.kind },
 				});
 			});
 	} catch (err) {
@@ -131,7 +136,7 @@ async function loadPreview(targetUrl: string) {
 		if (!(err instanceof ServerRejectionError)) {
 			reportClientIssue(err, {
 				operation: "preview-fetch",
-				extra: { targetUrl },
+				extra: { mediaKind: parseMediaLink(targetUrl)?.kind },
 			});
 		}
 		error = err instanceof Error ? err.message : "Failed to load preview";

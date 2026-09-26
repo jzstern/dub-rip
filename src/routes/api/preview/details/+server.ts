@@ -48,8 +48,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		if (typeof details.duration !== "number") {
-			// A SoundCloud track lacks a duration only when its page couldn't be
-			// read, which fetchSoundCloudTrack already reported.
+			// SoundCloud's oEmbed fallback (used when the track page can't be
+			// parsed) carries no duration field at all, and even a successfully
+			// parsed track page can yield a `found` track with no
+			// `durationSeconds` — so a missing duration is expected here, not an
+			// extraction failure.
 			if (link.kind === "youtube") {
 				Sentry.captureException(
 					new Error("yt-dlp returned video details without a duration"),
@@ -58,8 +61,9 @@ export const POST: RequestHandler = async ({ request }) => {
 						extra: { videoId },
 					},
 				);
+				return json({ error: "Failed to load details" }, { status: 500 });
 			}
-			return json({ error: "Failed to load details" }, { status: 500 });
+			return json({ success: true });
 		}
 
 		return json({

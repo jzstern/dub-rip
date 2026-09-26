@@ -93,4 +93,40 @@ describe("resolveMediaLink()", () => {
 			expect.objectContaining({ level: "warning" }),
 		);
 	});
+
+	it("keeps the share-link code out of the exception payload when the lookup throws", async () => {
+		// #given
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => {
+				throw new Error("socket hang up");
+			}),
+		);
+
+		// #when
+		await resolveMediaLink("https://on.soundcloud.com/secretCode456");
+
+		// #then
+		const [, captureOptions] = vi
+			.mocked(Sentry.captureException)
+			.mock.calls.at(-1) as [unknown, Record<string, unknown> | undefined];
+		expect(captureOptions).not.toHaveProperty("extra");
+	});
+
+	it("keeps the share-link code out of the breadcrumb when the link doesn't resolve to a track", async () => {
+		// #given
+		vi.mocked(Sentry.addBreadcrumb).mockClear();
+		vi.stubGlobal(
+			"fetch",
+			redirectTo("https://soundcloud.com/billieeilish/sets/album"),
+		);
+
+		// #when
+		await resolveMediaLink("https://on.soundcloud.com/secretCode789");
+
+		// #then
+		expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+			expect.objectContaining({ data: { status: 302 } }),
+		);
+	});
 });

@@ -1,7 +1,10 @@
 import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
+import { UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import { resolveMediaLink } from "$lib/resolve-media-link";
+import { soundCloudDetails } from "$lib/soundcloud/soundcloud-metadata";
+import { getSoundCloudTrack } from "$lib/soundcloud/soundcloud-track-cache";
 import { getVideoDetails } from "$lib/video-details-cache";
-import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
 import type { RequestHandler } from "./$types";
 
 const DURATION_EXTRACTION_TIMEOUT_MS = 12_000;
@@ -14,16 +17,20 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "URL is required" }, { status: 400 });
 		}
 
-		const videoId = extractVideoId(url);
-		if (!videoId) {
-			return json({ error: "Invalid YouTube URL" }, { status: 400 });
+		const link = await resolveMediaLink(url);
+		if (!link) {
+			return json({ error: UNSUPPORTED_LINK_MESSAGE }, { status: 400 });
 		}
+		const videoId = link.id;
 
-		const normalizedUrl = buildWatchUrl(videoId);
-
-		const details = await getVideoDetails(videoId, normalizedUrl, {
-			timeout: DURATION_EXTRACTION_TIMEOUT_MS,
-		});
+		const details =
+			link.kind === "youtube"
+				? await getVideoDetails(videoId, link.canonicalUrl, {
+						timeout: DURATION_EXTRACTION_TIMEOUT_MS,
+					})
+				: await getSoundCloudTrack(link)
+						.then(soundCloudDetails)
+						.catch(() => null);
 
 		/**
 		 * A null result means the extraction itself failed, and
@@ -41,14 +48,22 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		if (typeof details.duration !== "number") {
-			Sentry.captureException(
-				new Error("yt-dlp returned video details without a duration"),
-				{
-					tags: { service: "preview-details", operation: "parse-duration" },
-					extra: { videoId },
-				},
-			);
-			return json({ error: "Failed to load details" }, { status: 500 });
+			// SoundCloud's oEmbed fallback (used when the track page can't be
+			// parsed) carries no duration field at all, and even a successfully
+			// parsed track page can yield a `found` track with no
+			// `durationSeconds` — so a missing duration is expected here, not an
+			// extraction failure.
+			if (link.kind === "youtube") {
+				Sentry.captureException(
+					new Error("yt-dlp returned video details without a duration"),
+					{
+						tags: { service: "preview-details", operation: "parse-duration" },
+						extra: { videoId },
+					},
+				);
+				return json({ error: "Failed to load details" }, { status: 500 });
+			}
+			return json({ success: true });
 		}
 
 		return json({

@@ -1,7 +1,11 @@
 import { stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import * as Sentry from "@sentry/sveltekit";
-import { resolveAlbumArtImage } from "$lib/artwork";
+import {
+	resolveAlbumArtImage,
+	resolveSoundCloudAlbumArt,
+	type SoundCloudArtwork,
+} from "$lib/artwork";
 import { registerDownload } from "$lib/download-pipeline/download-tokens";
 import {
 	ID3_TAGS_WRITTEN_PERCENT,
@@ -22,6 +26,7 @@ export interface FinalizeMp3Input {
 	artist: string;
 	trackTitle: string;
 	downloadMethod: DownloadMethod;
+	/** YouTube video ID, or SoundCloud `user/slug`; also Sentry context. */
 	videoId: string;
 	detailsPromise: Promise<VideoDetails | null>;
 	thumbnailPromise: Promise<ThumbnailImage | null>;
@@ -29,6 +34,8 @@ export interface FinalizeMp3Input {
 	signal?: AbortSignal;
 	uploader?: string;
 	sourceUrl?: string;
+	/** Present only for SoundCloud; selects its cover-art order. */
+	soundCloudArtwork?: SoundCloudArtwork;
 }
 
 export interface FinalizeMp3Result {
@@ -100,6 +107,7 @@ export async function finalizeMp3({
 	signal,
 	uploader,
 	sourceUrl,
+	soundCloudArtwork,
 }: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
 
@@ -109,12 +117,19 @@ export async function finalizeMp3({
 			thumbnailPromise,
 		]);
 
-		const image = await resolveAlbumArtImage({
-			artist,
-			title: trackTitle || videoTitle,
-			videoId,
-			fallback: thumbnail,
-		});
+		const coverTitle = trackTitle || videoTitle;
+		const image = soundCloudArtwork
+			? await resolveSoundCloudAlbumArt({
+					artist,
+					title: coverTitle,
+					artwork: soundCloudArtwork,
+				})
+			: await resolveAlbumArtImage({
+					artist,
+					title: coverTitle,
+					videoId,
+					fallback: thumbnail,
+				});
 
 		const tags = buildID3Tags({
 			trackTitle,

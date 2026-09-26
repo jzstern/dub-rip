@@ -2,7 +2,14 @@ import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { resolveArtworkUrl } from "$lib/artwork";
-import { extractVideoId } from "$lib/video-utils";
+import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import { resolveMediaLink } from "$lib/resolve-media-link";
+import {
+	soundCloudRefusal,
+	soundCloudTitleState,
+} from "$lib/soundcloud/soundcloud-metadata";
+import { SoundCloudTrackError } from "$lib/soundcloud/soundcloud-track";
+import { getSoundCloudTrack } from "$lib/soundcloud/soundcloud-track-cache";
 import {
 	fetchYouTubeMetadata,
 	YouTubeMetadataError,
@@ -37,6 +44,47 @@ function prewarmBgutilPot(): void {
 	}).catch(() => undefined);
 }
 
+/**
+ * The upload's own artwork is the preview image whenever it has one — the
+ * same order resolveSoundCloudAlbumArt uses — so the cover a user sees is
+ * the cover they get. No bgutil prewarm: SoundCloud never uses the sidecar.
+ * fetchSoundCloudTrack already decided what to report, as fetchYouTubeMetadata
+ * does for YouTube, so its errors are answered here without a second capture.
+ */
+async function previewSoundCloud(link: MediaLink): Promise<Response> {
+	try {
+		const track = await getSoundCloudTrack(link);
+		const refusal = soundCloudRefusal(track);
+		if (refusal) {
+			return json({ error: refusal }, { status: 422 });
+		}
+
+		const { artist, trackTitle } = soundCloudTitleState(track);
+		const artwork =
+			track.artworkUrl ??
+			(await resolveArtworkUrl(artist, trackTitle, {
+				itunesSize: PREVIEW_ARTWORK_SIZE,
+				timeout: PREVIEW_ARTWORK_TIMEOUT,
+			}));
+
+		return json({
+			success: true,
+			videoTitle: track.title,
+			artist,
+			title: trackTitle,
+			thumbnail: track.artworkUrl ?? track.avatarUrl ?? "",
+			artwork: artwork ?? undefined,
+			duration: track.durationSeconds,
+		});
+	} catch (error) {
+		if (!(error instanceof SoundCloudTrackError)) throw error;
+		console.error("Preview error:", error.message);
+		return error.isUnavailable
+			? json({ error: "Track is unavailable or private" }, { status: 404 })
+			: json({ error: "Failed to load preview" }, { status: 500 });
+	}
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const { url } = await request.json();
@@ -45,10 +93,16 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json({ error: "URL is required" }, { status: 400 });
 		}
 
-		const videoId = extractVideoId(url);
-		if (!videoId) {
-			return json({ error: "Invalid YouTube URL" }, { status: 400 });
+		const link = await resolveMediaLink(url);
+		if (!link) {
+			return json({ error: UNSUPPORTED_LINK_MESSAGE }, { status: 400 });
 		}
+
+		if (link.kind === "soundcloud") {
+			return await previewSoundCloud(link);
+		}
+
+		const videoId = link.id;
 
 		prewarmBgutilPot();
 

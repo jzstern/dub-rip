@@ -57,9 +57,13 @@ describe("parseTrackTitle() version classes", () => {
 		["Bohemian Rhapsody (Live Aid)", "identity"],
 		["She so Heavy (SneakPreview)", "identity"],
 		["Blinding Lights (Instrumental)", "identity"],
+		["Marea (Edit)", "identity"],
 		["Levels (Radio Edit)", "length"],
 		["Se Cura (Extended Mix)", "length"],
 		["Se Cura - Extended Mix", "length"],
+		["Get Lucky (Single Version)", "length"],
+		["Blue Monday (Video Mix)", "length"],
+		['Blue Monday (12" Mix)', "length"],
 		["On My Knees (Original Mix)", "neutral"],
 		["Enter Sandman (Remastered)", "neutral"],
 		["Enter Sandman (Remastered 2021)", "neutral"],
@@ -119,6 +123,8 @@ describe("identityKey()", () => {
 		["Levels (Skrillex Remix)", "Levels (Radio Edit)"],
 		["Bohemian Rhapsody", "Bohemian Rhapsody (Live Aid)"],
 		["Se Cura", "Se Cura (Extended Mix)"],
+		["Marea", "Marea (Edit)"],
+		["Get Lucky", "Get Lucky (Single Version)"],
 	])("gives %j and %j different keys", (left, right) => {
 		// #when
 		const key = identityKey(parseTrackTitle(left));

@@ -57,7 +57,11 @@ function coverArtUrl(artworkUrl100: unknown): string | undefined {
 	}
 }
 
-function toCandidate(result: ITunesResult): CatalogCandidate | null {
+function toCandidate(
+	result: ITunesResult | null,
+	rank: number,
+): CatalogCandidate | null {
+	if (!result || typeof result !== "object") return null;
 	const title = optionalString(result.trackName);
 	const artist = optionalString(result.artistName);
 	if (!title || !artist || result.kind !== "song") return null;
@@ -65,6 +69,7 @@ function toCandidate(result: ITunesResult): CatalogCandidate | null {
 	const durationMs = result.trackTimeMillis;
 	return {
 		source: "itunes",
+		rank,
 		artist,
 		title,
 		album: optionalString(result.collectionName),
@@ -81,21 +86,26 @@ function toCandidate(result: ITunesResult): CatalogCandidate | null {
 	};
 }
 
+/**
+ * `null` means the catalog could not be reached or refused; `[]` means it
+ * answered and had nothing. The caller has to tell those apart, because an
+ * outage cached as "no such track" would outlive the outage.
+ */
 export async function searchITunes(
 	term: string,
 	{ timeout = DEFAULT_TIMEOUT_MS }: CatalogRequestOptions = {},
-): Promise<CatalogCandidate[]> {
+): Promise<CatalogCandidate[] | null> {
 	if (!term.trim()) return [];
 	try {
 		const response = await fetch(itunesSearchUrl(term), {
-			signal: AbortSignal.timeout(Math.round(timeout)),
+			signal: AbortSignal.timeout(Math.max(1, Math.round(timeout))),
 		});
 		if (!response.ok) {
 			console.warn(`[catalog] itunes search failed: HTTP ${response.status}`);
-			return [];
+			return null;
 		}
 		const body = (await response.json()) as { results?: ITunesResult[] };
-		if (!Array.isArray(body?.results)) return [];
+		if (!Array.isArray(body?.results)) return null;
 		/** `limit` is a request hint; the cap is ours, and it bounds the judging loop. */
 		return body.results
 			.slice(0, SEARCH_LIMIT)
@@ -105,6 +115,6 @@ export async function searchITunes(
 		console.warn(
 			`[catalog] itunes search failed: ${error instanceof Error ? error.message : error}`,
 		);
-		return [];
+		return null;
 	}
 }

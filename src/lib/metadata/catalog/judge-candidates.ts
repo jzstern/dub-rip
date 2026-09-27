@@ -11,6 +11,7 @@ import { releaseYear } from "./catalog-candidate";
 import {
 	artistDisplayName,
 	normalizeForMatch,
+	normalizeIsrc,
 	splitArtistNames,
 } from "./normalize-text";
 import {
@@ -26,29 +27,41 @@ import {
  * a preview judges on text alone, and the download adds the duration that the
  * yt-dlp details call already fetched.
  *
- * A candidate is written only when the artist, the song name and the version
- * agree AND one of three proofs holds. Nothing else is accepted, because a
- * plain search confidently returns the original for a bootleg.
+ * The artist, the song name and the version must agree for EVERY candidate —
+ * including one reached through its ISRC. On SoundCloud the uploader supplies
+ * that ISRC, so a bootleg stamped with the original's would otherwise be
+ * written as the original: the version check is the whole defence, and a proof
+ * that skips it is not a proof. On top of the text gate, one of three things
+ * must hold: the ISRC matches, the runtimes agree, or both catalogs
+ * independently reached the same recording.
  */
 
 const DURATION_TOLERANCE_SECONDS = 5;
 
-const EVIDENCE_RANK: Record<MatchEvidence, number> = {
-	isrc: 0,
-	duration: 1,
-	agreement: 2,
-};
+/** Strongest first. Only decides the reported `via`; ranking is structural. */
+const EVIDENCE_ORDER: MatchEvidence[] = ["isrc", "duration", "agreement"];
 
 /** Deezer first: it carries the ISRC and keeps feat. credits in the title. */
 const SOURCE_RANK: Record<CatalogSource, number> = { deezer: 0, itunes: 1 };
 
+/** Both stores back-date a reissue to Jan 1, so such a date cannot order releases. */
+const IMPRECISE_DATE = /-01-01$/;
+
 interface Assessment {
 	candidate: CatalogCandidate;
 	textPass: boolean;
-	/** The artist or the song name lined up, which an ISRC hit is sanity-checked against. */
-	namesAgree: boolean;
 	sameLength: boolean;
 	durationPass: boolean;
+	/** Both runtimes are known and disagree — evidence against, not merely absent. */
+	durationContradicts: boolean;
+	/**
+	 * The catalog's cut runs materially longer than the upload. An upload may
+	 * wrap a track in an intro or an outro — a music video legitimately runs
+	 * 30–90s longer — but a catalog recording that outruns the upload is a
+	 * different cut: a live version, an extended mix, or the full track behind a
+	 * bootleg that borrowed its ISRC.
+	 */
+	candidateOutruns: boolean;
 	isrcPass: boolean;
 	recordingKey: string;
 	reason: UnmatchedReason;
@@ -56,7 +69,8 @@ interface Assessment {
 
 interface Match {
 	assessment: Assessment;
-	via: MatchEvidence;
+	proofs: MatchEvidence[];
+	agreed: boolean;
 }
 
 interface ArtistCredit {
@@ -98,6 +112,7 @@ function assess(
 	query: TrackQuery,
 	queryTitle: ParsedTitle,
 	queryCredit: ArtistCredit,
+	queryIsrc: string | undefined,
 	candidate: CatalogCandidate,
 ): Assessment {
 	const candidateTitle = parseTrackTitle(candidate.title);
@@ -112,50 +127,61 @@ function assess(
 	const titlePass =
 		queryBase !== "" && queryBase === normalizeForMatch(candidateTitle.base);
 
+	const bothDurations =
+		query.durationSeconds !== undefined &&
+		candidate.durationSeconds !== undefined;
+	const signedGap = bothDurations
+		? (candidate.durationSeconds as number) - (query.durationSeconds as number)
+		: Number.NaN;
+	const durationGap = Math.abs(signedGap);
+	const candidateIsrc = normalizeIsrc(candidate.isrc);
+
 	return {
 		candidate,
 		textPass: artistPass && titlePass && version.identity,
-		namesAgree: artistPass || titlePass,
 		sameLength: version.length,
-		durationPass:
-			query.durationSeconds !== undefined &&
-			candidate.durationSeconds !== undefined &&
-			Math.abs(query.durationSeconds - candidate.durationSeconds) <=
-				DURATION_TOLERANCE_SECONDS,
+		durationPass: bothDurations && durationGap <= DURATION_TOLERANCE_SECONDS,
+		durationContradicts:
+			bothDurations && durationGap > DURATION_TOLERANCE_SECONDS,
+		candidateOutruns: bothDurations && signedGap > DURATION_TOLERANCE_SECONDS,
 		isrcPass:
-			query.isrc !== undefined &&
-			candidate.isrc !== undefined &&
-			query.isrc.toUpperCase() === candidate.isrc.toUpperCase(),
+			queryIsrc !== undefined &&
+			candidateIsrc !== undefined &&
+			queryIsrc === candidateIsrc,
 		recordingKey: identityKey(candidateTitle),
 		reason: missReason(artistPass, titlePass, version.identity),
 	};
 }
 
-function evidenceFor(
+/**
+ * Every proof this candidate satisfies, strongest first. The text gate comes
+ * first and applies to all of them. A runtime that disagrees cancels the ISRC
+ * proof rather than being ignored: two recordings minutes apart in length are
+ * not the same recording, whatever tag the uploader typed.
+ */
+function proofsFor(
 	assessment: Assessment,
 	agreedKeys: Set<string>,
-): MatchEvidence | null {
-	/**
-	 * An ISRC identifies a recording exactly, but on SoundCloud the uploader
-	 * supplies it, so one stamped from a famous release would otherwise hand
-	 * that release's artist and title to an unrelated upload. Requiring the
-	 * artist or the song name to line up costs real distributor uploads
-	 * nothing — their own metadata is where the ISRC came from.
-	 */
-	if (assessment.isrcPass && assessment.namesAgree) return "isrc";
-	if (!assessment.textPass) return null;
-	if (assessment.durationPass) return "duration";
+): MatchEvidence[] {
+	if (!assessment.textPass || assessment.candidateOutruns) return [];
+	const proofs: MatchEvidence[] = [];
+	if (assessment.isrcPass && !assessment.durationContradicts)
+		proofs.push("isrc");
+	if (assessment.durationPass) proofs.push("duration");
 	if (assessment.sameLength && agreedKeys.has(assessment.recordingKey)) {
-		return "agreement";
+		proofs.push("agreement");
 	}
-	return null;
+	return proofs.sort(
+		(left, right) =>
+			EVIDENCE_ORDER.indexOf(left) - EVIDENCE_ORDER.indexOf(right),
+	);
 }
 
 /** Keys that an iTunes result and a Deezer result both reached on their own. */
 function keysBothCatalogsReached(assessments: Assessment[]): Set<string> {
 	const sources = new Map<string, Set<CatalogSource>>();
 	for (const assessment of assessments) {
-		if (!assessment.textPass) continue;
+		if (!assessment.textPass || assessment.candidateOutruns) continue;
 		if (!assessment.sameLength && !assessment.durationPass) continue;
 		const seen =
 			sources.get(assessment.recordingKey) ?? new Set<CatalogSource>();
@@ -213,8 +239,10 @@ function fillFromSupport(
  * The other candidates for the same recording, whose fields fill the gaps in
  * the best one's. Text agreement is required because `recordingKey` compares
  * titles alone — without it, a different artist's same-named track could supply
- * the album. Ranked candidates come first, so a real release fills a field
- * before a compilation does.
+ * the album. A candidate whose runtime the query rules out is excluded: a live
+ * cut of the same song would otherwise donate its ISRC to the studio version.
+ * Ranked candidates come first, so a real release fills a field before a
+ * compilation does.
  */
 function supportingCandidates(
 	matches: Match[],
@@ -229,6 +257,7 @@ function supportingCandidates(
 		if (
 			assessment.candidate !== best.candidate &&
 			assessment.recordingKey === best.recordingKey &&
+			!assessment.durationContradicts &&
 			(assessment.textPass || assessment.isrcPass)
 		) {
 			support.add(assessment.candidate);
@@ -237,21 +266,46 @@ function supportingCandidates(
 	return [...support];
 }
 
+function preciseDate(releaseDate: string | undefined): string | undefined {
+	return releaseDate && !IMPRECISE_DATE.test(releaseDate)
+		? releaseDate
+		: undefined;
+}
+
+/**
+ * Ranking is structural, not evidential, so that the choice cannot change when
+ * a later stage learns the duration: a preview and its download must agree, or
+ * the file disagrees with what the user was shown. Corroboration comes first,
+ * then the release's own qualities, and the catalogs' own ordering breaks the
+ * rest — both APIs rank the canonical release above a reissue or a knock-off,
+ * which a back-dated "Jan 1" reissue date does not.
+ */
 function betterMatch(left: Match, right: Match): number {
-	const byEvidence = EVIDENCE_RANK[left.via] - EVIDENCE_RANK[right.via];
-	if (byEvidence !== 0) return byEvidence;
+	const byIsrc =
+		Number(!left.proofs.includes("isrc")) -
+		Number(!right.proofs.includes("isrc"));
+	if (byIsrc !== 0) return byIsrc;
+
+	const byAgreement = Number(!left.agreed) - Number(!right.agreed);
+	if (byAgreement !== 0) return byAgreement;
 
 	const a = left.assessment.candidate;
 	const b = right.assessment.candidate;
-
-	const bySource = SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
-	if (bySource !== 0) return bySource;
 
 	const byCompilation =
 		Number(a.isCompilation ?? false) - Number(b.isCompilation ?? false);
 	if (byCompilation !== 0) return byCompilation;
 
-	return (a.releaseDate ?? "9999").localeCompare(b.releaseDate ?? "9999");
+	const bySource = SOURCE_RANK[a.source] - SOURCE_RANK[b.source];
+	if (bySource !== 0) return bySource;
+
+	const byRank = (a.rank ?? 0) - (b.rank ?? 0);
+	if (byRank !== 0) return byRank;
+
+	const leftDate = preciseDate(a.releaseDate);
+	const rightDate = preciseDate(b.releaseDate);
+	if (leftDate && rightDate) return leftDate.localeCompare(rightDate);
+	return 0;
 }
 
 /** Closest miss first: the reason reported is the furthest the best candidate got. */
@@ -274,15 +328,24 @@ export function judgeCandidates(
 	const queryTitle = parseTrackTitle(query.title);
 	/** Parsed once, not once per candidate: the credit is attacker-chosen text. */
 	const queryCredit = artistCredit(query.artist, queryTitle);
+	const queryIsrc = normalizeIsrc(query.isrc);
 	const assessments = candidates.map((candidate) =>
-		assess(query, queryTitle, queryCredit, candidate),
+		assess(query, queryTitle, queryCredit, queryIsrc, candidate),
 	);
 	const agreedKeys = keysBothCatalogsReached(assessments);
 
 	const matches = assessments
 		.flatMap((assessment) => {
-			const via = evidenceFor(assessment, agreedKeys);
-			return via ? [{ assessment, via }] : [];
+			const proofs = proofsFor(assessment, agreedKeys);
+			return proofs.length
+				? [
+						{
+							assessment,
+							proofs,
+							agreed: agreedKeys.has(assessment.recordingKey),
+						},
+					]
+				: [];
 		})
 		.sort(betterMatch);
 
@@ -296,7 +359,7 @@ export function judgeCandidates(
 
 	return {
 		status: "matched",
-		via: best.via,
+		via: best.proofs[0] as MatchEvidence,
 		candidate: best.assessment.candidate,
 		metadata: fillFromSupport(
 			canonicalFrom(best.assessment.candidate, query.isrc),

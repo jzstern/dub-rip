@@ -87,7 +87,12 @@ function coverArtUrl(album: DeezerAlbumRef | undefined): string | undefined {
 	}
 }
 
-function toCandidate(track: DeezerTrack): CatalogCandidate | null {
+function toCandidate(
+	track: DeezerTrack | null,
+	rank = 0,
+): CatalogCandidate | null {
+	/** A `data` element can be a string or null; reaching into it would throw. */
+	if (!track || typeof track !== "object") return null;
 	const title =
 		optionalString(track.title) ?? optionalString(track.title_short);
 	const artist = optionalString(track.artist?.name);
@@ -96,6 +101,7 @@ function toCandidate(track: DeezerTrack): CatalogCandidate | null {
 	const duration = track.duration;
 	return {
 		source: "deezer",
+		rank,
 		artist,
 		title,
 		album: optionalString(track.album?.title),
@@ -155,21 +161,27 @@ async function requestDeezer(
 	}
 }
 
+/**
+ * `null` means Deezer could not be reached or refused (quota included); `[]`
+ * means it answered and had nothing. The caller has to tell those apart,
+ * because an outage cached as "no such track" would outlive the outage.
+ */
 export async function searchDeezer(
 	term: string,
 	{ timeout = DEFAULT_TIMEOUT_MS }: CatalogRequestOptions = {},
-): Promise<CatalogCandidate[]> {
+): Promise<CatalogCandidate[] | null> {
 	if (!term.trim()) return [];
 	const body = (await requestDeezer(
 		deezerSearchUrl(term),
 		"search",
 		timeout,
 	)) as { data?: DeezerTrack[] } | null;
-	if (!Array.isArray(body?.data)) return [];
+	if (!body) return null;
+	if (!Array.isArray(body.data)) return null;
 	/** `limit` is a request hint; the cap is ours, and it bounds the judging loop. */
 	return body.data
 		.slice(0, SEARCH_LIMIT)
-		.map(toCandidate)
+		.map((track, rank) => toCandidate(track, rank))
 		.filter((candidate): candidate is CatalogCandidate => candidate !== null);
 }
 
@@ -201,6 +213,7 @@ export async function deezerAlbum(
 		record_type?: unknown;
 		release_date?: unknown;
 		genres?: { data?: { name?: unknown }[] };
+		artist?: { name?: unknown };
 	} | null;
 	if (!body) return null;
 
@@ -208,6 +221,13 @@ export async function deezerAlbum(
 		label: optionalString(body.label),
 		genre: optionalString(body.genres?.data?.[0]?.name),
 		releaseDate: optionalString(body.release_date)?.slice(0, 10),
-		isCompilation: body.record_type === "compile",
+		/**
+		 * Deezer marks some compilations with `record_type`, but leaves many
+		 * label samplers as ordinary albums credited to Various Artists — which
+		 * is the same signal iTunes uses.
+		 */
+		isCompilation:
+			body.record_type === "compile" ||
+			optionalString(body.artist?.name)?.toLowerCase() === "various artists",
 	};
 }

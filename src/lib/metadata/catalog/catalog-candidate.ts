@@ -15,6 +15,12 @@ export interface CatalogCandidate {
 	genre?: string;
 	label?: string;
 	artworkUrl?: string;
+	/**
+	 * Where the catalog itself ranked this result. Both APIs put the canonical
+	 * release above a reissue or a knock-off, which is better ordering evidence
+	 * than a reissue's back-dated release date.
+	 */
+	rank?: number;
 }
 
 /** What a proven match writes, in place of the values parsed from the upload title. */

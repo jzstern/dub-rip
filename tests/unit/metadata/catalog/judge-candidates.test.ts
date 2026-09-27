@@ -114,10 +114,10 @@ describe("judgeCandidates() rejects what a search gets wrong", () => {
 	});
 
 	it("rejects a length variant when the duration disagrees", () => {
-		// #given — the upload is the 4:08 radio edit, the candidate the 6:07 album cut
+		// #given — the upload names the radio edit; the candidate is the 6:07 album cut
 		const query = {
 			artist: "Daft Punk",
-			title: "Get Lucky ft. Pharrell Williams, Nile Rodgers",
+			title: "Get Lucky (Radio Edit) ft. Pharrell Williams, Nile Rodgers",
 			durationSeconds: 248,
 		};
 
@@ -132,6 +132,75 @@ describe("judgeCandidates() rejects what a search gets wrong", () => {
 
 		// #then
 		expect(verdict).toEqual({ status: "unmatched", reason: "unverified" });
+	});
+
+	it("accepts a length variant the duration confirms", () => {
+		// #when — the same radio edit, against the catalog's own radio-edit row
+		const verdict = judgeCandidates(
+			{
+				artist: "Daft Punk",
+				title: "Get Lucky (Radio Edit) ft. Pharrell Williams, Nile Rodgers",
+				durationSeconds: 248,
+			},
+			[
+				candidate({
+					artist: "Daft Punk",
+					title:
+						"Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)",
+					durationSeconds: 248,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "duration" });
+	});
+
+	it("refuses a bare edit, which names someone else's cut", () => {
+		// #given — an unnamed DJ edit whose runtime happens to land near the original
+		const query = {
+			artist: "Fred again..",
+			title: "Marea (Edit)",
+			durationSeconds: 302,
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				artist: "Fred again..",
+				title: "Marea",
+				album: "Actual Life",
+				durationSeconds: 300,
+				isrc: "GB5KW2100001",
+			}),
+		]);
+
+		// #then
+		expect(verdict).toEqual({
+			status: "unmatched",
+			reason: "version-mismatch",
+		});
+	});
+
+	it("refuses a single version whose duration does not confirm it", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Daft Punk",
+				title: "Get Lucky (Single Version)",
+				durationSeconds: 248,
+			},
+			[
+				candidate({
+					artist: "Daft Punk",
+					title: "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+					durationSeconds: 367,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
 	});
 });
 
@@ -158,19 +227,209 @@ describe("judgeCandidates() distrusts an ISRC an uploader typed", () => {
 		expect(verdict.status).toBe("unmatched");
 	});
 
-	it("still accepts it when the upload's own artist lines up", () => {
-		// #when — a distributor upload, where the ISRC and the credit came together
+	it("refuses an ISRC copied onto a sped-up edit of the same song", () => {
+		// #given — the version differs, so it is a different recording whatever the tag says
+		const query = {
+			artist: "Billie Eilish",
+			title: "bad guy (Sped Up)",
+			isrc: "USUM71900764",
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [STAMPED]);
+
+		// #then
+		expect(verdict).toEqual({
+			status: "unmatched",
+			reason: "version-mismatch",
+		});
+	});
+
+	it("refuses an ISRC whose candidate runs minutes longer than the upload", () => {
+		// #given — a bootleg tagged with the source track's ISRC, 136s shorter
+		const query = {
+			artist: "Klaps",
+			title: "Se Cura",
+			isrc: "DEH742513913",
+			durationSeconds: 150,
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				artist: "Klaps (BE)",
+				title: "Se Cura",
+				album: "Deadline Records Va 05",
+				durationSeconds: 286,
+				isrc: "DEH742513913",
+			}),
+		]);
+
+		// #then
+		expect(verdict).toEqual({ status: "unmatched", reason: "unverified" });
+	});
+
+	it("accepts a distributor upload whose title and ISRC both line up", () => {
+		// #when
 		const verdict = judgeCandidates(
-			{
-				artist: "Billie Eilish",
-				title: "bad guy (Sped Up)",
-				isrc: "USUM71900764",
-			},
+			{ artist: "Billie Eilish", title: "bad guy", isrc: "USUM71900764" },
 			[STAMPED],
 		);
 
 		// #then
 		expect(verdict).toMatchObject({ status: "matched", via: "isrc" });
+	});
+
+	it("compares an ISRC as an identifier, ignoring case and dashes", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Billie Eilish", title: "bad guy", isrc: "us-um7-19-00764" },
+			[STAMPED],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "isrc" });
+	});
+});
+
+describe("judgeCandidates() ranks the same recording stably", () => {
+	const TOTO_ALBUM_CUT = candidate({
+		artist: "Toto",
+		title: "Africa",
+		album: "Toto IV",
+		durationSeconds: 296,
+		rank: 0,
+		isrc: "USSM19801941",
+	});
+	const TOTO_KNOCK_OFF = candidate({
+		artist: "Toto",
+		title: "Africa",
+		album: "Classic Rock Instrumentals",
+		durationSeconds: 307,
+		rank: 4,
+	});
+	const TOTO_ITUNES = candidate({
+		source: "itunes",
+		artist: "Toto",
+		title: "Africa",
+		album: "Toto IV",
+		durationSeconds: 296,
+		rank: 0,
+	});
+
+	it("keeps the release both catalogs reached when a later stage learns the duration", () => {
+		// #given — the upload runs 307s, which only the knock-off's runtime matches
+		const query = { artist: "Toto", title: "Africa", durationSeconds: 307 };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			TOTO_ITUNES,
+			TOTO_ALBUM_CUT,
+			TOTO_KNOCK_OFF,
+		]);
+
+		// #then — the preview's choice stands, so the file matches what was shown
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Toto IV" },
+		});
+	});
+
+	it("prefers the catalog's own top result over a back-dated reissue", () => {
+		// #given — iTunes back-dates the greatest-hits reissue to Jan 1
+		const query = {
+			artist: "Rick Astley",
+			title: "Never Gonna Give You Up",
+			durationSeconds: 214,
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "Rick Astley",
+				title: "Never Gonna Give You Up",
+				album: "Whenever You Need Somebody",
+				releaseDate: "1987-07-27",
+				durationSeconds: 214,
+				rank: 0,
+			}),
+			candidate({
+				source: "itunes",
+				artist: "Rick Astley",
+				title: "Never Gonna Give You Up",
+				album: "The Best Of Me: Never Edition",
+				releaseDate: "1987-01-01",
+				durationSeconds: 214,
+				rank: 2,
+			}),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Whenever You Need Somebody" },
+		});
+	});
+
+	it("takes the earlier release when both dates are precise", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Adele", title: "Hello", durationSeconds: 295 },
+			[
+				candidate({
+					artist: "Adele",
+					title: "Hello",
+					album: "25 (Reissue)",
+					releaseDate: "2020-03-14",
+					durationSeconds: 295,
+					rank: 0,
+				}),
+				candidate({
+					artist: "Adele",
+					title: "Hello",
+					album: "25",
+					releaseDate: "2015-11-20",
+					durationSeconds: 295,
+					rank: 0,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ metadata: { album: "25" } });
+	});
+});
+
+describe("judgeCandidates() fills gaps only from the same recording", () => {
+	it("does not take an ISRC from a candidate the duration rules out", () => {
+		// #given — a live cut of the same song, four times too long to be this upload
+		const query = { artist: "Adele", title: "Hello", durationSeconds: 295 };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "Adele",
+				title: "Hello",
+				album: "25",
+				durationSeconds: 295,
+				releaseDate: "2015-11-20",
+			}),
+			candidate({
+				artist: "Adele",
+				title: "Hello",
+				album: "Live at the Royal Albert Hall",
+				durationSeconds: 372,
+				isrc: "GBBKS1100123",
+			}),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "25", isrc: undefined },
+		});
 	});
 });
 
@@ -323,11 +582,10 @@ describe("judgeCandidates() picks between accepted candidates", () => {
 			}),
 		]);
 
-		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Levels (Remixes) - Single" },
-		});
+		// #then — the CHOSEN candidate, not the merged output, which a fill could mask
+		expect(verdict.status === "matched" && verdict.candidate.album).toBe(
+			"Levels (Remixes) - Single",
+		);
 	});
 
 	it("prefers Deezer, which carries the ISRC and keeps feat. credits in the title", () => {

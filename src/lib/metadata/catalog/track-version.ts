@@ -39,9 +39,17 @@ const DANGLING_PUNCTUATION = /^[\s,;:|/–—-]+|[\s,;:|/–—-]+$/g;
 const IDENTITY_KIND =
 	/\b(remix|rmx|edit|bootleg|flip|rework|refix|vip|mashup|live|acoustic|unplugged|instrumental|acapella|cappella|karaoke|cover|tribute|slowed|sped|nightcore|reprise|demo|dub|session)\b/;
 
-/** Length variants: the same recording, cut for radio or a club. */
+/**
+ * Length variants: the same recording, cut for radio, a club or a 12".
+ *
+ * Checked before the neutral vocabulary, so "single version" and "video mix"
+ * land here even though "single", "version", "video" and "mix" are each
+ * individually neutral. A bare "edit" is deliberately NOT here — an unqualified
+ * "(Edit)" names someone else's edit, so it belongs with the identity kinds and
+ * has to fail closed.
+ */
 const LENGTH_PHRASE =
-	/^(?:radio (?:edit|mix|version)|extended(?: (?:mix|version|edit))?|club (?:mix|edit)|(?:short|long|full) (?:version|edit)|edit)$/;
+	/^(?:radio (?:edit|mix|version)|extended(?: (?:mix|version|edit))?|club (?:mix|edit)|single (?:version|mix|edit)|video (?:mix|version|edit)|(?:short|long|full) (?:version|edit)|(?:7|10|12)(?: inch)?(?: (?:mix|version|edit))?)$/;
 
 /**
  * Words that describe a file or a master rather than a recording. A bracket

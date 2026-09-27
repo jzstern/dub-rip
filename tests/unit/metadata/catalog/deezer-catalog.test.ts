@@ -20,8 +20,9 @@ describe("searchDeezer()", () => {
 		const candidates = await searchDeezer("Billie Eilish bad guy");
 
 		// #then
-		expect(candidates[0]).toEqual({
+		expect(candidates?.[0]).toEqual({
 			source: "deezer",
+			rank: 0,
 			artist: "Billie Eilish",
 			title: "bad guy",
 			album: "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
@@ -43,7 +44,7 @@ describe("searchDeezer()", () => {
 		);
 
 		// #then
-		expect(candidates[0]?.title).toBe("Levels (Skrillex Remix)");
+		expect(candidates?.[0]?.title).toBe("Levels (Skrillex Remix)");
 	});
 
 	it("treats Deezer's HTTP 200 error body as a failure", async () => {
@@ -66,12 +67,17 @@ describe("searchDeezer()", () => {
 		// #when
 		const candidates = await searchDeezer("Adele Hello");
 
-		// #then
-		expect(candidates).toEqual([]);
+		// #then — unreachable, not empty: an outage must not be cached as a miss
+		expect(candidates).toBeNull();
 	});
 
-	it("ignores artwork served from anywhere but Deezer's CDN", async () => {
-		// #given
+	it.each([
+		["a plaintext scheme", "http://cdn-images.dzcdn.net/x.jpg"],
+		["a file scheme", "file://cdn-images.dzcdn.net/etc/passwd"],
+		["another host", "https://evil.example/x.jpg"],
+		["a lookalike host", "https://cdn-images.dzcdn.net.evil.example/x.jpg"],
+	])("ignores artwork at %s", async (_name, coverUrl) => {
+		// #given — the allowlist is the only gate the later image fetch has
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => ({
@@ -82,11 +88,7 @@ describe("searchDeezer()", () => {
 						{
 							title: "Hello",
 							artist: { name: "Adele" },
-							album: {
-								id: 1,
-								title: "25",
-								cover_xl: "https://evil.example/x.jpg",
-							},
+							album: { id: 1, title: "25", cover_xl: coverUrl },
 						},
 					],
 				}),
@@ -97,7 +99,31 @@ describe("searchDeezer()", () => {
 		const candidates = await searchDeezer("Adele Hello");
 
 		// #then
-		expect(candidates[0]?.artworkUrl).toBeUndefined();
+		expect(candidates?.[0]?.artworkUrl).toBeUndefined();
+	});
+
+	it("skips a data element that is not a track object", async () => {
+		// #given
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => ({
+				ok: true,
+				status: 200,
+				json: async () => ({
+					data: [
+						null,
+						"not a track",
+						{ title: "Hello", artist: { name: "Adele" } },
+					],
+				}),
+			})),
+		);
+
+		// #when
+		const candidates = await searchDeezer("Adele Hello");
+
+		// #then
+		expect(candidates).toHaveLength(1);
 	});
 });
 
@@ -162,6 +188,28 @@ describe("deezerAlbum()", () => {
 			releaseDate: "2019-03-29",
 			isCompilation: false,
 		});
+	});
+
+	it("reports a Various Artists album as a compilation, whatever its record_type", async () => {
+		// #given — Deezer leaves many label samplers as ordinary albums
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => ({
+				ok: true,
+				status: 200,
+				json: async () => ({
+					label: "Deadline Rec",
+					record_type: "album",
+					artist: { name: "Various Artists" },
+				}),
+			})),
+		);
+
+		// #when
+		const album = await deezerAlbum("1");
+
+		// #then
+		expect(album?.isCompilation).toBe(true);
 	});
 
 	it("reports a compilation, whose album name would be wrong to write", async () => {

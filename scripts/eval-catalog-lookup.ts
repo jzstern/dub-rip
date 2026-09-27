@@ -10,7 +10,10 @@
 
 import { lookupCatalogMetadata } from "../src/lib/metadata/catalog/lookup-catalog";
 import { normalizeForMatch } from "../src/lib/metadata/catalog/normalize-text";
-import { parseTrackTitle } from "../src/lib/metadata/catalog/track-version";
+import {
+	parseTrackTitle,
+	sameVersion,
+} from "../src/lib/metadata/catalog/track-version";
 import corpus from "../tests/fixtures/catalog/eval-corpus.json";
 
 interface EvalCase {
@@ -45,6 +48,19 @@ function sameTitle(
 ): boolean {
 	if (!left || !right) return false;
 	return normalizeForMatch(left) === normalizeForMatch(right);
+}
+
+/**
+ * The gate the whole design exists for: the recording written must carry the
+ * same version as the upload. Comparing base titles alone cannot see it — a
+ * bootleg and the original share a base title, which is exactly how the wrong
+ * recording would slip past this harness.
+ */
+function sameRecording(uploadTitle: string, matchedTitle: string): boolean {
+	return sameVersion(
+		parseTrackTitle(uploadTitle),
+		parseTrackTitle(matchedTitle),
+	).identity;
 }
 
 for (const testCase of cases) {
@@ -82,7 +98,11 @@ for (const testCase of cases) {
 			verdict.metadata.artist,
 			testCase.expectArtist,
 		);
-		if (!titleMatches || !artistMatches) {
+		const versionMatches = sameRecording(
+			testCase.title,
+			verdict.metadata.title,
+		);
+		if (!titleMatches || !artistMatches || !versionMatches) {
 			tally.wrong += 1;
 			console.log(
 				`WRONG   ${testCase.name}\n        wanted ${testCase.expectArtist} — ${testCase.expectTitle}\n        got    ${got}`,

@@ -28,7 +28,7 @@ describe("fetchCatalogCandidates()", () => {
 		);
 	});
 
-	it("asks Deezer for the ISRC alone when the upload carries one", async () => {
+	it("asks the ISRC and both searches together, so an unrelated ISRC cannot suppress them", async () => {
 		// #given
 		const fetchMock = stubCatalogFetch();
 
@@ -40,7 +40,38 @@ describe("fetchCatalogCandidates()", () => {
 		});
 
 		// #then
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock).toHaveBeenCalledTimes(3);
+	});
+
+	it("still returns search results when the ISRC is unknown", async () => {
+		// #given — the fabricated ISRC is expected to be absent from the fixtures
+		stubCatalogFetch({ allowMissing: ["ZZZZZ0000000"] });
+
+		// #when
+		const candidates = await fetchCatalogCandidates({
+			artist: "Billie Eilish",
+			title: "bad guy",
+			isrc: "ZZZZZ0000000",
+		});
+
+		// #then
+		expect(candidates.length).toBeGreaterThan(1);
+	});
+
+	it("throws when no catalog can be reached, rather than reporting an empty result", async () => {
+		// #given
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => {
+				throw new Error("network down");
+			}),
+		);
+
+		// #when
+		const attempt = fetchCatalogCandidates({ artist: "Adele", title: "Hello" });
+
+		// #then — an outage reported as "no such track" would outlive the outage
+		await expect(attempt).rejects.toThrow(/catalog/i);
 	});
 
 	it("keeps searching out of a title we could not classify", () => {
@@ -52,21 +83,6 @@ describe("fetchCatalogCandidates()", () => {
 
 		// #then
 		expect(term).toBe("Lostin Powers She so Heavy sneakpreview");
-	});
-
-	it("falls back to searching when the ISRC is unknown", async () => {
-		// #given — the ISRC lookup 404s, the searches are recorded
-		stubCatalogFetch();
-
-		// #when
-		const candidates = await fetchCatalogCandidates({
-			artist: "Billie Eilish",
-			title: "bad guy",
-			isrc: "ZZZZZ0000000",
-		});
-
-		// #then
-		expect(candidates.length).toBeGreaterThan(1);
 	});
 });
 
@@ -157,6 +173,58 @@ describe("lookupCatalogMetadata()", () => {
 		).toEqual([]);
 	});
 
+	it("drops the album when enrichment reveals a compilation", async () => {
+		// #given — the recorded search matches, but its album is a Various Artists set
+		const fetchMock = vi.fn(async (input: unknown) => {
+			const url = String(input);
+			if (url.includes("itunes.apple.com")) {
+				return { ok: true, status: 200, json: async () => ({ results: [] }) };
+			}
+			if (url.includes("/album/")) {
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						label: "Deadline Rec",
+						record_type: "compile",
+						genres: { data: [{ name: "Electronic" }] },
+					}),
+				};
+			}
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ({
+					data: [
+						{
+							title: "Se Cura",
+							duration: 286,
+							artist: { name: "Klaps" },
+							album: { id: 42, title: "Deadline Records Va 05" },
+						},
+					],
+				}),
+			};
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		// #when
+		const verdict = await lookupCatalogMetadata(
+			{ artist: "Klaps", title: "Se Cura", durationSeconds: 286 },
+			{ enrich: true },
+		);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: {
+				album: undefined,
+				label: "Deadline Rec",
+				genre: "Electronic",
+			},
+		});
+	});
+
 	it("survives both catalogs failing", async () => {
 		// #given
 		vi.stubGlobal(
@@ -176,14 +244,51 @@ describe("lookupCatalogMetadata()", () => {
 		expect(verdict).toEqual({ status: "unmatched", reason: "no-candidates" });
 	});
 
+	it("does not cache an outage, so the next request retries", async () => {
+		// #given
+		const fetchMock = vi.fn(async () => {
+			throw new Error("network down");
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		const store = new Map<string, unknown>();
+		const cache = {
+			get: async (
+				key: string,
+				fetchValue: () => Promise<
+					Awaited<ReturnType<typeof fetchCatalogCandidates>>
+				>,
+			) => {
+				if (!store.has(key)) store.set(key, await fetchValue());
+				return store.get(key) as Awaited<
+					ReturnType<typeof fetchCatalogCandidates>
+				>;
+			},
+		};
+		const query = { artist: "Adele", title: "Hello" };
+
+		// #when
+		await lookupCatalogMetadata(query, { cache });
+		await lookupCatalogMetadata(query, { cache });
+
+		// #then — two attempts, four calls: nothing was remembered
+		expect(fetchMock).toHaveBeenCalledTimes(4);
+	});
+
 	it("fetches once for repeated lookups when given a cache", async () => {
 		// #given
 		const fetchMock = stubCatalogFetch();
 		const store = new Map<string, unknown>();
 		const cache = {
-			get: async <T>(key: string, factory: () => Promise<T>): Promise<T> => {
-				if (!store.has(key)) store.set(key, await factory());
-				return store.get(key) as T;
+			get: async (
+				key: string,
+				fetchValue: () => Promise<
+					Awaited<ReturnType<typeof fetchCatalogCandidates>>
+				>,
+			) => {
+				if (!store.has(key)) store.set(key, await fetchValue());
+				return store.get(key) as Awaited<
+					ReturnType<typeof fetchCatalogCandidates>
+				>;
 			},
 		};
 		const query = { artist: "Billie Eilish", title: "bad guy" };
@@ -204,16 +309,29 @@ describe("lookupCatalogMetadata()", () => {
 });
 
 describe("candidateCacheKey()", () => {
-	it("ignores the punctuation and case an uploader typed", () => {
-		// #when
+	it("shares an entry between titles that search identically", () => {
+		// #when — the bracketed noise is dropped from the search term
 		const key = candidateCacheKey({
-			artist: "Billie Eilish",
-			title: "Bad Guy",
+			artist: "Queen",
+			title: "Bohemian Rhapsody (Official Video Remastered)",
 		});
 
 		// #then
 		expect(key).toBe(
-			candidateCacheKey({ artist: "billie eilish", title: "bad guy!" }),
+			candidateCacheKey({ artist: "Queen", title: "Bohemian Rhapsody" }),
+		);
+	});
+
+	it("separates titles whose version changes what is searched for", () => {
+		// #when
+		const key = candidateCacheKey({
+			artist: "Avicii",
+			title: "Levels (Skrillex Remix)",
+		});
+
+		// #then
+		expect(key).not.toBe(
+			candidateCacheKey({ artist: "Avicii", title: "Levels" }),
 		);
 	});
 

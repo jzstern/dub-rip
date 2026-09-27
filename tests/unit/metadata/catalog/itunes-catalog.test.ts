@@ -19,8 +19,9 @@ describe("searchITunes()", () => {
 		const candidates = await searchITunes("Billie Eilish bad guy");
 
 		// #then
-		expect(candidates[0]).toEqual({
+		expect(candidates?.[0]).toEqual({
 			source: "itunes",
+			rank: 0,
 			artist: "Billie Eilish",
 			title: "bad guy",
 			album: "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
@@ -43,7 +44,7 @@ describe("searchITunes()", () => {
 
 		// #then
 		expect(
-			candidates.find((candidate) =>
+			candidates?.find((candidate) =>
 				candidate.album?.startsWith("Body By Jake"),
 			)?.isCompilation,
 		).toBe(true);
@@ -108,7 +109,7 @@ describe("searchITunes()", () => {
 		const candidates = await searchITunes("Adele Hello");
 
 		// #then
-		expect(candidates[0]?.artworkUrl).toBeUndefined();
+		expect(candidates?.[0]?.artworkUrl).toBeUndefined();
 	});
 
 	it.each([
@@ -127,8 +128,8 @@ describe("searchITunes()", () => {
 				},
 			},
 		],
-	])("returns no candidates for %s", async (_name, response) => {
-		// #given
+	])("reports unreachable, not empty, for %s", async (_name, response) => {
+		// #given — an outage must be distinguishable from a genuine miss, or it gets cached
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async () => response),
@@ -138,10 +139,10 @@ describe("searchITunes()", () => {
 		const candidates = await searchITunes("Adele Hello");
 
 		// #then
-		expect(candidates).toEqual([]);
+		expect(candidates).toBeNull();
 	});
 
-	it("returns no candidates when the request times out", async () => {
+	it("reports unreachable when the request times out", async () => {
 		// #given
 		vi.stubGlobal(
 			"fetch",
@@ -154,7 +155,7 @@ describe("searchITunes()", () => {
 		const candidates = await searchITunes("Adele Hello", { timeout: 10 });
 
 		// #then
-		expect(candidates).toEqual([]);
+		expect(candidates).toBeNull();
 	});
 
 	it("skips results that are not songs", async () => {

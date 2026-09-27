@@ -7,7 +7,11 @@ import {
 import { deezerAlbum, deezerTrackByIsrc, searchDeezer } from "./deezer-catalog";
 import { searchITunes } from "./itunes-catalog";
 import { judgeCandidates } from "./judge-candidates";
-import { collapseWhitespace, normalizeForMatch } from "./normalize-text";
+import {
+	collapseWhitespace,
+	normalizeForMatch,
+	normalizeIsrc,
+} from "./normalize-text";
 import { parseTrackTitle } from "./track-version";
 
 /**
@@ -19,21 +23,40 @@ import { parseTrackTitle } from "./track-version";
  * nothing while letting a later stage accept what an earlier one could not.
  *
  * The cache is a port rather than a module so that the wiring stage can pass
- * the app's single-flight cache in. Without one the lookup still works, one
- * fetch at a time.
+ * the app's own `createSingleFlightCache<CatalogCandidate[]>()` in. Without one
+ * the lookup still works, one fetch at a time.
  */
 
 export const CANDIDATE_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_TIMEOUT_MS = 6000;
 
+/**
+ * Structurally satisfied by `SingleFlightCache<CatalogCandidate[]>` from
+ * $lib/single-flight-cache. Deliberately not generic in `get`: a concrete cache
+ * cannot satisfy a method-level generic, which would make it unpassable.
+ */
 export interface CandidateCache {
-	get<T>(key: string, factory: () => Promise<T>, ttlMs: number): Promise<T>;
+	get(
+		key: string,
+		fetch: () => Promise<CatalogCandidate[]>,
+		ttlMs: number,
+	): Promise<CatalogCandidate[]>;
 }
 
 export interface LookupOptions {
+	/** Total budget for the whole lookup, not per request. */
 	timeout?: number;
 	cache?: CandidateCache;
 	/** Fetch the Deezer album for label and genre. Off for previews, which show neither. */
 	enrich?: boolean;
+}
+
+/** Thrown when no catalog could be reached, so the miss is never cached as a result. */
+export class CatalogUnavailableError extends Error {
+	constructor() {
+		super("No music catalog could be reached");
+		this.name = "CatalogUnavailableError";
+	}
 }
 
 /**
@@ -56,40 +79,48 @@ export function searchTerm(query: TrackQuery): string {
 	);
 }
 
+/**
+ * Keyed on what is actually fetched, not on the raw query: two titles that
+ * differ only in bracketed noise search identically and must share an entry,
+ * while two that search differently must not — normalising the whole title
+ * would collide "Bohemian Rhapsody (Live Aid)" with the studio version.
+ */
 export function candidateCacheKey(query: TrackQuery): string {
 	return [
-		normalizeForMatch(query.artist),
-		normalizeForMatch(query.title),
-		query.isrc?.toUpperCase() ?? "",
+		normalizeForMatch(searchTerm(query)),
+		normalizeIsrc(query.isrc) ?? "",
 	].join("|");
 }
 
 /**
- * An ISRC identifies the recording outright, so it is tried alone. A wrong or
- * unknown one falls through to the searches rather than ending the lookup.
+ * All three calls go out together. The ISRC leg is not a short-circuit: an
+ * uploader-supplied ISRC can resolve to a track that is not this upload, and
+ * suppressing the searches would leave nothing for the judge to fall back on.
  */
 export async function fetchCatalogCandidates(
 	query: TrackQuery,
-	{ timeout }: Pick<LookupOptions, "timeout"> = {},
+	{ timeout = DEFAULT_TIMEOUT_MS }: Pick<LookupOptions, "timeout"> = {},
 ): Promise<CatalogCandidate[]> {
-	if (query.isrc) {
-		const byIsrc = await deezerTrackByIsrc(query.isrc, { timeout });
-		if (byIsrc) return [byIsrc];
-	}
-
 	const term = searchTerm(query);
-	if (!term) return [];
+	const isrc = normalizeIsrc(query.isrc);
 
-	const [itunes, deezer] = await Promise.all([
+	const [byIsrc, itunes, deezer] = await Promise.all([
+		isrc ? deezerTrackByIsrc(isrc, { timeout }) : Promise.resolve(null),
 		searchITunes(term, { timeout }),
 		searchDeezer(term, { timeout }),
 	]);
-	return [...itunes, ...deezer];
+
+	/** Both searches unreachable is an outage, which must not be cached as a miss. */
+	if (itunes === null && deezer === null && !byIsrc) {
+		throw new CatalogUnavailableError();
+	}
+
+	return [...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])];
 }
 
 async function enrichFromAlbum(
 	verdict: CatalogVerdict,
-	timeout: number | undefined,
+	timeout: number,
 ): Promise<CatalogVerdict> {
 	if (verdict.status !== "matched") return verdict;
 	const { albumId } = verdict.candidate;
@@ -112,19 +143,31 @@ async function enrichFromAlbum(
 
 export async function lookupCatalogMetadata(
 	query: TrackQuery,
-	{ timeout, cache, enrich = false }: LookupOptions = {},
+	{ timeout = DEFAULT_TIMEOUT_MS, cache, enrich = false }: LookupOptions = {},
 ): Promise<CatalogVerdict> {
-	const fetchCandidates = () => fetchCatalogCandidates(query, { timeout });
-	const candidates = cache
-		? await cache.get(
-				candidateCacheKey(query),
-				fetchCandidates,
-				CANDIDATE_TTL_MS,
-			)
-		: await fetchCandidates();
+	/** A budget, so a lookup cannot take a multiple of the caller's timeout. */
+	const deadline = Date.now() + timeout;
+	const remaining = () => Math.max(1, deadline - Date.now());
+
+	let candidates: CatalogCandidate[];
+	try {
+		const fetchCandidates = () =>
+			fetchCatalogCandidates(query, { timeout: remaining() });
+		candidates = cache
+			? await cache.get(
+					candidateCacheKey(query),
+					fetchCandidates,
+					CANDIDATE_TTL_MS,
+				)
+			: await fetchCandidates();
+	} catch (error) {
+		if (!(error instanceof CatalogUnavailableError)) throw error;
+		console.log("[catalog] unmatched reason=catalogs-unreachable");
+		return { status: "unmatched", reason: "no-candidates" };
+	}
 
 	const judged = judgeCandidates(query, candidates);
-	const verdict = enrich ? await enrichFromAlbum(judged, timeout) : judged;
+	const verdict = enrich ? await enrichFromAlbum(judged, remaining()) : judged;
 
 	console.log(
 		verdict.status === "matched"

@@ -18,7 +18,16 @@ export interface TrackIdentity {
 }
 
 const ARTIST_LIST_SEPARATOR = /\s*(?:,|&|\+|\sx\s|\bfeat\.?\s|\bft\.?\s)\s*/i;
-const CHANNEL_SUFFIX = /\s*(?:vevo|mixes|music|official|records|tv)$/i;
+/** A VEVO channel is only ever named after its artist. */
+const VEVO_SUFFIX = /\s*vevo$/i;
+/**
+ * "Two Friends Mixes" is an artist's channel, but "Summer Mixes" is not, and a
+ * lone word is as likely to be a song title as an artist, so what's left must
+ * be more than one word. "Records", "Music" and "TV" aren't stripped at all:
+ * "Island Records" names a label, not an artist called "Island".
+ */
+const ARTIST_CHANNEL_SUFFIX = /\s+(?:mixes|official)$/i;
+const MULTI_WORD = /\S\s+\S/;
 const TRAILING_VERSION = /(?:\s*[([][^()[\]]*[)\]])+$/;
 
 function normalizeName(name: string): string {
@@ -28,11 +37,16 @@ function normalizeName(name: string): string {
 		.replace(/[^\p{L}\p{N}]/gu, "");
 }
 
+function channelStems(name: string): string[] {
+	const stems = [name.replace(VEVO_SUFFIX, "")];
+	const artistStem = name.replace(ARTIST_CHANNEL_SUFFIX, "");
+	if (MULTI_WORD.test(artistStem)) stems.push(artistStem);
+	return stems;
+}
+
 function knownArtistNames(...names: (string | undefined)[]): Set<string> {
 	const variants = names.flatMap((name) =>
-		name
-			? [...name.split(ARTIST_LIST_SEPARATOR), name.replace(CHANNEL_SUFFIX, "")]
-			: [],
+		name ? [...name.split(ARTIST_LIST_SEPARATOR), ...channelStems(name)] : [],
 	);
 	return new Set(variants.map(normalizeName).filter(Boolean));
 }

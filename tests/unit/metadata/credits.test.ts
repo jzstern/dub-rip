@@ -9,6 +9,8 @@ describe("extractRemixer()", () => {
 		["Don't Stop The Music (Ed Marquis Bootleg)", "Ed Marquis"],
 		["Something Just Like This (Alesso Remix)", "Alesso"],
 		["Spring (DROPIXX & ARAYSEN Remix)", "DROPIXX & ARAYSEN"],
+		["Song (Dirty South Remix)", "Dirty South"],
+		["Song (Club Killers Remix)", "Club Killers"],
 	])("finds the remixer in %j", (title, expected) => {
 		// #when
 		const remixer = extractRemixer(title);
@@ -28,6 +30,16 @@ describe("extractRemixer()", () => {
 		"Song (Acapella Edit)",
 		"Song (A Cappella Edit)",
 		"Song (Super Clean Edit)",
+		"Song (Video Edit)",
+		"Song (Lyric Edit)",
+		"Song (Intro Edit)",
+		"Song (DJ Edit)",
+		"Song (TV Edit)",
+		"Song (Promo Edit)",
+		"Song (Dirty Edit)",
+		"Song (Lyric Video Edit)",
+		"Song (Video Mix Edit)",
+		"Song (Clean Intro Edit)",
 	])("names nobody for %j", (title) => {
 		// #when
 		const remixer = extractRemixer(title);

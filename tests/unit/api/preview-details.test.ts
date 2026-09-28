@@ -214,12 +214,13 @@ describe("POST /api/preview/details - duration extraction", () => {
 		expect(data).toEqual({ success: true, duration: 295 });
 	});
 
-	it("queries with the identity the client echoed, plus the extracted duration", async () => {
-		// #given
+	it("derives the identity server-side, not from the request body", async () => {
+		// #given — the body's artist/title are attacker-controlled and must be ignored,
+		// because the identity becomes a key in a cache shared across requests
 		mockYtDlpJson({
 			duration: 295,
-			track: "yt-dlp Track",
-			artist: "yt-dlp Artist",
+			title: "Adele - Hello (Official Video)",
+			uploader: "AdeleVEVO",
 		});
 		const POST = await importPost();
 
@@ -227,12 +228,12 @@ describe("POST /api/preview/details - duration extraction", () => {
 		await POST(
 			makeEvent({
 				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
-				artist: "Adele",
-				title: "Hello",
+				artist: "Ad''ele",
+				title: "Hel'''lo",
 			}),
 		);
 
-		// #then — the echoed values win, so all three stages share one cache key
+		// #then — the same heuristic identity the preview and the download build
 		expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
 			{ artist: "Adele", title: "Hello", durationSeconds: 295 },
 			{ timeout: 4000 },

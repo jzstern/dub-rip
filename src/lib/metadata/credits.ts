@@ -3,7 +3,7 @@ const VERSION_CREDIT =
 
 /** Words that describe a version rather than name the person who made it. */
 const GENERIC_VERSION_NAME =
-	/^(?:original|radio|extended|club|dub|instrumental|album|single|clean|explicit|short|long|main|vocal|acoustic|live|official|vip|deluxe|festival|acapella|a capella|a cappella|super clean|tiktok|summer|trap|house|techno|hardstyle|slowed|sped up|speed up|nightcore|\d+)$/i;
+	/^(?:original|radio|extended|club|dub|instrumental|album|single|clean|explicit|short|long|full|main|vocal|acoustic|live|official|vip|deluxe|festival|acapella|a capella|a cappella|super clean|tiktok|summer|trap|house|techno|hardstyle|slowed|sped up|speed up|nightcore|\d+\s*(?:inch|")?)$/i;
 
 const LABEL_LIKE_NAME = /\b(?:records|recordings)\b/i;
 

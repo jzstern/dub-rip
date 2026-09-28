@@ -13,7 +13,7 @@ const {
 	resolveAlbumArtImageMock,
 	resolveSoundCloudAlbumArtMock,
 	registerDownloadMock,
-	enrichedCatalogVerdictMock,
+	enrichedCatalogLookupMock,
 } = vi.hoisted(() => ({
 	/** Typed by their inputs so the call arguments can be asserted against. */
 	resolveAlbumArtImageMock: vi.fn<(input: unknown) => Promise<null>>(
@@ -23,9 +23,12 @@ const {
 		async () => null,
 	),
 	registerDownloadMock: vi.fn(() => "fake-token"),
-	enrichedCatalogVerdictMock: vi.fn<
+	enrichedCatalogLookupMock: vi.fn<
 		(...args: unknown[]) => Promise<Record<string, unknown>>
-	>(async () => ({ status: "unmatched", reason: "no-candidates" })),
+	>(async () => ({
+		verdict: { status: "unmatched", reason: "no-candidates" },
+		candidates: [],
+	})),
 }));
 
 vi.mock("node-id3", () => ({
@@ -45,9 +48,15 @@ vi.mock("$lib/download-pipeline/download-tokens", () => ({
 	registerDownload: registerDownloadMock,
 }));
 
-/** Without this the real lookup runs and these tests call iTunes and Deezer for real. */
-vi.mock("$lib/metadata/catalog/catalog-cache", () => ({
-	enrichedCatalogVerdict: enrichedCatalogVerdictMock,
+/**
+ * Without this the real lookup runs and these tests call iTunes and Deezer for
+ * real. `catalogArtwork` is pure, so it keeps its real behaviour.
+ */
+vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("$lib/metadata/catalog/catalog-cache")
+	>()),
+	enrichedCatalogLookup: enrichedCatalogLookupMock,
 }));
 
 import {
@@ -368,25 +377,29 @@ describe("finalizeMp3() SoundCloud cover art", () => {
 
 describe("finalizeMp3() with a proven catalog match", () => {
 	const MATCHED = {
-		status: "matched",
-		via: "duration",
-		candidate: { source: "itunes", artist: "Adele", title: "Hello" },
-		metadata: {
-			artist: "Adele",
-			title: "Hello",
-			album: "25",
-			artworkUrl: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
-			source: "itunes",
+		verdict: {
+			status: "matched",
+			via: "duration",
+			candidate: { source: "itunes", artist: "Adele", title: "Hello" },
+			metadata: {
+				artist: "Adele",
+				title: "Hello",
+				album: "25",
+				artworkUrl: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
+				source: "itunes",
+			},
 		},
+		candidates: [],
 	};
 
 	beforeEach(() => {
 		registerDownloadMock.mockClear();
 		resolveAlbumArtImageMock.mockReset().mockResolvedValue(null);
 		resolveSoundCloudAlbumArtMock.mockReset().mockResolvedValue(null);
-		enrichedCatalogVerdictMock
-			.mockReset()
-			.mockResolvedValue({ status: "unmatched", reason: "no-candidates" });
+		enrichedCatalogLookupMock.mockReset().mockResolvedValue({
+			verdict: { status: "unmatched", reason: "no-candidates" },
+			candidates: [],
+		});
 	});
 
 	it("queries with the heuristic identity plus the evidence the download has", async () => {
@@ -403,7 +416,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 		});
 
 		// #then — the same artist and title the preview queried, so the key matches
-		expect(enrichedCatalogVerdictMock).toHaveBeenCalledWith(
+		expect(enrichedCatalogLookupMock).toHaveBeenCalledWith(
 			{
 				artist: "Test Artist",
 				title: "Test Track",
@@ -417,7 +430,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	it("names the file after the canonical identity", async () => {
 		// #given
 		const filePath = await createTempMp3();
-		enrichedCatalogVerdictMock.mockResolvedValue(MATCHED);
+		enrichedCatalogLookupMock.mockResolvedValue(MATCHED);
 
 		// #when
 		await finalizeMp3(finalizeInputFor(filePath));
@@ -431,7 +444,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	it("hands the proven cover to the artwork resolver", async () => {
 		// #given
 		const filePath = await createTempMp3();
-		enrichedCatalogVerdictMock.mockResolvedValue(MATCHED);
+		enrichedCatalogLookupMock.mockResolvedValue(MATCHED);
 
 		// #when
 		await finalizeMp3(finalizeInputFor(filePath));
@@ -463,7 +476,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	it("still delivers the file when the lookup fails outright", async () => {
 		// #given
 		const filePath = await createTempMp3();
-		enrichedCatalogVerdictMock.mockRejectedValue(new Error("catalog exploded"));
+		enrichedCatalogLookupMock.mockRejectedValue(new Error("catalog exploded"));
 
 		// #when
 		const result = await finalizeMp3(finalizeInputFor(filePath));

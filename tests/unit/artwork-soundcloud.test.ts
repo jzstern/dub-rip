@@ -34,6 +34,86 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		);
 	});
 
+	it("uses a cover the match proved before searching any store", async () => {
+		// #given — an upload with no cover of its own, and a verified match
+		const fetchMock = vi.fn(async (_url: string) => image());
+		vi.stubGlobal("fetch", fetchMock);
+
+		// #when
+		const art = await resolveSoundCloudAlbumArt({
+			artist: "blk.",
+			title: "I Cant Fail",
+			artwork: { avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg" },
+			preferredArtwork: {
+				url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+				source: "itunes",
+			},
+		});
+
+		// #then — one fetch, for the proven cover, and no store search
+		expect(art?.buffer.byteLength).toBe(3);
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(fetchMock.mock.calls[0]?.[0]).toBe(
+			"https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+		);
+	});
+
+	it("still puts the upload's own artwork ahead of a proven cover", async () => {
+		// #given — SoundCloud is mostly edits and unreleased tracks, so the
+		// uploader's own cover is the one the user expects to get
+		const fetchMock = vi.fn(async (_url: string) => image());
+		vi.stubGlobal("fetch", fetchMock);
+
+		// #when
+		await resolveSoundCloudAlbumArt({
+			artist: "blk.",
+			title: "I Cant Fail",
+			artwork: { artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg" },
+			preferredArtwork: {
+				url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+				source: "itunes",
+			},
+		});
+
+		// #then
+		expect(fetchMock.mock.calls[0]?.[0]).toBe(
+			"https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+		);
+	});
+
+	it("falls through to the stores when the proven cover is dead", async () => {
+		// #given
+		const fetchMock = vi.fn(async (url: string) => {
+			if (url.includes("mzstatic.com/proven")) {
+				return { ok: false, status: 404, arrayBuffer: async () => JPEG };
+			}
+			if (url.includes("itunes.apple.com")) {
+				return searchResult({
+					results: [
+						{ artworkUrl100: "https://is1-ssl.mzstatic.com/100x100bb.jpg" },
+					],
+				});
+			}
+			return image();
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		// #when
+		const art = await resolveSoundCloudAlbumArt({
+			artist: "blk.",
+			title: "I Cant Fail",
+			artwork: { avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg" },
+			preferredArtwork: {
+				url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+				source: "itunes",
+			},
+		});
+
+		// #then — a dead CDN URL must not cost the track its cover
+		expect(art?.buffer.byteLength).toBe(3);
+		expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+	});
+
 	it("searches the stores only when the upload has no artwork", async () => {
 		// #given
 		const fetchMock = vi.fn(async (url: string) =>

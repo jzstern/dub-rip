@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-	catalogArtworkUrl,
+	cardSizedArtwork,
+	catalogArtwork,
 	clearCatalogCandidateCache,
+	enrichedCatalogLookup,
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { CatalogCandidate } from "$lib/metadata/catalog/catalog-candidate";
@@ -164,6 +166,25 @@ describe("sharedCatalogLookup()", () => {
 		]);
 	});
 
+	it("lets the download reuse the candidates the preview fetched", async () => {
+		// #given — a preview, then the download for the same track
+		const fetchMock = stubStores();
+		await sharedCatalogLookup(QUERY, { timeout: 4000 });
+
+		// #when
+		const download = await enrichedCatalogLookup(
+			{ ...QUERY, durationSeconds: 295 },
+			{ timeout: 6000 },
+		);
+
+		// #then — the two searches, plus the download's own album call, and no
+		// second pair of searches
+		const searches = fetchMock.mock.calls.filter(
+			(call) => !String(call[0]).includes("/album/"),
+		);
+		expect([searches.length, download.verdict.status]).toEqual([2, "matched"]);
+	});
+
 	it("starts fresh after the cache is cleared", async () => {
 		// #given
 		const fetchMock = stubStores();
@@ -178,7 +199,7 @@ describe("sharedCatalogLookup()", () => {
 	});
 });
 
-describe("catalogArtworkUrl()", () => {
+describe("catalogArtwork()", () => {
 	const itunes: CatalogCandidate = {
 		source: "itunes",
 		artist: "Adele",
@@ -192,9 +213,9 @@ describe("catalogArtworkUrl()", () => {
 		artworkUrl: "https://e-cdns-images.dzcdn.net/deezer.jpg",
 	};
 
-	it("prefers the cover the match proved", () => {
+	it("prefers the cover the match proved, with its source", () => {
 		// #when
-		const url = catalogArtworkUrl({
+		const artwork = catalogArtwork({
 			verdict: {
 				status: "matched",
 				via: "agreement",
@@ -210,39 +231,73 @@ describe("catalogArtworkUrl()", () => {
 		});
 
 		// #then
-		expect(url).toBe("https://is1-ssl.mzstatic.com/matched.jpg");
+		expect(artwork).toEqual({
+			url: "https://is1-ssl.mzstatic.com/matched.jpg",
+			source: "itunes",
+		});
 	});
 
 	it("falls back to the iTunes candidate when nothing matched", () => {
 		// #when — today's order, from the responses already in memory
-		const url = catalogArtworkUrl({
+		const artwork = catalogArtwork({
 			verdict: { status: "unmatched", reason: "unverified" },
 			candidates: [deezer, itunes],
 		});
 
 		// #then
-		expect(url).toBe(itunes.artworkUrl);
+		expect(artwork?.url).toBe(itunes.artworkUrl);
 	});
 
 	it("falls back to any candidate's cover when iTunes has none", () => {
 		// #when
-		const url = catalogArtworkUrl({
+		const artwork = catalogArtwork({
 			verdict: { status: "unmatched", reason: "unverified" },
 			candidates: [{ ...itunes, artworkUrl: undefined }, deezer],
 		});
 
 		// #then
-		expect(url).toBe(deezer.artworkUrl);
+		expect(artwork).toEqual({ url: deezer.artworkUrl, source: "deezer" });
 	});
 
 	it("gives nothing when no candidate has a cover", () => {
 		// #when
-		const url = catalogArtworkUrl({
+		const artwork = catalogArtwork({
 			verdict: { status: "unmatched", reason: "no-candidates" },
 			candidates: [],
 		});
 
 		// #then
-		expect(url).toBeUndefined();
+		expect(artwork).toBeUndefined();
+	});
+});
+
+describe("cardSizedArtwork()", () => {
+	it.each([
+		[
+			"an iTunes template",
+			"https://is1-ssl.mzstatic.com/image/600x600bb.jpg",
+			"https://is1-ssl.mzstatic.com/image/300x300bb.jpg",
+		],
+		[
+			"a Deezer path segment",
+			"https://cdn-images.dzcdn.net/images/cover/abc/1000x1000-000000-80-0-0.jpg",
+			"https://cdn-images.dzcdn.net/images/cover/abc/300x300-000000-80-0-0.jpg",
+		],
+	])("downscales %s for the 56 px card", (_name, full, small) => {
+		// #when — Deezer is the preferred source on a match, so its form must work too
+		const sized = cardSizedArtwork(full);
+
+		// #then
+		expect(sized).toBe(small);
+	});
+
+	it("leaves a URL it does not recognise alone", () => {
+		// #when
+		const sized = cardSizedArtwork(
+			"https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+		);
+
+		// #then
+		expect(sized).toBe("https://i1.sndcdn.com/artworks-x-t500x500.jpg");
 	});
 });

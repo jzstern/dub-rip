@@ -35,7 +35,7 @@ vi.mock("$lib/youtube-metadata", () => ({
 }));
 
 /**
- * Only the lookup itself is mocked; `catalogArtworkUrl` and `cardSizedArtwork`
+ * Only the lookup itself is mocked; `catalogArtwork` and `cardSizedArtwork`
  * are pure and keep their real behaviour. Without this mock these tests would
  * call iTunes and Deezer for real.
  */
@@ -230,6 +230,46 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(data.artwork).toBe("https://art/itunes/300x300bb.jpg");
+		});
+
+		it("keeps the parsed identity even when the catalog matched", async () => {
+			// #given — a match whose canonical identity differs from the parsed one
+			vi.mocked(extractVideoId).mockReturnValue("dQw4w9WgXcQ");
+			vi.mocked(fetchYouTubeMetadata).mockResolvedValue({
+				videoTitle: "Rick Astley - Never Gonna Give You Up",
+				artist: "Rick Astley",
+				trackTitle: "Never Gonna Give You Up",
+				uploader: "RickAstleyVEVO",
+				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+			});
+			sharedCatalogLookupMock.mockResolvedValue({
+				verdict: {
+					status: "matched",
+					via: "agreement",
+					candidate: { source: "deezer", artist: "x", title: "y" },
+					metadata: {
+						artist: "Rick Astley (Remastered)",
+						title: "Never Gonna Give You Up - 2022 Remaster",
+						source: "deezer",
+					},
+				},
+				candidates: [],
+			});
+
+			const event = createMockEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+			});
+
+			// #when
+			const response = await POST(event);
+			const data = await response.json();
+
+			// #then — a preview verdict is provisional, and the identity it would
+			// echo has to stay the one every stage queries with
+			expect([data.artist, data.title]).toEqual([
+				"Rick Astley",
+				"Never Gonna Give You Up",
+			]);
 		});
 
 		it("queries artwork with the parsed artist and track title", async () => {

@@ -118,7 +118,8 @@ export async function fetchCatalogCandidates(
 	return [...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])];
 }
 
-async function enrichFromAlbum(
+/** Exported so the shared cache can enrich a verdict it judged from cached candidates. */
+export async function enrichVerdictFromAlbum(
 	verdict: CatalogVerdict,
 	timeout: number,
 ): Promise<CatalogVerdict> {
@@ -167,7 +168,9 @@ export async function lookupCatalogMetadata(
 	}
 
 	const judged = judgeCandidates(query, candidates);
-	const verdict = enrich ? await enrichFromAlbum(judged, remaining()) : judged;
+	const verdict = enrich
+		? await enrichVerdictFromAlbum(judged, remaining())
+		: judged;
 
 	console.log(
 		verdict.status === "matched"

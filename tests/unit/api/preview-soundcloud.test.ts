@@ -85,6 +85,42 @@ describe("POST /api/preview — SoundCloud", () => {
 		expect(fetchYouTubeMetadata).not.toHaveBeenCalled();
 	});
 
+	it("never searches a store when the upload has its own cover", async () => {
+		// #given — the upload's cover always wins, so a lookup's only output would
+		// be discarded; /details does the lookup that feeds the file's tags
+		getSoundCloudTrackMock.mockResolvedValue(TRACK);
+
+		// #when
+		await previewPOST(eventFor("https://soundcloud.com/a/b"));
+
+		// #then
+		expect(sharedCatalogLookupMock).not.toHaveBeenCalled();
+	});
+
+	it("queries with the upload's own ISRC and duration", async () => {
+		// #given — the two pieces of evidence a SoundCloud page carries and YouTube does not
+		getSoundCloudTrackMock.mockResolvedValue({
+			...TRACK,
+			artworkUrl: undefined,
+			isrc: "USUM71900764",
+			durationSeconds: 201,
+		});
+
+		// #when
+		await previewPOST(eventFor("https://soundcloud.com/a/b"));
+
+		// #then
+		expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
+			{
+				artist: "blk.",
+				title: "I Cant Fail",
+				isrc: "USUM71900764",
+				durationSeconds: 201,
+			},
+			{ timeout: 4000 },
+		);
+	});
+
 	it("searches the stores only when the upload has no artwork", async () => {
 		// #given
 		getSoundCloudTrackMock.mockResolvedValue({

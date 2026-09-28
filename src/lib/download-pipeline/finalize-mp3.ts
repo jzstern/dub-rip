@@ -11,7 +11,10 @@ import {
 	ID3_TAGS_WRITTEN_PERCENT,
 	PREPARING_DOWNLOAD_PERCENT,
 } from "$lib/download-pipeline/progress-stages";
-import { enrichedCatalogVerdict } from "$lib/metadata/catalog/catalog-cache";
+import {
+	catalogArtwork,
+	enrichedCatalogLookup,
+} from "$lib/metadata/catalog/catalog-cache";
 import type { CanonicalMetadata } from "$lib/metadata/catalog/catalog-candidate";
 import type { DownloadMethod } from "$lib/types";
 import {
@@ -130,9 +133,9 @@ export async function finalizeMp3({
 		 * cache key and one set of candidates. By now the duration is in hand,
 		 * which is the evidence a preview could not have.
 		 */
-		const verdict = signal?.aborted
+		const lookup = signal?.aborted
 			? undefined
-			: await enrichedCatalogVerdict(
+			: await enrichedCatalogLookup(
 					{
 						artist,
 						title: trackTitle,
@@ -141,12 +144,15 @@ export async function finalizeMp3({
 					},
 					{ timeout: DOWNLOAD_CATALOG_TIMEOUT_MS },
 				);
-		if (verdict?.status === "matched") canonical = verdict.metadata;
+		if (lookup?.verdict.status === "matched")
+			canonical = lookup.verdict.metadata;
 
-		/** The cover the match proved, so a remix stops getting the original's sleeve. */
-		const preferredArtwork = canonical?.artworkUrl
-			? { url: canonical.artworkUrl, source: canonical.source }
-			: undefined;
+		/**
+		 * The cover the match proved, so a remix stops getting the original's
+		 * sleeve — and, when nothing matched, the same candidate cover the preview
+		 * card showed, so the file agrees with what the user saw.
+		 */
+		const preferredArtwork = lookup ? catalogArtwork(lookup) : undefined;
 
 		const coverTitle = canonical?.title || trackTitle || videoTitle;
 		const image = soundCloudArtwork

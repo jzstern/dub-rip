@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/sveltekit";
+import type { PreferredArtwork } from "$lib/artwork";
 import { createSingleFlightCache } from "$lib/single-flight-cache";
 import type {
 	CatalogCandidate,
@@ -10,8 +11,8 @@ import {
 	CANDIDATE_TTL_MS,
 	CatalogUnavailableError,
 	candidateCacheKey,
+	enrichVerdictFromAlbum,
 	fetchCatalogCandidates,
-	lookupCatalogMetadata,
 } from "./lookup-catalog";
 
 /**
@@ -99,49 +100,61 @@ export async function sharedCatalogLookup(
 	}
 }
 
-/** The download: the same cached candidates, plus the album call for label and genre. */
-export async function enrichedCatalogVerdict(
+/**
+ * The download: the same cached candidates, plus the album call for the label
+ * and genre. The candidates come back too, so an unmatched download falls back
+ * to the same cover the preview showed rather than searching again.
+ */
+export async function enrichedCatalogLookup(
 	query: TrackQuery,
 	{ timeout }: { timeout: number },
-): Promise<CatalogVerdict> {
-	if (isBlank(query)) return UNMATCHED;
+): Promise<CatalogLookup> {
+	const lookup = await sharedCatalogLookup(query, { timeout });
+	if (lookup.verdict.status !== "matched") return lookup;
 	try {
-		return await lookupCatalogMetadata(query, { timeout, cache, enrich: true });
+		return {
+			...lookup,
+			verdict: await enrichVerdictFromAlbum(lookup.verdict, timeout),
+		};
 	} catch (error) {
 		reportLookupBug(error, query);
-		return UNMATCHED;
+		return lookup;
 	}
 }
 
 /**
  * The cover the match proved, else today's order — iTunes first, then Deezer —
  * taken from the responses already in memory rather than a second pair of
- * searches.
+ * searches. The source travels with the URL so a written cover can be labelled
+ * honestly.
  */
-export function catalogArtworkUrl({
+export function catalogArtwork({
 	verdict,
 	candidates,
-}: CatalogLookup): string | undefined {
-	const matched =
-		verdict.status === "matched" ? verdict.metadata.artworkUrl : undefined;
-	return (
-		matched ??
+}: CatalogLookup): PreferredArtwork | undefined {
+	if (verdict.status === "matched" && verdict.metadata.artworkUrl) {
+		return {
+			url: verdict.metadata.artworkUrl,
+			source: verdict.metadata.source,
+		};
+	}
+	const fallback =
 		candidates.find(
 			(candidate) => candidate.source === "itunes" && candidate.artworkUrl,
-		)?.artworkUrl ??
-		candidates.find((candidate) => candidate.artworkUrl)?.artworkUrl
-	);
+		) ?? candidates.find((candidate) => candidate.artworkUrl);
+	return fallback?.artworkUrl
+		? { url: fallback.artworkUrl, source: fallback.source }
+		: undefined;
 }
 
-/** The preview card is 56 px, while candidates carry the 600 px cover the file gets. */
+/** The preview card is 56 px, while candidates carry the full-size cover the file gets. */
 const CARD_ARTWORK_SIZE = 300;
 
-/** A no-op on a Deezer URL, which is not size-templated. */
+/** iTunes templates its size as `600x600bb`; Deezer as a `/1000x1000-…` path segment. */
 export function cardSizedArtwork(url: string | undefined): string | undefined {
-	return url?.replace(
-		"600x600bb",
-		`${CARD_ARTWORK_SIZE}x${CARD_ARTWORK_SIZE}bb`,
-	);
+	return url
+		?.replace("600x600bb", `${CARD_ARTWORK_SIZE}x${CARD_ARTWORK_SIZE}bb`)
+		.replace(/\/(\d+)x\1-/, `/${CARD_ARTWORK_SIZE}x${CARD_ARTWORK_SIZE}-`);
 }
 
 export function clearCatalogCandidateCache(): void {

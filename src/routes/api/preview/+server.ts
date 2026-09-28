@@ -4,7 +4,7 @@ import { env } from "$env/dynamic/private";
 import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
 import {
 	cardSizedArtwork,
-	catalogArtworkUrl,
+	catalogArtwork,
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import { resolveMediaLink } from "$lib/resolve-media-link";
@@ -64,21 +64,29 @@ async function previewSoundCloud(link: MediaLink): Promise<Response> {
 
 		const { artist, trackTitle } = soundCloudTitleState(track);
 		/**
-		 * After the refusal check, so a Go+ preview or a geo-blocked track costs
-		 * no catalog calls. The upload's own cover still wins, so the cover shown
-		 * stays the cover written.
+		 * Searched only when the upload has no cover of its own. The upload's cover
+		 * always wins here, so on the normal path a lookup's only output would be
+		 * thrown away — latency the user pays for nothing. `/details` runs the
+		 * lookup that feeds the file's tags.
+		 *
+		 * After the refusal check, so a Go+ preview or a geo-blocked track costs no
+		 * catalog calls either.
 		 */
-		const lookup = await sharedCatalogLookup(
-			{
-				artist,
-				title: trackTitle,
-				isrc: track.isrc,
-				durationSeconds: track.durationSeconds,
-			},
-			{ timeout: PREVIEW_ARTWORK_TIMEOUT },
-		);
 		const artwork =
-			track.artworkUrl ?? cardSizedArtwork(catalogArtworkUrl(lookup));
+			track.artworkUrl ??
+			cardSizedArtwork(
+				catalogArtwork(
+					await sharedCatalogLookup(
+						{
+							artist,
+							title: trackTitle,
+							isrc: track.isrc,
+							durationSeconds: track.durationSeconds,
+						},
+						{ timeout: PREVIEW_ARTWORK_TIMEOUT },
+					),
+				)?.url,
+			);
 
 		return json({
 			success: true,
@@ -136,7 +144,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			artist: metadata.artist,
 			title: metadata.trackTitle,
 			thumbnail: metadata.thumbnailUrl,
-			artwork: cardSizedArtwork(catalogArtworkUrl(lookup)),
+			artwork: cardSizedArtwork(catalogArtwork(lookup)?.url),
 		});
 	} catch (error) {
 		/**

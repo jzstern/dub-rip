@@ -94,21 +94,12 @@ async function loadPreview(targetUrl: string) {
 
 		if (url !== targetUrl) return;
 
-		const previewData = await response.json();
-		preview = previewData;
+		preview = await response.json();
 
 		fetch("/api/preview/details", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			/**
-			 * The identity is echoed so /details queries the catalog with exactly
-			 * what the preview queried — same query, same cache key, one fetch.
-			 */
-			body: JSON.stringify({
-				url: targetUrl,
-				artist: previewData.artist,
-				title: previewData.title,
-			}),
+			body: JSON.stringify({ url: targetUrl }),
 		})
 			.then(async (res) => {
 				if (!res.ok) {

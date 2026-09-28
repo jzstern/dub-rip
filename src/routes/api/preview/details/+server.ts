@@ -6,6 +6,7 @@ import {
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { TrackQuery } from "$lib/metadata/catalog/catalog-candidate";
+import { resolveTrackIdentity } from "$lib/metadata/resolve-track-identity";
 import { resolveMediaLink } from "$lib/resolve-media-link";
 import {
 	soundCloudDetails,
@@ -25,15 +26,16 @@ const DETAILS_CATALOG_TIMEOUT_MS = 4000;
  * YouTube preview could not have, and what lets a text-only match be confirmed
  * or refused here.
  *
- * The artist and title are the heuristic ones the client echoes back, never a
- * canonical value and never `details.track` / `details.artist`: all three stages
- * have to hash to one cache key, or `/details` would judge query B against
- * candidates fetched for query A.
+ * Derived entirely server-side, from the upload's own title and uploader
+ * through the same heuristic the preview and the download use. It is
+ * deliberately NOT taken from the request body: the identity becomes a key in a
+ * cache shared across requests, so letting a caller choose it would let anyone
+ * seed another user's track with candidates fetched for a string they picked,
+ * and mint unbounded keys in a cache that never evicts.
  */
 function detailsQuery(
 	details: VideoDetails,
 	track: SoundCloudTrack | null,
-	body: { artist?: unknown; title?: unknown },
 ): TrackQuery {
 	if (track) {
 		const { artist, trackTitle } = soundCloudTitleState(track);
@@ -44,21 +46,17 @@ function detailsQuery(
 			durationSeconds: track.durationSeconds,
 		};
 	}
-	return {
-		artist:
-			typeof body.artist === "string" ? body.artist : (details.artist ?? ""),
-		title:
-			typeof body.title === "string"
-				? body.title
-				: (details.track ?? details.title ?? ""),
-		durationSeconds: details.duration,
-	};
+	const { artist, trackTitle } = resolveTrackIdentity({
+		rawTitle: details.title ?? "",
+		uploader: details.uploader ?? "",
+		labelName: details.label,
+	});
+	return { artist, title: trackTitle, durationSeconds: details.duration };
 }
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const body = await request.json();
-		const { url } = body;
+		const { url } = await request.json();
 
 		if (!url) {
 			return json({ error: "URL is required" }, { status: 400 });
@@ -121,8 +119,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const { verdict } = await sharedCatalogLookup(
-			detailsQuery(details, track, body),
-			{ timeout: DETAILS_CATALOG_TIMEOUT_MS },
+			detailsQuery(details, track),
+			{
+				timeout: DETAILS_CATALOG_TIMEOUT_MS,
+			},
 		);
 
 		/**

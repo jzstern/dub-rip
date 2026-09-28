@@ -27,28 +27,47 @@ export interface StubOptions {
 	allowMissing?: string[];
 }
 
-function recordedResponse(
-	url: string,
-	allowMissing: string[],
-): FixtureResponse {
-	const body = RECORDED[url];
-	if (body !== undefined) {
-		return { ok: true, status: 200, json: async () => body };
-	}
-	if (allowMissing.some((fragment) => url.includes(fragment))) {
-		return { ok: false, status: 404, json: async () => ({}) };
-	}
-	throw new Error(
-		`No recorded catalog response for ${url}. Re-record with \`bun scripts/record-catalog-fixtures.ts\`, or pass allowMissing if the miss is the point of the test.`,
-	);
+export interface CatalogFetchStub extends Mock {
+	/**
+	 * URLs asked for that no fixture covers. Throwing is not enough on its own:
+	 * the adapters catch everything and degrade to "no candidates", so a stale
+	 * fixture would quietly turn a real assertion into a passing "no match".
+	 */
+	missing: string[];
 }
 
 export function stubCatalogFetch({
 	allowMissing = [],
-}: StubOptions = {}): Mock {
-	const fetchMock = vi.fn(async (input: unknown) =>
-		recordedResponse(String(input), allowMissing),
-	);
+}: StubOptions = {}): CatalogFetchStub {
+	const missing: string[] = [];
+	const fetchMock = vi.fn(async (input: unknown): Promise<FixtureResponse> => {
+		const url = String(input);
+		const body = RECORDED[url];
+		if (body !== undefined) {
+			return { ok: true, status: 200, json: async () => body };
+		}
+		if (allowMissing.some((fragment) => url.includes(fragment))) {
+			return { ok: false, status: 404, json: async () => ({}) };
+		}
+		missing.push(url);
+		throw new Error(
+			`No recorded catalog response for ${url}. Re-record with \`bun scripts/record-catalog-fixtures.ts\`, or pass allowMissing if the miss is the point of the test.`,
+		);
+	}) as CatalogFetchStub;
+	fetchMock.missing = missing;
 	vi.stubGlobal("fetch", fetchMock);
 	return fetchMock;
+}
+
+/**
+ * Fails the test when the code asked for a URL no fixture covers. The adapters
+ * swallow the stub's throw, so without this a renamed search term turns a real
+ * assertion into a vacuous one.
+ */
+export function expectEveryFixtureHit(stub: CatalogFetchStub): void {
+	if (stub.missing.length > 0) {
+		throw new Error(
+			`Fixtures missing for:\n  ${stub.missing.join("\n  ")}\nRe-record with \`bun scripts/record-catalog-fixtures.ts\`.`,
+		);
+	}
 }

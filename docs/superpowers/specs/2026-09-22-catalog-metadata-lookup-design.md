@@ -69,7 +69,7 @@ The cache is a **port**, not a module: `lookupCatalogMetadata` takes an optional
 | Stage | Evidence available | Network vs today |
 | --- | --- | --- |
 | Preview (YouTube) | iTunes and Deezer agreeing (YouTube never supplies an ISRC) | none — the two searches artwork already runs, with `limit=5` instead of 1 |
-| Preview (SoundCloud) | the page's ISRC and duration | **1–3 calls where today there are none**, since a SoundCloud preview uses the upload's own artwork and never searches a store. With an ISRC, the ISRC lookup goes out *alongside* both searches rather than instead of them: an uploader-supplied ISRC can resolve to a track that is not this upload, and short-circuiting on it would leave the judge nothing to fall back on. |
+| Preview (SoundCloud) | the page's ISRC and duration | **2 calls where today there are none** (3 with an ISRC), since a SoundCloud preview uses the upload's own artwork and never searches a store. Both searches always go out; an ISRC lookup joins them *alongside* rather than instead, because an uploader-supplied ISRC can resolve to a track that is not this upload, and short-circuiting on it would leave the judge nothing to fall back on. |
 | `/details` (YouTube) | + duration, from the **existing** yt-dlp call | none |
 | Download | same as `/details` | + one Deezer `/album/{id}` (~300 ms) for label and genre; one fewer iTunes search |
 
@@ -77,8 +77,8 @@ The cache is a **port**, not a module: `lookupCatalogMetadata` takes an optional
 
 Consequences:
 
-- The verdict is **monotonic**: more evidence only adds ways to accept, so a preview match is never withdrawn.
-- The file gets the verdict `/details` displayed. What you see is what you get.
+- **A later stage can refine or withdraw a preview match, and Stage B has to render that.** Duration is not purely additive evidence: a catalog cut that outruns the upload is refused (see above), so a match accepted on text alone can be dropped once `/details` supplies the runtime, and a field donated by a cross-catalog twin can drop out with it. The trade was deliberate — the alternative is tagging a 3:26 upload from a 7:41 extended mix — but it means the preview verdict is provisional, not a promise. Stage B should either hold the canonical fields back until the duration is in, or show them as provisional and let the `/details` response correct them.
+- Ranking, by contrast, **is** stable: among candidates that all remain accepted, the choice does not depend on the duration, so the two stages cannot disagree about *which* release to prefer.
 - Artwork comes from the matched candidate, which fixes a remix showing the original's cover. With no match, artwork falls back to today's order using the same responses.
 - The lookup never runs inside `fetchYouTubeMetadata`, so `youtube-identity-characterization.test.ts` keeps pinning the heuristic stage and does not change.
 

@@ -64,6 +64,8 @@ describe("parseTrackTitle() version classes", () => {
 		["Get Lucky (Single Version)", "length"],
 		["Blue Monday (Video Mix)", "length"],
 		['Blue Monday (12" Mix)', "length"],
+		["Tainted Love (2023 Version)", "identity"],
+		["Blue Monday (1988 Mix)", "identity"],
 		["On My Knees (Original Mix)", "neutral"],
 		["Enter Sandman (Remastered)", "neutral"],
 		["Enter Sandman (Remastered 2021)", "neutral"],
@@ -107,6 +109,8 @@ describe("identityKey()", () => {
 			"Get Lucky (feat. Pharrell Williams & Nile Rodgers)",
 		],
 		["I Cant Fail", "I Can't Fail"],
+		["Enter Sandman (Remastered 2021)", "Enter Sandman (2021 Remaster)"],
+		['Heart of Glass (12" Version)', "Heart of Glass (12-Inch Version)"],
 		["HUMBLE.", "HUMBLE"],
 		["Marea (We've Lost Dancing)", "Marea (We’ve Lost Dancing)"],
 	])("gives %j and %j the same key", (left, right) => {
@@ -125,6 +129,8 @@ describe("identityKey()", () => {
 		["Se Cura", "Se Cura (Extended Mix)"],
 		["Marea", "Marea (Edit)"],
 		["Get Lucky", "Get Lucky (Single Version)"],
+		["Tainted Love", "Tainted Love (2023 Version)"],
+		["Blue Monday (Radio Edit)", 'Blue Monday (12" Mix)'],
 	])("gives %j and %j different keys", (left, right) => {
 		// #when
 		const key = identityKey(parseTrackTitle(left));

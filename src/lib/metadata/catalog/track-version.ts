@@ -87,11 +87,45 @@ const NEUTRAL_TOKENS = new Set([
 	"bonus",
 ]);
 
+/**
+ * The two catalogs spell the same cut differently — iTunes writes "12-Inch
+ * Version" where Deezer writes '12" Version'. Keying a length tag on the text
+ * as written would stop those rows from ever agreeing on one recording, so each
+ * maps to the family it belongs to instead.
+ */
+const LENGTH_FAMILIES: [RegExp, string][] = [
+	[/^radio\b/, "radio"],
+	[/^extended\b/, "extended"],
+	[/^club\b/, "club"],
+	[/^single\b/, "single"],
+	[/^video\b/, "video"],
+	[/^short\b/, "short"],
+	[/^(?:long|full)\b/, "full"],
+	[/^(?:7|10|12)\b/, "vinyl"],
+];
+
+function lengthFamily(normalized: string): string {
+	return (
+		LENGTH_FAMILIES.find(([pattern]) => pattern.test(normalized))?.[1] ??
+		normalized
+	);
+}
+
+/** "remastered 2021" and "2015 remaster" are masterings; "2023 version" is a re-recording. */
+const MASTERING_TOKEN = /^remaster(?:ed|ing)?$/;
+
 function isNeutral(normalized: string): boolean {
 	const tokens = normalized.split(" ").filter(Boolean);
-	return (
-		tokens.length > 0 &&
-		tokens.every((token) => NEUTRAL_TOKENS.has(token) || /^\d+$/.test(token))
+	if (tokens.length === 0) return false;
+	/**
+	 * A year only rides along with a mastering word. Allowing a bare year on its
+	 * own made "(2023 Version)" neutral, which silently equated a Taylor's-Version
+	 * style re-recording — a different recording entirely — with the original.
+	 */
+	const hasMastering = tokens.some((token) => MASTERING_TOKEN.test(token));
+	return tokens.every(
+		(token) =>
+			NEUTRAL_TOKENS.has(token) || (hasMastering && /^\d{4}$/.test(token)),
 	);
 }
 
@@ -106,7 +140,7 @@ function classifySegment(segment: string): VersionTag | null {
 	const normalized = normalizeForMatch(segment);
 	if (!normalized) return null;
 	if (LENGTH_PHRASE.test(normalized)) {
-		return { class: "length", kind: normalized };
+		return { class: "length", kind: lengthFamily(normalized) };
 	}
 	if (isNeutral(normalized)) {
 		return { class: "neutral", kind: normalized };

@@ -21,6 +21,10 @@ const MAX_LENGTH = 300;
  */
 const COMBINING_DIACRITICS = /[̀-ͯ]/g;
 
+/** A high surrogate with no low after it, or a low with no high before it. */
+const UNPAIRED_SURROGATE =
+	/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g;
+
 /** "Klaps (BE)" and "Sarah (UK)" are store disambiguators, not part of a name. */
 const STORE_DISAMBIGUATOR = /\s*\([A-Z]{2,3}\d*\)\s*$/;
 
@@ -28,18 +32,17 @@ const ARTIST_SEPARATOR =
 	/\s*(?:,|&|\+|\/|\sx\s|\bfeat\.?\s|\bft\.?\s|\bfeaturing\s|\bwith\s|\band\s)\s*/gi;
 
 /**
- * Caps the text without cutting a surrogate pair in half. A lone high surrogate
- * survives into `encodeURIComponent` when the term reaches a search URL, where
- * it throws URIError — one emoji landing on the boundary would otherwise take
- * down the whole lookup.
+ * Caps the text and drops any unpaired surrogate — one the cap split off, and
+ * one the uploader typed. A lone surrogate reaching `encodeURIComponent` when
+ * the term becomes a search URL throws URIError, which would take down the whole
+ * lookup rather than degrade to no candidates.
  */
 export function collapseWhitespace(text: string): string {
-	let capped = text.slice(0, MAX_LENGTH);
-	const lastCode = capped.charCodeAt(capped.length - 1);
-	if (lastCode >= 0xd800 && lastCode <= 0xdbff) {
-		capped = capped.slice(0, -1);
-	}
-	return capped.replace(/\s+/g, " ").trim();
+	return text
+		.slice(0, MAX_LENGTH)
+		.replace(UNPAIRED_SURROGATE, "")
+		.replace(/\s+/g, " ")
+		.trim();
 }
 
 export function normalizeForMatch(text: string): string {
@@ -51,7 +54,8 @@ export function normalizeForMatch(text: string): string {
 			.replace(/[&+]/g, " and ")
 			// Apostrophes close up rather than split, so "Can't" and "Cant" agree.
 			.replace(/['’‘`´]/g, "")
-			.replace(/[^\p{L}\p{N}\s]/gu, " ")
+			// Marks are kept: dropping them here would undo the kana rule above.
+			.replace(/[^\p{L}\p{N}\p{M}\s]/gu, " ")
 			.replace(/\s+/g, " ")
 			.trim()
 	);

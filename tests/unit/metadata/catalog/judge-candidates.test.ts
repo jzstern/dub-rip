@@ -335,6 +335,26 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 		});
 	});
 
+	it("chooses the same release with and without a duration", () => {
+		// #given — the preview has no duration; /details later supplies one
+		const candidates = [TOTO_ITUNES, TOTO_ALBUM_CUT, TOTO_KNOCK_OFF];
+		const preview = judgeCandidates(
+			{ artist: "Toto", title: "Africa" },
+			candidates,
+		);
+
+		// #when
+		const download = judgeCandidates(
+			{ artist: "Toto", title: "Africa", durationSeconds: 307 },
+			candidates,
+		);
+
+		// #then — ranking is structural, so the two stages cannot disagree
+		expect(preview.status === "matched" && preview.candidate.album).toBe(
+			download.status === "matched" && download.candidate.album,
+		);
+	});
+
 	it("prefers the catalog's own top result over a back-dated reissue", () => {
 		// #given — iTunes back-dates the greatest-hits reissue to Jan 1
 		const query = {
@@ -401,7 +421,168 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 	});
 });
 
+describe("judgeCandidates() treats a longer catalog cut as a different recording", () => {
+	it("refuses a candidate that outruns the upload, even with both catalogs agreeing", () => {
+		// #given — a 7:41 extended cut against a 3:26 upload, titled identically
+		const query = {
+			artist: "New Order",
+			title: "Blue Monday",
+			durationSeconds: 206,
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "New Order",
+				title: "Blue Monday",
+				durationSeconds: 461,
+			}),
+			candidate({
+				artist: "New Order",
+				title: "Blue Monday",
+				durationSeconds: 461,
+			}),
+		]);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("does not let an outrunning cut corroborate a candidate with no runtime", () => {
+		// #given — the only other row is a 7:41 extended mix, which may not vouch
+		const query = {
+			artist: "New Order",
+			title: "Blue Monday",
+			durationSeconds: 206,
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "New Order",
+				title: "Blue Monday",
+				durationSeconds: 461,
+			}),
+			candidate({ artist: "New Order", title: "Blue Monday" }),
+		]);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("still accepts a shorter catalog cut, because an upload may carry an intro", () => {
+		// #given — a music video runs 6:07 against the 4:55 track
+		const query = { artist: "Adele", title: "Hello", durationSeconds: 367 };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "Adele",
+				title: "Hello",
+				durationSeconds: 295,
+			}),
+			candidate({ artist: "Adele", title: "Hello", durationSeconds: 295 }),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
+	});
+});
+
 describe("judgeCandidates() fills gaps only from the same recording", () => {
+	it("takes year and genre from the shorter twin of a longer upload", () => {
+		// #given — the music-video case agreement exists for: the twin is the donor
+		const query = { artist: "Toto", title: "Africa", durationSeconds: 330 };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				artist: "Toto",
+				title: "Africa",
+				album: "Toto IV",
+				durationSeconds: 295,
+			}),
+			candidate({
+				source: "itunes",
+				artist: "Toto",
+				title: "Africa",
+				album: "Toto IV",
+				durationSeconds: 295,
+				releaseDate: "1982-04-08",
+				genre: "Rock",
+			}),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { year: 1982, genre: "Rock" },
+		});
+	});
+
+	it("takes nothing from a candidate whose artist disagrees, ISRC or not", () => {
+		// #given — an ISRC-reached row by someone else entirely
+		const query = {
+			artist: "Some Bedroom Producer",
+			title: "Night Drive",
+			durationSeconds: 200,
+			isrc: "USUM71900764",
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "Some Bedroom Producer",
+				title: "Night Drive",
+				durationSeconds: 200,
+			}),
+			candidate({
+				artist: "Totally Different Artist",
+				title: "Night Drive",
+				album: "Someone Else's Album",
+				genre: "Pop",
+				releaseDate: "2019-03-29",
+				isrc: "USUM71900764",
+			}),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: undefined, genre: undefined, year: undefined },
+		});
+	});
+
+	it("writes the ISRC in its canonical form, not as the uploader typed it", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Some Bedroom Producer",
+				title: "Night Drive",
+				durationSeconds: 200,
+				isrc: "us-um7-19-00764",
+			},
+			[
+				candidate({
+					source: "itunes",
+					artist: "Some Bedroom Producer",
+					title: "Night Drive",
+					durationSeconds: 200,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { isrc: "USUM71900764" },
+		});
+	});
+
 	it("does not take an ISRC from a candidate the duration rules out", () => {
 		// #given — a live cut of the same song, four times too long to be this upload
 		const query = { artist: "Adele", title: "Hello", durationSeconds: 295 };

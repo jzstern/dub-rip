@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { lookupCatalogMetadata } from "$lib/metadata/catalog/lookup-catalog";
 import { resolveTrackIdentity } from "$lib/metadata/resolve-track-identity";
-import { stubCatalogFetch } from "./catalog-fixtures";
+import { expectEveryFixtureHit, stubCatalogFetch } from "./catalog-fixtures";
 
 /**
  * The other side of `youtube-identity-characterization.test.ts`, which pins what
@@ -140,12 +140,13 @@ describe("canonical identity characterization", () => {
 		CANONICAL_YOUTUBE_TITLES,
 	)("%j from %j shows %j / %j, from the %s", async (rawTitle, uploader, artist, title, from) => {
 		// #given
-		stubCatalogFetch();
+		const stub = stubCatalogFetch();
 
 		// #when
 		const shown = await resolveShownIdentity(rawTitle, uploader);
 
-		// #then
+		// #then — a missing fixture would otherwise read as a legitimate "heuristic" row
+		expectEveryFixtureHit(stub);
 		expect(shown).toEqual({ artist, title, from });
 	});
 

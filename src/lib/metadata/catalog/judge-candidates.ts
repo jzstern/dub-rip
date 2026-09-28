@@ -177,7 +177,14 @@ function proofsFor(
 	);
 }
 
-/** Keys that an iTunes result and a Deezer result both reached on their own. */
+/**
+ * Keys that an iTunes result and a Deezer result both reached on their own. The
+ * outruns check here is the load-bearing one: without it a 7:41 extended mix
+ * would corroborate itself and hand a 3:26 upload the wrong recording. The same
+ * check in `proofsFor` is belt to this braces — a cut that outruns the upload
+ * contradicts its runtime by definition, so the other two proofs already refuse
+ * it — but it keeps the rule legible where the proofs are decided.
+ */
 function keysBothCatalogsReached(assessments: Assessment[]): Set<string> {
 	const sources = new Map<string, Set<CatalogSource>>();
 	for (const assessment of assessments) {
@@ -237,12 +244,15 @@ function fillFromSupport(
 
 /**
  * The other candidates for the same recording, whose fields fill the gaps in
- * the best one's. Text agreement is required because `recordingKey` compares
- * titles alone — without it, a different artist's same-named track could supply
- * the album. A candidate whose runtime the query rules out is excluded: a live
- * cut of the same song would otherwise donate its ISRC to the studio version.
- * Ranked candidates come first, so a real release fills a field before a
- * compilation does.
+ * the best one's. The full text gate is required — `recordingKey` compares
+ * titles alone, so without the artist check a different artist's same-named
+ * track could supply the album, and an ISRC-reached candidate is no exception.
+ *
+ * Only a cut that OUTRUNS the upload is excluded, not any runtime difference: a
+ * live take would otherwise donate its ISRC to the studio version, while the
+ * shorter catalog twin of a longer music video is exactly the donor whose year
+ * and genre the match needs. Ranked candidates come first, so a real release
+ * fills a field before a compilation does.
  */
 function supportingCandidates(
 	matches: Match[],
@@ -257,8 +267,8 @@ function supportingCandidates(
 		if (
 			assessment.candidate !== best.candidate &&
 			assessment.recordingKey === best.recordingKey &&
-			!assessment.durationContradicts &&
-			(assessment.textPass || assessment.isrcPass)
+			!assessment.candidateOutruns &&
+			assessment.textPass
 		) {
 			support.add(assessment.candidate);
 		}
@@ -282,8 +292,7 @@ function preciseDate(releaseDate: string | undefined): string | undefined {
  */
 function betterMatch(left: Match, right: Match): number {
 	const byIsrc =
-		Number(!left.proofs.includes("isrc")) -
-		Number(!right.proofs.includes("isrc"));
+		Number(!left.assessment.isrcPass) - Number(!right.assessment.isrcPass);
 	if (byIsrc !== 0) return byIsrc;
 
 	const byAgreement = Number(!left.agreed) - Number(!right.agreed);
@@ -362,7 +371,7 @@ export function judgeCandidates(
 		via: best.proofs[0] as MatchEvidence,
 		candidate: best.assessment.candidate,
 		metadata: fillFromSupport(
-			canonicalFrom(best.assessment.candidate, query.isrc),
+			canonicalFrom(best.assessment.candidate, queryIsrc),
 			supportingCandidates(matches, assessments, best.assessment),
 		),
 	};

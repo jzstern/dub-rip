@@ -27,6 +27,16 @@ describe("normalizeForMatch()", () => {
 		expect(normalized).toBe(expected);
 	});
 
+	it("keeps a voiced kana whole rather than splitting its mark off", () => {
+		// #given — NFKD decomposes パ into ハ plus a combining mark. Replacing marks
+		// with a space would break the word apart instead of preserving the letter.
+		// #when
+		const normalized = normalizeForMatch("パート");
+
+		// #then
+		expect(normalized).not.toContain(" ");
+	});
+
 	it.each([
 		["パート", "ハート"],
 		["ガゼ", "カゼ"],
@@ -46,6 +56,26 @@ describe("collapseWhitespace()", () => {
 
 		// #then
 		expect(collapsed).toHaveLength(300);
+	});
+
+	it("drops a lone surrogate the uploader typed, wherever it sits", () => {
+		// #given — an unpaired surrogate reaching encodeURIComponent throws URIError,
+		// which would escape the whole lookup instead of degrading to no candidates
+		const stray = `Night \ud800Drive`;
+
+		// #when
+		const collapsed = collapseWhitespace(stray);
+
+		// #then
+		expect(() => encodeURIComponent(collapsed)).not.toThrow();
+	});
+
+	it("keeps a valid surrogate pair intact", () => {
+		// #when
+		const collapsed = collapseWhitespace("Night 😀 Drive");
+
+		// #then
+		expect(collapsed).toBe("Night 😀 Drive");
 	});
 
 	it("never cuts a surrogate pair in half", () => {

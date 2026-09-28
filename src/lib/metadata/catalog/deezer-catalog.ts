@@ -114,27 +114,28 @@ function toCandidate(
 	};
 }
 
-/**
- * Deezer answers 200 with an `error` object, including for quota. The message
- * is upstream text going into a log line, so its newlines are stripped rather
- * than left to forge a second line.
- */
+/** Deezer answers 200 with an `error` object, including for quota. */
 function payloadError(body: unknown): string | null {
 	const error = (body as DeezerError | null)?.error;
 	if (!error) return null;
-	const message = (optionalString(error.message) ?? "error").replace(
-		/[\r\n]+/g,
-		" ",
-	);
-	return `${message} (code ${optionalString(error.code) ?? "?"})`;
+	/** Both fields are upstream text going into a log line, so both get stripped. */
+	const oneLine = (value: unknown, fallback: string) =>
+		(optionalString(value) ?? fallback).replace(/[\r\n]+/g, " ");
+	return `${oneLine(error.message, "error")} (code ${oneLine(error.code, "?")})`;
 }
 
+/**
+ * `buildUrl` is called inside the try: it encodes caller-supplied text, and an
+ * unpaired surrogate there throws URIError, which would otherwise escape the
+ * whole lookup instead of degrading to no candidates.
+ */
 async function requestDeezer(
-	url: string,
+	buildUrl: () => string,
 	operation: string,
 	timeout: number,
 ): Promise<unknown | null> {
 	try {
+		const url = buildUrl();
 		const response = await fetch(url, {
 			signal: AbortSignal.timeout(Math.round(timeout)),
 		});
@@ -172,7 +173,7 @@ export async function searchDeezer(
 ): Promise<CatalogCandidate[] | null> {
 	if (!term.trim()) return [];
 	const body = (await requestDeezer(
-		deezerSearchUrl(term),
+		() => deezerSearchUrl(term),
 		"search",
 		timeout,
 	)) as { data?: DeezerTrack[] } | null;
@@ -191,7 +192,7 @@ export async function deezerTrackByIsrc(
 ): Promise<CatalogCandidate | null> {
 	if (!isrc.trim()) return null;
 	const body = (await requestDeezer(
-		deezerIsrcUrl(isrc),
+		() => deezerIsrcUrl(isrc),
 		"isrc lookup",
 		timeout,
 	)) as DeezerTrack | null;
@@ -205,7 +206,7 @@ export async function deezerAlbum(
 	/** The id comes from a search response; a numeric one cannot walk the path. */
 	if (!/^\d+$/.test(albumId)) return null;
 	const body = (await requestDeezer(
-		deezerAlbumUrl(albumId),
+		() => deezerAlbumUrl(albumId),
 		"album lookup",
 		timeout,
 	)) as {

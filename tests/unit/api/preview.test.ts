@@ -5,6 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // (which would hand the route fresh, unconfigured mocks of everything else).
 const mockEnv = vi.hoisted(() => ({}) as Record<string, string>);
 
+const { sharedCatalogLookupMock } = vi.hoisted(() => ({
+	sharedCatalogLookupMock: vi.fn(),
+}));
+
+const NO_MATCH = {
+	verdict: { status: "unmatched" as const, reason: "no-candidates" as const },
+	candidates: [],
+};
+
 vi.mock("$env/dynamic/private", () => ({ env: mockEnv }));
 
 vi.mock("$lib/video-utils", () => ({
@@ -25,12 +34,19 @@ vi.mock("$lib/youtube-metadata", () => ({
 	},
 }));
 
-vi.mock("$lib/artwork", () => ({
-	resolveArtworkUrl: vi.fn(),
+/**
+ * Only the lookup itself is mocked; `catalogArtworkUrl` and `cardSizedArtwork`
+ * are pure and keep their real behaviour. Without this mock these tests would
+ * call iTunes and Deezer for real.
+ */
+vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("$lib/metadata/catalog/catalog-cache")
+	>()),
+	sharedCatalogLookup: sharedCatalogLookupMock,
 }));
 
 import * as Sentry from "@sentry/sveltekit";
-import { resolveArtworkUrl } from "$lib/artwork";
 import { extractVideoId } from "$lib/video-utils";
 import {
 	fetchYouTubeMetadata,
@@ -53,7 +69,7 @@ function createMockEvent(body: Record<string, unknown>) {
 describe("POST /api/preview", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(resolveArtworkUrl).mockResolvedValue(null);
+		sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
 	});
 
 	afterEach(() => {
@@ -189,9 +205,20 @@ describe("POST /api/preview", () => {
 				uploader: "RickAstleyVEVO",
 				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			});
-			vi.mocked(resolveArtworkUrl).mockResolvedValue(
-				"https://art/itunes/300x300bb.jpg",
-			);
+			sharedCatalogLookupMock.mockResolvedValue({
+				verdict: {
+					status: "matched",
+					via: "agreement",
+					candidate: { source: "itunes", artist: "Rick Astley", title: "x" },
+					metadata: {
+						artist: "Rick Astley",
+						title: "Never Gonna Give You Up",
+						artworkUrl: "https://art/itunes/300x300bb.jpg",
+						source: "itunes",
+					},
+				},
+				candidates: [],
+			});
 
 			const event = createMockEvent({
 				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
@@ -224,10 +251,9 @@ describe("POST /api/preview", () => {
 			await POST(event);
 
 			// #then
-			expect(resolveArtworkUrl).toHaveBeenCalledWith(
-				"Rick Astley",
-				"Never Gonna Give You Up",
-				{ itunesSize: 300, timeout: 4000 },
+			expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
+				{ artist: "Rick Astley", title: "Never Gonna Give You Up" },
+				{ timeout: 4000 },
 			);
 		});
 
@@ -241,7 +267,7 @@ describe("POST /api/preview", () => {
 				uploader: "RickAstleyVEVO",
 				thumbnailUrl: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
 			});
-			vi.mocked(resolveArtworkUrl).mockResolvedValue(null);
+			sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
 
 			const event = createMockEvent({
 				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",

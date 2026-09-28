@@ -66,11 +66,26 @@ const {
 	ensureYtDlpBinaryMock,
 	buildBgutilPotArgsMock,
 	buildJsRuntimeArgsMock,
+	sharedCatalogLookupMock,
 } = vi.hoisted(() => ({
 	ensureYtDlpBinaryMock: vi.fn(),
 	buildBgutilPotArgsMock: vi.fn(),
 	buildJsRuntimeArgsMock: vi.fn(),
+	sharedCatalogLookupMock: vi.fn(),
 }));
+
+/** Without this the real lookup runs and these tests call iTunes and Deezer. */
+vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("$lib/metadata/catalog/catalog-cache")
+	>()),
+	sharedCatalogLookup: sharedCatalogLookupMock,
+}));
+
+const NO_MATCH = {
+	verdict: { status: "unmatched" as const, reason: "no-candidates" as const },
+	candidates: [],
+};
 
 vi.mock("$lib/yt-dlp-binary", () => ({
 	ensureYtDlpBinary: (...args: unknown[]) => ensureYtDlpBinaryMock(...args),
@@ -121,6 +136,7 @@ describe("POST /api/preview/details - duration extraction", () => {
 		ensureYtDlpBinaryMock.mockResolvedValue("/tmp/yt-dlp");
 		buildBgutilPotArgsMock.mockResolvedValue([]);
 		buildJsRuntimeArgsMock.mockReturnValue([]);
+		sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
 		const { clearVideoDetailsCache } = await import("$lib/video-details-cache");
 		clearVideoDetailsCache();
 	});
@@ -138,6 +154,89 @@ describe("POST /api/preview/details - duration extraction", () => {
 
 		// #then
 		expect(data).toEqual({ success: true, duration: 213 });
+	});
+
+	it("corrects the identity when the duration proves a match", async () => {
+		// #given — the runtime is the evidence the preview could not have
+		mockYtDlpJson({ duration: 295, title: "Adele - Hello (Official Video)" });
+		sharedCatalogLookupMock.mockResolvedValue({
+			verdict: {
+				status: "matched",
+				via: "duration",
+				candidate: { source: "itunes", artist: "Adele", title: "Hello" },
+				metadata: {
+					artist: "Adele",
+					title: "Hello",
+					artworkUrl: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
+					source: "itunes",
+				},
+			},
+			candidates: [],
+		});
+		const POST = await importPost();
+
+		// #when
+		const response = await POST(
+			makeEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+				artist: "Adele",
+				title: "Hello (Official Video)",
+			}),
+		);
+		const data = await response.json();
+
+		// #then — downscaled for the 56 px card
+		expect(data).toEqual({
+			success: true,
+			duration: 295,
+			artist: "Adele",
+			title: "Hello",
+			artwork: "https://is1-ssl.mzstatic.com/300x300bb.jpg",
+		});
+	});
+
+	it("leaves the heuristic identity alone when nothing matched", async () => {
+		// #given
+		mockYtDlpJson({ duration: 295, title: "Some Bedroom Jam" });
+		const POST = await importPost();
+
+		// #when
+		const response = await POST(
+			makeEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+				artist: "Some Producer",
+				title: "Some Bedroom Jam",
+			}),
+		);
+		const data = await response.json();
+
+		// #then — no keys added, so the client's merge changes nothing
+		expect(data).toEqual({ success: true, duration: 295 });
+	});
+
+	it("queries with the identity the client echoed, plus the extracted duration", async () => {
+		// #given
+		mockYtDlpJson({
+			duration: 295,
+			track: "yt-dlp Track",
+			artist: "yt-dlp Artist",
+		});
+		const POST = await importPost();
+
+		// #when
+		await POST(
+			makeEvent({
+				url: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+				artist: "Adele",
+				title: "Hello",
+			}),
+		);
+
+		// #then — the echoed values win, so all three stages share one cache key
+		expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
+			{ artist: "Adele", title: "Hello", durationSeconds: 295 },
+			{ timeout: 4000 },
+		);
 	});
 
 	it("rounds a fractional duration to the nearest second", async () => {

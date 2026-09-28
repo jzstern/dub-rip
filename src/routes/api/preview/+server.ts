@@ -1,8 +1,12 @@
 import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
-import { resolveArtworkUrl } from "$lib/artwork";
 import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import {
+	cardSizedArtwork,
+	catalogArtworkUrl,
+	sharedCatalogLookup,
+} from "$lib/metadata/catalog/catalog-cache";
 import { resolveMediaLink } from "$lib/resolve-media-link";
 import {
 	soundCloudRefusal,
@@ -16,7 +20,6 @@ import {
 } from "$lib/youtube-metadata";
 import type { RequestHandler } from "./$types";
 
-const PREVIEW_ARTWORK_SIZE = 300;
 const PREVIEW_ARTWORK_TIMEOUT = 4000;
 const BGUTIL_PREWARM_TIMEOUT = 2000;
 
@@ -60,12 +63,22 @@ async function previewSoundCloud(link: MediaLink): Promise<Response> {
 		}
 
 		const { artist, trackTitle } = soundCloudTitleState(track);
+		/**
+		 * After the refusal check, so a Go+ preview or a geo-blocked track costs
+		 * no catalog calls. The upload's own cover still wins, so the cover shown
+		 * stays the cover written.
+		 */
+		const lookup = await sharedCatalogLookup(
+			{
+				artist,
+				title: trackTitle,
+				isrc: track.isrc,
+				durationSeconds: track.durationSeconds,
+			},
+			{ timeout: PREVIEW_ARTWORK_TIMEOUT },
+		);
 		const artwork =
-			track.artworkUrl ??
-			(await resolveArtworkUrl(artist, trackTitle, {
-				itunesSize: PREVIEW_ARTWORK_SIZE,
-				timeout: PREVIEW_ARTWORK_TIMEOUT,
-			}));
+			track.artworkUrl ?? cardSizedArtwork(catalogArtworkUrl(lookup));
 
 		return json({
 			success: true,
@@ -107,10 +120,14 @@ export const POST: RequestHandler = async ({ request }) => {
 		prewarmBgutilPot();
 
 		const metadata = await fetchYouTubeMetadata(videoId);
-		const artwork = await resolveArtworkUrl(
-			metadata.artist,
-			metadata.trackTitle,
-			{ itunesSize: PREVIEW_ARTWORK_SIZE, timeout: PREVIEW_ARTWORK_TIMEOUT },
+		/**
+		 * The heuristic identity is what goes out and what gets queried: YouTube
+		 * has no duration yet, so a match here rests on text alone and the client
+		 * echoes these values to `/details`, which re-judges them with the runtime.
+		 */
+		const lookup = await sharedCatalogLookup(
+			{ artist: metadata.artist, title: metadata.trackTitle },
+			{ timeout: PREVIEW_ARTWORK_TIMEOUT },
 		);
 
 		return json({
@@ -119,7 +136,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			artist: metadata.artist,
 			title: metadata.trackTitle,
 			thumbnail: metadata.thumbnailUrl,
-			artwork: artwork ?? undefined,
+			artwork: cardSizedArtwork(catalogArtworkUrl(lookup)),
 		});
 	} catch (error) {
 		/**

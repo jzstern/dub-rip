@@ -21,10 +21,22 @@ export interface CoverArt {
 	source: CoverArtSource;
 }
 
+/**
+ * A cover already proven to belong to this recording, from a verified catalog
+ * match, so it is tried before the unverified searches below. Without it a
+ * remix gets the original's sleeve: the searches take the top hit for
+ * "artist title" and cannot tell the two apart.
+ */
+export interface PreferredArtwork {
+	url: string;
+	source: CoverArtSource;
+}
+
 interface ResolveCoverArtInput {
 	artist: string;
 	title: string;
 	thumbnailUrl: string;
+	preferredArtwork?: PreferredArtwork;
 }
 
 interface ITunesResult {
@@ -43,6 +55,33 @@ interface DeezerAlbum {
 
 interface DeezerResponse {
 	data?: { album?: DeezerAlbum }[];
+}
+
+/**
+ * For a URL that passed the https + mzstatic/dzcdn allowlist when its candidate
+ * was built. Redirects are not followed, because following one would leave the
+ * allowlist behind; a 3xx counts as a miss. Kept separate from
+ * `fetchBufferWithTimeout`, which also serves the ytimg and sndcdn paths.
+ */
+async function fetchAllowlistedImage(
+	url: string,
+	timeout: number,
+): Promise<Buffer | null> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeout);
+	try {
+		const response = await fetch(url, {
+			signal: controller.signal,
+			redirect: "manual",
+		});
+		if (!response.ok) return null;
+		const arrayBuffer = await response.arrayBuffer();
+		return arrayBuffer.byteLength ? Buffer.from(arrayBuffer) : null;
+	} catch {
+		return null;
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 async function fetchBufferWithTimeout(
@@ -199,6 +238,7 @@ interface ResolveAlbumArtImageInput {
 	title: string;
 	videoId: string;
 	fallback?: AlbumArtImage | null;
+	preferredArtwork?: PreferredArtwork;
 }
 
 export async function resolveAlbumArtImage({
@@ -206,12 +246,14 @@ export async function resolveAlbumArtImage({
 	title,
 	videoId,
 	fallback,
+	preferredArtwork,
 }: ResolveAlbumArtImageInput): Promise<AlbumArtImage | null> {
 	try {
 		const cover = await resolveCoverArt({
 			artist,
 			title,
 			thumbnailUrl: youTubeThumbnailUrl(videoId),
+			preferredArtwork,
 		});
 		if (cover) {
 			console.log(`[artwork] Using cover art from: ${cover.source}`);
@@ -234,8 +276,20 @@ export async function resolveCoverArt({
 	artist,
 	title,
 	thumbnailUrl,
+	preferredArtwork,
 }: ResolveCoverArtInput): Promise<CoverArt | null> {
 	try {
+		if (preferredArtwork) {
+			const verified = await fetchAllowlistedImage(
+				preferredArtwork.url,
+				ITUNES_TIMEOUT,
+			);
+			/** A dead CDN URL must not cost the track its cover, so fall through. */
+			if (verified) {
+				return { imageBuffer: verified, source: preferredArtwork.source };
+			}
+		}
+
 		const official = await fetchOfficialArtwork(artist, title);
 		if (official) {
 			return { imageBuffer: official, source: "itunes" };
@@ -281,6 +335,7 @@ interface ResolveSoundCloudAlbumArtInput {
 	artist: string;
 	title: string;
 	artwork: SoundCloudArtwork;
+	preferredArtwork?: PreferredArtwork;
 }
 
 async function soundCloudImage(
@@ -302,12 +357,27 @@ export async function resolveSoundCloudAlbumArt({
 	artist,
 	title,
 	artwork,
+	preferredArtwork,
 }: ResolveSoundCloudAlbumArtInput): Promise<AlbumArtImage | null> {
 	try {
 		const uploaded = await soundCloudImage(artwork.artworkUrl);
 		if (uploaded) {
 			console.log("[artwork] Using cover art from: soundcloud");
 			return uploaded;
+		}
+
+		/** After the upload's own cover, before the unverified searches. */
+		if (preferredArtwork) {
+			const verified = await fetchAllowlistedImage(
+				preferredArtwork.url,
+				ITUNES_TIMEOUT,
+			);
+			if (verified) {
+				console.log(
+					`[artwork] Using cover art from: ${preferredArtwork.source}`,
+				);
+				return { buffer: verified, mime: "image/jpeg" };
+			}
 		}
 
 		const official = await fetchOfficialArtwork(artist, title);

@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getSoundCloudTrackMock } = vi.hoisted(() => ({
+const { getSoundCloudTrackMock, sharedCatalogLookupMock } = vi.hoisted(() => ({
 	getSoundCloudTrackMock: vi.fn(),
+	sharedCatalogLookupMock: vi.fn(),
 }));
+
+/** Without this the real lookup runs and these tests call iTunes and Deezer. */
+const NO_MATCH = {
+	verdict: { status: "unmatched" as const, reason: "no-candidates" as const },
+	candidates: [],
+};
 const mockEnv = vi.hoisted(
 	() => ({ BGUTIL_POT_URL: "http://bgutil" }) as Record<string, string>,
 );
@@ -13,6 +20,12 @@ vi.mock("$lib/soundcloud/soundcloud-track-cache", () => ({
 }));
 vi.mock("$lib/artwork", () => ({
 	resolveArtworkUrl: vi.fn(async () => "https://store/art.jpg"),
+}));
+vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("$lib/metadata/catalog/catalog-cache")
+	>()),
+	sharedCatalogLookup: sharedCatalogLookupMock,
 }));
 vi.mock("$lib/youtube-metadata", () => ({
 	fetchYouTubeMetadata: vi.fn(),
@@ -49,6 +62,7 @@ describe("POST /api/preview — SoundCloud", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		getSoundCloudTrackMock.mockResolvedValue(TRACK);
+		sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
 	});
 
 	it("previews the resolved identity with the upload's own artwork", async () => {
@@ -76,6 +90,17 @@ describe("POST /api/preview — SoundCloud", () => {
 		getSoundCloudTrackMock.mockResolvedValue({
 			...TRACK,
 			artworkUrl: undefined,
+		});
+		sharedCatalogLookupMock.mockResolvedValue({
+			verdict: NO_MATCH.verdict,
+			candidates: [
+				{
+					source: "itunes",
+					artist: "blk.",
+					title: "I Cant Fail",
+					artworkUrl: "https://store/art.jpg",
+				},
+			],
 		});
 
 		// #when
@@ -137,6 +162,7 @@ describe("POST /api/preview/details — SoundCloud", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		getSoundCloudTrackMock.mockResolvedValue(TRACK);
+		sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
 	});
 
 	it("returns the duration from the cached track, with no yt-dlp run", async () => {

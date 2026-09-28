@@ -11,6 +11,8 @@ import {
 	ID3_TAGS_WRITTEN_PERCENT,
 	PREPARING_DOWNLOAD_PERCENT,
 } from "$lib/download-pipeline/progress-stages";
+import { enrichedCatalogVerdict } from "$lib/metadata/catalog/catalog-cache";
+import type { CanonicalMetadata } from "$lib/metadata/catalog/catalog-candidate";
 import type { DownloadMethod } from "$lib/types";
 import {
 	buildID3Tags,
@@ -46,6 +48,9 @@ export interface FinalizeMp3Result {
 }
 
 const FILENAME_UNSAFE_CHARS = '<>:"/\\|?*';
+
+/** The whole catalog lookup, not per request — the candidates are usually cached by now. */
+const DOWNLOAD_CATALOG_TIMEOUT_MS = 6000;
 
 function isUnsafeFilenameChar(char: string): boolean {
 	const code = char.codePointAt(0) ?? 0;
@@ -110,6 +115,8 @@ export async function finalizeMp3({
 	soundCloudArtwork,
 }: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
+	/** Declared out here because the filename is built after the try block. */
+	let canonical: CanonicalMetadata | undefined;
 
 	try {
 		const [details, thumbnail] = await Promise.all([
@@ -117,18 +124,44 @@ export async function finalizeMp3({
 			thumbnailPromise,
 		]);
 
-		const coverTitle = trackTitle || videoTitle;
+		/**
+		 * Queried with the heuristic identity, never with `details.track` or
+		 * `details.artist`, so the preview, `/details` and this stage share one
+		 * cache key and one set of candidates. By now the duration is in hand,
+		 * which is the evidence a preview could not have.
+		 */
+		const verdict = signal?.aborted
+			? undefined
+			: await enrichedCatalogVerdict(
+					{
+						artist,
+						title: trackTitle,
+						isrc: details?.isrc,
+						durationSeconds: details?.duration,
+					},
+					{ timeout: DOWNLOAD_CATALOG_TIMEOUT_MS },
+				);
+		if (verdict?.status === "matched") canonical = verdict.metadata;
+
+		/** The cover the match proved, so a remix stops getting the original's sleeve. */
+		const preferredArtwork = canonical?.artworkUrl
+			? { url: canonical.artworkUrl, source: canonical.source }
+			: undefined;
+
+		const coverTitle = canonical?.title || trackTitle || videoTitle;
 		const image = soundCloudArtwork
 			? await resolveSoundCloudAlbumArt({
-					artist,
+					artist: canonical?.artist || artist,
 					title: coverTitle,
 					artwork: soundCloudArtwork,
+					...(preferredArtwork ? { preferredArtwork } : {}),
 				})
 			: await resolveAlbumArtImage({
-					artist,
+					artist: canonical?.artist || artist,
 					title: coverTitle,
 					videoId,
 					fallback: thumbnail,
+					...(preferredArtwork ? { preferredArtwork } : {}),
 				});
 
 		const tags = buildID3Tags({
@@ -139,6 +172,9 @@ export async function finalizeMp3({
 			image,
 			uploader,
 			sourceUrl,
+			canonical,
+			/** SoundCloud's label field is a distributor's; YouTube's is a scraped ℗ line. */
+			trustPlatformLabel: Boolean(soundCloudArtwork),
 		});
 
 		const { image: _image, ...tagsForLog } = tags;
@@ -177,7 +213,16 @@ export async function finalizeMp3({
 	send({ type: "status", message: "Preparing download..." });
 
 	const { size } = await stat(filePath);
-	const filename = buildDownloadFilename({ artist, trackTitle, videoTitle });
+	/**
+	 * Narrow `||` rather than reading `tags`, whose title and artist fall back to
+	 * "Unknown Title" / "Unknown Artist" — deriving from those would turn today's
+	 * `audio.mp3` into `Unknown Artist - Unknown Title.mp3`.
+	 */
+	const filename = buildDownloadFilename({
+		artist: canonical?.artist || artist,
+		trackTitle: canonical?.title || trackTitle,
+		videoTitle,
+	});
 
 	if (signal?.aborted) {
 		// The artwork/ID3 work above this line is wasted if the client is gone,

@@ -13,10 +13,19 @@ const {
 	resolveAlbumArtImageMock,
 	resolveSoundCloudAlbumArtMock,
 	registerDownloadMock,
+	enrichedCatalogVerdictMock,
 } = vi.hoisted(() => ({
-	resolveAlbumArtImageMock: vi.fn(() => Promise.resolve(null)),
-	resolveSoundCloudAlbumArtMock: vi.fn(() => Promise.resolve(null)),
+	/** Typed by their inputs so the call arguments can be asserted against. */
+	resolveAlbumArtImageMock: vi.fn<(input: unknown) => Promise<null>>(
+		async () => null,
+	),
+	resolveSoundCloudAlbumArtMock: vi.fn<(input: unknown) => Promise<null>>(
+		async () => null,
+	),
 	registerDownloadMock: vi.fn(() => "fake-token"),
+	enrichedCatalogVerdictMock: vi.fn<
+		(...args: unknown[]) => Promise<Record<string, unknown>>
+	>(async () => ({ status: "unmatched", reason: "no-candidates" })),
 }));
 
 vi.mock("node-id3", () => ({
@@ -34,6 +43,11 @@ vi.mock("$lib/video-metadata", () => ({
 
 vi.mock("$lib/download-pipeline/download-tokens", () => ({
 	registerDownload: registerDownloadMock,
+}));
+
+/** Without this the real lookup runs and these tests call iTunes and Deezer for real. */
+vi.mock("$lib/metadata/catalog/catalog-cache", () => ({
+	enrichedCatalogVerdict: enrichedCatalogVerdictMock,
 }));
 
 import {
@@ -349,5 +363,115 @@ describe("finalizeMp3() SoundCloud cover art", () => {
 			artwork: { artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg" },
 		});
 		expect(resolveAlbumArtImageMock).not.toHaveBeenCalled();
+	});
+});
+
+describe("finalizeMp3() with a proven catalog match", () => {
+	const MATCHED = {
+		status: "matched",
+		via: "duration",
+		candidate: { source: "itunes", artist: "Adele", title: "Hello" },
+		metadata: {
+			artist: "Adele",
+			title: "Hello",
+			album: "25",
+			artworkUrl: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
+			source: "itunes",
+		},
+	};
+
+	beforeEach(() => {
+		registerDownloadMock.mockClear();
+		resolveAlbumArtImageMock.mockReset().mockResolvedValue(null);
+		resolveSoundCloudAlbumArtMock.mockReset().mockResolvedValue(null);
+		enrichedCatalogVerdictMock
+			.mockReset()
+			.mockResolvedValue({ status: "unmatched", reason: "no-candidates" });
+	});
+
+	it("queries with the heuristic identity plus the evidence the download has", async () => {
+		// #given
+		const filePath = await createTempMp3();
+
+		// #when
+		await finalizeMp3({
+			...finalizeInputFor(filePath),
+			detailsPromise: Promise.resolve({
+				duration: 295,
+				isrc: "GBBKS1500214",
+			}),
+		});
+
+		// #then — the same artist and title the preview queried, so the key matches
+		expect(enrichedCatalogVerdictMock).toHaveBeenCalledWith(
+			{
+				artist: "Test Artist",
+				title: "Test Track",
+				isrc: "GBBKS1500214",
+				durationSeconds: 295,
+			},
+			{ timeout: 6000 },
+		);
+	});
+
+	it("names the file after the canonical identity", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		enrichedCatalogVerdictMock.mockResolvedValue(MATCHED);
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then
+		expect(registerDownloadMock).toHaveBeenCalledWith(
+			expect.objectContaining({ filename: "Adele - Hello.mp3" }),
+		);
+	});
+
+	it("hands the proven cover to the artwork resolver", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		enrichedCatalogVerdictMock.mockResolvedValue(MATCHED);
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then — so a remix stops inheriting the original's sleeve
+		expect(resolveAlbumArtImageMock).toHaveBeenCalledWith(
+			expect.objectContaining({
+				preferredArtwork: {
+					url: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
+					source: "itunes",
+				},
+			}),
+		);
+	});
+
+	it("passes no preferred cover when nothing matched", async () => {
+		// #given
+		const filePath = await createTempMp3();
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then
+		expect(resolveAlbumArtImageMock.mock.calls[0]?.[0]).not.toHaveProperty(
+			"preferredArtwork",
+		);
+	});
+
+	it("still delivers the file when the lookup fails outright", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		enrichedCatalogVerdictMock.mockRejectedValue(new Error("catalog exploded"));
+
+		// #when
+		const result = await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then — the heuristic filename, and a download that still happens
+		expect([result.filename, result.token]).toEqual([
+			"Test Artist - Test Track.mp3",
+			"fake-token",
+		]);
 	});
 });

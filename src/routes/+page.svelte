@@ -94,12 +94,21 @@ async function loadPreview(targetUrl: string) {
 
 		if (url !== targetUrl) return;
 
-		preview = await response.json();
+		const previewData = await response.json();
+		preview = previewData;
 
 		fetch("/api/preview/details", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ url: targetUrl }),
+			/**
+			 * The identity is echoed so /details queries the catalog with exactly
+			 * what the preview queried — same query, same cache key, one fetch.
+			 */
+			body: JSON.stringify({
+				url: targetUrl,
+				artist: previewData.artist,
+				title: previewData.title,
+			}),
 		})
 			.then(async (res) => {
 				if (!res.ok) {
@@ -111,17 +120,23 @@ async function loadPreview(targetUrl: string) {
 				return res.json();
 			})
 			.then((details) => {
-				if (
-					url === targetUrl &&
-					preview &&
-					details?.success &&
-					typeof details.duration === "number"
-				) {
-					preview = {
-						...preview,
-						duration: details.duration,
-					};
-				}
+				if (url !== targetUrl || !preview || !details?.success) return;
+				/**
+				 * Key-conditional, because /details answers `{success:true}` alone
+				 * when a SoundCloud track carries no duration — spreading absent
+				 * keys would blank the card. A canonical artist/title arrives only
+				 * when the catalog match survived the duration check, so an absent
+				 * one leaves the heuristic identity standing.
+				 */
+				preview = {
+					...preview,
+					...(typeof details.duration === "number"
+						? { duration: details.duration }
+						: {}),
+					...(details.artist ? { artist: details.artist } : {}),
+					...(details.title ? { title: details.title } : {}),
+					...(details.artwork ? { artwork: details.artwork } : {}),
+				};
 			})
 			.catch((err) => {
 				console.error("Details error:", err);

@@ -1,9 +1,22 @@
 const VERSION_CREDIT =
 	/[([]\s*([^()[\]]+?)\s+(?:remix|re-?edit|edit|bootleg|flip|rework|refix)\s*[)\]]/gi;
 
-/** Words that describe a version rather than name the person who made it. */
-const GENERIC_VERSION_NAME =
-	/^(?:original|radio|extended|club|dub|instrumental|album|single|clean|explicit|short|long|full|main|vocal|acoustic|live|official|vip|deluxe|festival|acapella|a capella|a cappella|super clean|tiktok|summer|trap|house|techno|hardstyle|slowed|sped up|speed up|nightcore|\d+\s*(?:inch|")?)$/i;
+/**
+ * A word that describes a version rather than naming the person who made it.
+ * `full`, `inch` and the `12"` / `12-inch` forms cover the length variants a
+ * catalog match now writes as the title: without them "(Full Edit)" and
+ * '(12" Edit)' credited remixers called "Full" and '12"'.
+ */
+const GENERIC_VERSION_WORD =
+	/^(?:original|radio|extended|club|dub|instrumental|album|single|clean|explicit|dirty|short|long|full|main|intro|outro|dj|vocal|acoustic|live|official|video|lyrics?|tv|promo|vip|deluxe|festival|acapella|a|capella|cappella|super|tiktok|summer|trap|house|techno|hardstyle|slowed|sped|speed|up|nightcore|mix|edit|inch|\d+(?:"|-?inch)?)$/i;
+
+/**
+ * Every word has to be generic, so "Video Mix" describes a version while
+ * "Dirty South" and "Club Killers" still name the act that made it.
+ */
+function describesAVersion(name: string): boolean {
+	return name.split(" ").every((word) => GENERIC_VERSION_WORD.test(word));
+}
 
 const LABEL_LIKE_NAME = /\b(?:records|recordings)\b/i;
 
@@ -20,7 +33,7 @@ export function extractRemixer(title: string): string | undefined {
 	const singleSpaced = title.replace(/\s+/g, " ");
 	const names = [...singleSpaced.matchAll(VERSION_CREDIT)]
 		.map((match) => match[1]?.trim() ?? "")
-		.filter((name) => name && !GENERIC_VERSION_NAME.test(name));
+		.filter((name) => name && !describesAVersion(name));
 	return names.at(-1);
 }
 

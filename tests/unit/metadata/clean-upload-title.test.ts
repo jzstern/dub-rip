@@ -105,7 +105,20 @@ describe("cleanUploadTitle()", () => {
 		"Artist - Title [Vinyl Release]",
 		"Artist - Title [Japan Release]",
 		"Artist - Title [Out Now on Spotify]",
+		"Artist - Title (Acoustic Recordings)",
+		"Artist - Title (Unreleased Recordings)",
+		"Artist - Title (Rehearsal Recordings)",
+		"Artist - Title (Bedroom Recordings)",
+		"Artist - Title (Field Recordings)",
+		"Artist - Title [Limited Release]",
+		"Artist - Title [Exclusive Release]",
+		"Artist - Title [EP Release]",
+		"Artist - Title [Remix Release]",
+		"Artist - Title [Instrumental Release]",
 		"Artist - Title [Available via Armada Recordings]",
+		"Artist - Title [Available on Spinnin' Records]",
+		"Artist - Title [Taken from Spinnin' Records]",
+		"Artist - Title [Released by Spinnin' Records]",
 	])("keeps version info and ordinary titles intact: %j", (raw) => {
 		// #when
 		const result = cleanUploadTitle(raw);

@@ -71,7 +71,7 @@ const OUT_ON_LEAD_IN = /^out\s+(?:now\s+)?on\s+/i;
  * Both stay in the title and write no TPUB.
  */
 const NOT_A_LABEL_NAME =
-	/^(?:official|live|home|demo|original|studio|early|new|single|album|promo|free|digital|debut|press|pre|vinyl|japan)\b|\s(?:on|at|via|from|by)\s/i;
+	/^(?:official|live|home|demo|original|studio|early|acoustic|instrumental|unreleased|rehearsal|bedroom|basement|field|solo|alternate|sessions?|lost|rare|remix|new|single|album|ep|lp|cd|promo|free|digital|debut|press|pre|vinyl|limited|exclusive|japan)\b|\s(?:on|at|via|from|by)\s/i;
 const LABEL_SUFFIX = /^.+\s(?:records|recordings)$/i;
 /** "[Monstercat Release]" names the label Monstercat. */
 const RELEASE_SUFFIX = /^(.+?)\s+release$/i;

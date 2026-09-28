@@ -104,17 +104,22 @@ export async function sharedCatalogLookup(
  * The download: the same cached candidates, plus the album call for the label
  * and genre. The candidates come back too, so an unmatched download falls back
  * to the same cover the preview showed rather than searching again.
+ *
+ * `timeout` is one budget for the searches and the album call together, so a
+ * download waits at most that long here rather than twice it.
  */
 export async function enrichedCatalogLookup(
 	query: TrackQuery,
 	{ timeout }: { timeout: number },
 ): Promise<CatalogLookup> {
+	const deadline = Date.now() + timeout;
 	const lookup = await sharedCatalogLookup(query, { timeout });
-	if (lookup.verdict.status !== "matched") return lookup;
+	const remaining = deadline - Date.now();
+	if (lookup.verdict.status !== "matched" || remaining <= 0) return lookup;
 	try {
 		return {
 			...lookup,
-			verdict: await enrichVerdictFromAlbum(lookup.verdict, timeout),
+			verdict: await enrichVerdictFromAlbum(lookup.verdict, remaining),
 		};
 	} catch (error) {
 		reportLookupBug(error, query);

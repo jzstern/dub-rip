@@ -43,20 +43,36 @@ function itunesSearchBody() {
 	};
 }
 
+/** The album a Deezer row is checked against before it is judged. */
+function deezerAlbumBody() {
+	return { artist: { name: "Adele" }, label: "XL Recordings" };
+}
+
 function stubStores(): ReturnType<typeof vi.fn> {
-	const fetchMock = vi.fn(async (input: unknown) => ({
-		ok: true,
-		status: 200,
-		json: async () =>
-			String(input).includes("itunes")
-				? itunesSearchBody()
-				: deezerSearchBody(),
-	}));
+	const fetchMock = vi.fn(async (input: unknown) => {
+		const url = String(input);
+		return {
+			ok: true,
+			status: 200,
+			json: async () =>
+				url.includes("itunes")
+					? itunesSearchBody()
+					: url.includes("/album/")
+						? deezerAlbumBody()
+						: deezerSearchBody(),
+		};
+	});
 	vi.stubGlobal("fetch", fetchMock);
 	return fetchMock;
 }
 
 const QUERY = { artist: "Adele", title: "Hello" };
+
+function searchesIn(fetchMock: ReturnType<typeof vi.fn>): unknown[][] {
+	return fetchMock.mock.calls.filter(
+		(call) => !String(call[0]).includes("/album/"),
+	);
+}
 
 describe("sharedCatalogLookup()", () => {
 	beforeEach(() => {
@@ -79,7 +95,7 @@ describe("sharedCatalogLookup()", () => {
 		);
 
 		// #then — two searches in total, not four: the duration does not change the key
-		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(searchesIn(fetchMock)).toHaveLength(2);
 	});
 
 	it("judges the later lookup on the evidence it has, not the earlier one's", async () => {
@@ -179,10 +195,27 @@ describe("sharedCatalogLookup()", () => {
 
 		// #then — the two searches, plus the download's own album call, and no
 		// second pair of searches
-		const searches = fetchMock.mock.calls.filter(
-			(call) => !String(call[0]).includes("/album/"),
+		expect([searchesIn(fetchMock).length, download.verdict.status]).toEqual([
+			2,
+			"matched",
+		]);
+	});
+
+	it("makes no album call once the searches have spent the download's budget", async () => {
+		// #given
+		const fetchMock = stubStores();
+
+		// #when
+		await enrichedCatalogLookup(
+			{ ...QUERY, durationSeconds: 295 },
+			{ timeout: 0 },
 		);
-		expect([searches.length, download.verdict.status]).toEqual([2, "matched"]);
+
+		// #then — the check that ran before judging, and no enrichment after it
+		const albumCalls = fetchMock.mock.calls.filter((call) =>
+			String(call[0]).includes("/album/"),
+		);
+		expect(albumCalls).toHaveLength(1);
 	});
 
 	it("starts fresh after the cache is cleared", async () => {
@@ -195,7 +228,7 @@ describe("sharedCatalogLookup()", () => {
 		await sharedCatalogLookup(QUERY, { timeout: 4000 });
 
 		// #then
-		expect(fetchMock).toHaveBeenCalledTimes(4);
+		expect(searchesIn(fetchMock)).toHaveLength(4);
 	});
 });
 

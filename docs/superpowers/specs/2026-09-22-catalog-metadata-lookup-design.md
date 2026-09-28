@@ -98,15 +98,22 @@ Matching is exact after normalization. No edit-distance fuzzing: fuzzing is how 
 
 An unrecognized bracket counts as identity, so matching fails closed. `(SneakPreview) Adrian Ackers Blueprint 1` can never match a plain catalog title.
 
-**A candidate is accepted** when the artist check passes (either side's primary artist is in the other's artist set, split on `, & x feat ft with`), the base titles are equal, the version rules above hold, **the catalog's cut does not outrun the upload**, and one of:
+**A candidate is accepted** when the artist check passes (either side's primary artist is in the other's artist set, split on `, & x feat ft with`), **the album is that artist's own** (its album artist shares a name with the track's credits, unless it is a compilation), the base titles are equal, the version rules above hold, **the catalog's cut does not outrun the upload**, and one of:
 
 1. **ISRC** — the candidate carries the upload's own ISRC, compared as an identifier (case and dashes ignored). An exact identifier, but on SoundCloud the *uploader* supplies it, so it earns no exemption from the gate above: a bootleg stamped with the original's ISRC would otherwise be written as the original, which is the exact failure this design exists to prevent. A runtime that disagrees also cancels it.
 2. **Duration** — within ±5 s. SoundCloud always has it; YouTube has it once `/details` returns.
-3. **Agreement** — an iTunes candidate and a Deezer candidate pass independently with the same normalized identity.
+3. **Agreement** — an iTunes candidate and a Deezer candidate pass independently with the same normalized identity **and runtimes within ±5 s of each other**.
 
 Agreement exists because YouTube has no duration at preview time, and because an official music video usually runs 30–90 s longer than the track (`Adele – Hello` is 6:07 against a 4:55 track), so a duration rule alone would reject most correct music-video matches.
 
 That asymmetry is why the runtime rule is one-directional. An upload may wrap a track in an intro or an outro, so a *longer upload* is ordinary. A **catalog cut that outruns the upload** by more than the tolerance is not: it is a live take, an extended mix, or the full track behind a bootleg that borrowed its ISRC. Such a candidate is refused outright, and it cannot corroborate another candidate either.
+
+**Revised 2026-09-27, after a PR-env download of Flume's official "Never Be Like You" was written with an instrumental knock-off's album, label, ISRC and cover.** Deezer carried no copy of the real single for that search, only rows credited to "Flume" on other artists' albums: "Unst" by Unstrumental (3:32) and "The Lockbox" by The Amalgamates (3:55, the single's exact runtime). Two rules were too weak:
+
+- Agreement was keyed on the title alone, so the 3:32 row "agreed" with iTunes's 3:55 single and then won, because Deezer ranks first. Agreement now also requires the two catalog runtimes to agree, and a donor may not fill fields for a winner whose runtime it contradicts.
+- Neither the credit nor the runtime can tell The Lockbox from the single, but the album can. iTunes search rows carry `collectionArtistName`; Deezer search rows do not, so every Deezer row that names the song and artist is checked against its album before judging (usually one to three calls, paid once per track and cached with the candidates). A row whose album cannot be read is dropped, not trusted.
+
+The upload's `feat.` credit is also written back when the catalog files the feature outside its title (Deezer's "Latch", not "Latch (feat. Sam Smith)"), since the Deezer-first rule's premise that Deezer keeps `feat.` in the title does not always hold.
 
 **Choosing among accepted candidates is structural, not evidential**, so the choice cannot change when a later stage learns the duration — a preview and its download must agree, or the file contradicts what the user was shown. In order: an ISRC proof; then a recording both catalogs reached; then non-compilation over compilation; then Deezer over iTunes (it keeps the `Artist – Title (feat. X)` shape the filenames use, and carries the ISRC); then **the catalog's own result order**, since both APIs rank the canonical release above a reissue or a knock-off; then the earlier release date, and only when both dates are precise — both stores back-date a reissue to January 1, which would otherwise make a greatest-hits set look older than the album it reissues.
 

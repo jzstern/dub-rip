@@ -349,6 +349,37 @@ describe("finalizeMp3() tag inputs", () => {
 			}),
 		);
 	});
+
+	it("does not let YouTube's scraped ℗ line outrank the catalog's label", async () => {
+		// #given
+		const filePath = await createTempMp3();
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then
+		expect(buildID3Tags).toHaveBeenLastCalledWith(
+			expect.objectContaining({ trustPlatformLabel: false }),
+		);
+	});
+
+	it("lets SoundCloud's own label field outrank the catalog's", async () => {
+		// #given
+		const filePath = await createTempMp3();
+
+		// #when
+		await finalizeMp3({
+			...finalizeInputFor(filePath),
+			soundCloudArtwork: {
+				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+			},
+		});
+
+		// #then
+		expect(buildID3Tags).toHaveBeenLastCalledWith(
+			expect.objectContaining({ trustPlatformLabel: true }),
+		);
+	});
 });
 
 describe("finalizeMp3() SoundCloud cover art", () => {

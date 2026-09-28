@@ -11,6 +11,7 @@ import { Input } from "$lib/components/ui/input";
 import VideoPreview from "$lib/components/VideoPreview.svelte";
 import { formatDuration } from "$lib/format-duration";
 import { parseMediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import { mergePreviewDetails } from "$lib/merge-preview-details";
 import { createProgressSmoother } from "$lib/progress-smoothing";
 import { smoothCollapse } from "$lib/transitions";
 import type { VideoPreview as VideoPreviewType } from "$lib/types";
@@ -112,22 +113,7 @@ async function loadPreview(targetUrl: string) {
 			})
 			.then((details) => {
 				if (url !== targetUrl || !preview || !details?.success) return;
-				/**
-				 * Key-conditional, because /details answers `{success:true}` alone
-				 * when a SoundCloud track carries no duration — spreading absent
-				 * keys would blank the card. A canonical artist/title arrives only
-				 * when the catalog match survived the duration check, so an absent
-				 * one leaves the heuristic identity standing.
-				 */
-				preview = {
-					...preview,
-					...(typeof details.duration === "number"
-						? { duration: details.duration }
-						: {}),
-					...(details.artist ? { artist: details.artist } : {}),
-					...(details.title ? { title: details.title } : {}),
-					...(details.artwork ? { artwork: details.artwork } : {}),
-				};
+				preview = mergePreviewDetails(preview, details);
 			})
 			.catch((err) => {
 				console.error("Details error:", err);

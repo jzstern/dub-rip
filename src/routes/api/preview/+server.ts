@@ -130,8 +130,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		const metadata = await fetchYouTubeMetadata(videoId);
 		/**
 		 * The heuristic identity is what goes out and what gets queried: YouTube
-		 * has no duration yet, so a match here rests on text alone and the client
-		 * echoes these values to `/details`, which re-judges them with the runtime.
+		 * has no duration yet, so a match here rests on text alone. `/details`
+		 * resolves the same identity server-side and re-judges the same cached
+		 * candidates with the runtime.
 		 */
 		const lookup = await sharedCatalogLookup(
 			{ artist: metadata.artist, title: metadata.trackTitle },

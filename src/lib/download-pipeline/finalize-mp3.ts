@@ -52,7 +52,10 @@ export interface FinalizeMp3Result {
 
 const FILENAME_UNSAFE_CHARS = '<>:"/\\|?*';
 
-/** The whole catalog lookup, not per request — the candidates are usually cached by now. */
+/**
+ * One budget for the searches and the album call together — the candidates are
+ * usually cached by now. The cover fetch that follows keeps its own.
+ */
 const DOWNLOAD_CATALOG_TIMEOUT_MS = 6000;
 
 function isUnsafeFilenameChar(char: string): boolean {

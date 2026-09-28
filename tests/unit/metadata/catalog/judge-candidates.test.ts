@@ -820,3 +820,225 @@ describe("judgeCandidates() picks between accepted candidates", () => {
 		});
 	});
 });
+
+describe("judgeCandidates() needs the catalogs to agree on a recording, not a title", () => {
+	/**
+	 * Seen on a PR-env download of the official upload (3:53): Deezer's top row
+	 * was a 3:32 instrumental knock-off credited to Flume, iTunes had the single.
+	 */
+	const FLUME_KNOCK_OFF = candidate({
+		artist: "Flume",
+		title: "Never Be Like You",
+		album: "Unst",
+		durationSeconds: 212,
+		isrc: "QZANL1714525",
+		rank: 0,
+	});
+	const FLUME_SINGLE_ITUNES = candidate({
+		source: "itunes",
+		artist: "Flume",
+		title: "Never Be Like You (feat. Kai)",
+		album: "Skin",
+		durationSeconds: 235,
+		rank: 0,
+	});
+	const FLUME_SINGLE_DEEZER = candidate({
+		artist: "Flume",
+		title: "Never Be Like You (feat. Kai)",
+		album: "Skin",
+		durationSeconds: 234,
+		rank: 1,
+	});
+	const query = { artist: "Flume", title: "Never Be Like You feat. Kai" };
+
+	it("picks the release the upload's runtime confirms over a knock-off Deezer ranks first", () => {
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 233 }, [
+			FLUME_KNOCK_OFF,
+			FLUME_SINGLE_ITUNES,
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Skin" },
+		});
+	});
+
+	it("takes no ISRC from a same-titled release of another length", () => {
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 233 }, [
+			FLUME_KNOCK_OFF,
+			FLUME_SINGLE_ITUNES,
+		]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.isrc).toBe(
+			undefined,
+		);
+	});
+
+	it("does not count one title at two lengths as both catalogs agreeing", () => {
+		// #given — a preview, with no runtime of the upload's own to settle it
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			FLUME_KNOCK_OFF,
+			FLUME_SINGLE_ITUNES,
+		]);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("still agrees when the two catalogs' runtimes are within five seconds", () => {
+		// #when
+		const verdict = judgeCandidates(query, [
+			FLUME_KNOCK_OFF,
+			FLUME_SINGLE_DEEZER,
+			FLUME_SINGLE_ITUNES,
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			via: "agreement",
+			metadata: { album: "Skin" },
+		});
+	});
+});
+
+describe("judgeCandidates() keeps the featured artists the upload names", () => {
+	const LATCH = {
+		artist: "Disclosure",
+		title: "Latch",
+		album: "Settle (Special Edition)",
+		durationSeconds: 256,
+	};
+	const query = { artist: "Disclosure", title: "Latch ft. Sam Smith" };
+
+	it("adds back a feature the catalog files outside the title", () => {
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate(LATCH),
+			candidate({ ...LATCH, source: "itunes" }),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { title: "Latch (feat. Sam Smith)" },
+		});
+	});
+
+	it("does not double a feature the catalog's title already carries", () => {
+		// #given
+		const credited = { ...LATCH, title: "Latch (feat. Sam Smith)" };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate(credited),
+			candidate({ ...credited, source: "itunes" }),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { title: "Latch (feat. Sam Smith)" },
+		});
+	});
+
+	it("does not add a feature the catalog credits as an artist", () => {
+		// #given
+		const coCredited = { ...LATCH, artist: "Disclosure & Sam Smith" };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate(coCredited),
+			candidate({ ...coCredited, source: "itunes" }),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { title: "Latch" },
+		});
+	});
+});
+
+describe("judgeCandidates() writes only the artist's own releases", () => {
+	const SINGLE = candidate({
+		source: "itunes",
+		artist: "Flume",
+		title: "Never Be Like You (feat. Kai)",
+		album: "Never Be Like You (feat. Kai) - Single",
+		durationSeconds: 235,
+	});
+	const query = {
+		artist: "Flume",
+		title: "Never Be Like You feat. Kai",
+		durationSeconds: 233,
+	};
+
+	it("refuses a row credited to the artist on somebody else's album", () => {
+		// #given — the same runtime, credited to Flume, on The Amalgamates' album
+		const knockOff = candidate({
+			artist: "Flume",
+			title: "Never Be Like You",
+			album: "The Lockbox",
+			albumArtist: "The Amalgamates",
+			durationSeconds: 235,
+			isrc: "QZ9Y21704533",
+		});
+
+		// #when
+		const verdict = judgeCandidates(query, [knockOff, SINGLE]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Never Be Like You (feat. Kai) - Single" },
+		});
+	});
+
+	it("accepts a feature on the other credited artist's album", () => {
+		// #given — Sam Smith's album, crediting Disclosure & Sam Smith
+		const feature = candidate({
+			artist: "Disclosure & Sam Smith",
+			title: "Latch",
+			album: "In the Lonely Hour",
+			albumArtist: "Sam Smith",
+			durationSeconds: 256,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Disclosure", title: "Latch", durationSeconds: 256 },
+			[feature],
+		);
+
+		// #then
+		expect(verdict.status).toBe("matched");
+	});
+
+	it("accepts a compilation's row, whose album it never writes", () => {
+		// #given
+		const compilation = candidate({
+			artist: "Flume",
+			title: "Never Be Like You (feat. Kai)",
+			album: "Summer Hits 2016",
+			albumArtist: "Various Artists",
+			isCompilation: true,
+			durationSeconds: 234,
+		});
+
+		// #when
+		const verdict = judgeCandidates(query, [compilation]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: undefined },
+		});
+	});
+});

@@ -8,6 +8,12 @@ export interface CatalogCandidate {
 	album?: string;
 	/** Deezer's album id, which the label and genre come from. */
 	albumId?: string;
+	/**
+	 * Whose release the album is. A catalog can credit a track to the real
+	 * artist on somebody else's album — a knock-off label's — and only the
+	 * album's own credit gives it away.
+	 */
+	albumArtist?: string;
 	isCompilation?: boolean;
 	releaseDate?: string;
 	durationSeconds?: number;

@@ -240,6 +240,30 @@ describe("POST /api/preview/details - duration extraction", () => {
 		);
 	});
 
+	it("queries without the ℗ label, which the preview and the download never have", async () => {
+		// #given — only yt-dlp's description names the label; oEmbed does not
+		mockYtDlpJson({
+			duration: 233,
+			title: "Flume - Never Be Like You [Mad Decent]",
+			uploader: "Mad Decent",
+			description: "℗ 2016 Mad Decent",
+		});
+		const POST = await importPost();
+
+		// #when
+		await POST(makeEvent({ url: "https://youtube.com/watch?v=dQw4w9WgXcQ" }));
+
+		// #then — the same key the preview cached, so the card and file agree
+		expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
+			{
+				artist: "Flume",
+				title: "Never Be Like You [Mad Decent]",
+				durationSeconds: 233,
+			},
+			{ timeout: 4000 },
+		);
+	});
+
 	it("rounds a fractional duration to the nearest second", async () => {
 		// #given
 		mockYtDlpJson({ duration: 213.6 });

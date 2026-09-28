@@ -25,6 +25,11 @@ interface EvalCase {
 	expect: "match" | "none";
 	expectArtist?: string;
 	expectTitle?: string;
+	/**
+	 * The release the file should name. A knock-off credited to the artist
+	 * passes every artist and title check, so only the album shows it.
+	 */
+	expectAlbum?: string;
 }
 
 const cases = corpus.cases as EvalCase[];
@@ -102,10 +107,13 @@ for (const testCase of cases) {
 			testCase.title,
 			verdict.metadata.title,
 		);
-		if (!titleMatches || !artistMatches || !versionMatches) {
+		const albumMatches =
+			testCase.expectAlbum === undefined ||
+			sameTitle(verdict.metadata.album, testCase.expectAlbum);
+		if (!titleMatches || !artistMatches || !versionMatches || !albumMatches) {
 			tally.wrong += 1;
 			console.log(
-				`WRONG   ${testCase.name}\n        wanted ${testCase.expectArtist} — ${testCase.expectTitle}\n        got    ${got}`,
+				`WRONG   ${testCase.name}\n        wanted ${testCase.expectArtist} — ${testCase.expectTitle}${testCase.expectAlbum ? ` · ${testCase.expectAlbum}` : ""}\n        got    ${got} · ${verdict.metadata.album ?? "no album"}`,
 			);
 			continue;
 		}

@@ -4225,5 +4225,1935 @@
 			"type": "artist"
 		},
 		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6630083f454d48eadb6a9b53f035d734/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://itunes.apple.com/search?term=Flume%20Never%20Be%20Like%20You%20Kai&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You (feat. Kai)",
+				"artistName": "Flume",
+				"collectionName": "Never Be Like You (feat. Kai) - Single",
+				"releaseDate": "2016-01-16T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 235058,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/3e/23/82/3e23829f-ef2e-99f3-206d-66d4fe128b7d/112129.jpg/100x100bb.jpg",
+				"trackId": 1881366664,
+				"collectionId": 1881366662
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You (feat. Kai) [Disclosure Remix]",
+				"artistName": "Flume",
+				"collectionName": "Never Be Like You (feat. Kai) [Remixes] - EP",
+				"releaseDate": "2016-03-04T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 371909,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/29/f4/3b/29f43b3f-cbeb-2cdd-33d3-d3b6bd231a9d/112230.jpg/100x100bb.jpg",
+				"trackId": 1885945784,
+				"collectionId": 1885945779
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You (feat. KAI) [Disclosure Remix]",
+				"artistName": "Flume",
+				"collectionName": "Skin: The Remixes",
+				"releaseDate": "2016-03-04T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 371909,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/fd/66/93/fd6693a4-4d18-bacc-346c-f5e7fa7cd7bc/112249.jpg/100x100bb.jpg",
+				"trackId": 1881400030,
+				"collectionId": 1881399652
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You (Workout Mix)",
+				"artistName": "Power Music Workout",
+				"collectionName": "Never Be Like You - Single (Workout Mix) - Single",
+				"releaseDate": "2016-09-02T12:00:00Z",
+				"primaryGenreName": "Fitness & Workout",
+				"trackTimeMillis": 305625,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music62/v4/08/2d/5d/082d5dd1-73d5-6eb1-aeb9-45bee58cc284/NeverBeLikeYou-2400.jpg/100x100bb.jpg",
+				"trackId": 1150630815,
+				"collectionId": 1150630699
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You",
+				"artistName": "KIDZ BOP Kids",
+				"collectionName": "Kidz Bop 33",
+				"releaseDate": "2016-10-14T12:00:00Z",
+				"primaryGenreName": "Children's Music",
+				"trackTimeMillis": 202750,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/eb/6f/4c/eb6f4cd5-f348-e6bf-90ed-a3c038728cba/16CRGIM01579.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440946344,
+				"collectionId": 1440945851
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You",
+				"artistName": "Aexcit",
+				"collectionName": "Never Be Like You - Single",
+				"releaseDate": "2021-06-11T12:00:00Z",
+				"primaryGenreName": "Dance",
+				"trackTimeMillis": 148893,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/43/6e/40/436e401d-3d6b-fd99-402c-afee138d4f79/5059806882247_cover.jpg/100x100bb.jpg",
+				"trackId": 1569044484,
+				"collectionId": 1569044483
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You",
+				"artistName": "The Almost",
+				"collectionName": "Fear Inside Our Bones",
+				"releaseDate": "2013-06-11T12:00:00Z",
+				"primaryGenreName": "Alternative",
+				"trackTimeMillis": 196576,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/13/2f/8b/132f8b50-54c8-f6ab-9d09-d623b376c3e7/195497466498.jpg/100x100bb.jpg",
+				"trackId": 1538018537,
+				"collectionId": 1538018220
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You",
+				"artistName": "Diamond White & AJ Rafael",
+				"collectionName": "Never Be Like You - Single",
+				"releaseDate": "2016-09-09T12:00:00Z",
+				"primaryGenreName": "Singer/Songwriter",
+				"trackTimeMillis": 213250,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music62/v4/fe/4b/c4/fe4bc4f5-f7aa-32c2-95d6-6950c802365e/5052917022939.jpg/100x100bb.jpg",
+				"trackId": 1152632733,
+				"collectionId": 1152632519
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Never Be Like You",
+				"artistName": "Jess & Matt",
+				"collectionName": "Belmont Street - EP",
+				"releaseDate": "2017-02-10T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 237094,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/68/6b/dc/686bdc6b-fb7d-0126-b66b-c72539947139/886446269016.jpg/100x100bb.jpg",
+				"trackId": 1197277168,
+				"collectionId": 1197277052
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Like You (feat. Ciara)",
+				"artistName": "Bow Wow",
+				"collectionName": "Wanted",
+				"releaseDate": "2005-07-12T07:00:00Z",
+				"primaryGenreName": "Dirty South",
+				"trackTimeMillis": 205840,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music/ae/ad/f4/mzi.vpzwhzsw.jpg/100x100bb.jpg",
+				"trackId": 400070201,
+				"collectionId": 400070195
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Flume%20Never%20Be%20Like%20You%20Kai&limit=10": {
+		"total": 10,
+		"data": [
+			{
+				"id": 3875829771,
+				"title": "Never Be Like You (feat. Kai) (Disclosure Remix)",
+				"title_short": "Never Be Like You (feat. Kai)",
+				"title_version": "(Disclosure Remix)",
+				"duration": 372,
+				"isrc": "AUFF01600793",
+				"readable": true,
+				"artist": {
+					"id": 1164295,
+					"name": "Flume"
+				},
+				"album": {
+					"id": 930599621,
+					"title": "Never Be Like You (feat. Kai) (Remixes)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9e73242acab3fd21a1a1d132d1ae211f/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/9e73242acab3fd21a1a1d132d1ae211f/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 425359372,
+				"title": "Never Be Like You",
+				"title_short": "Never Be Like You",
+				"duration": 212,
+				"isrc": "QZANL1714525",
+				"readable": true,
+				"artist": {
+					"id": 1164295,
+					"name": "Flume"
+				},
+				"album": {
+					"id": 51130372,
+					"title": "Unst",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/847baff60053a23edc689988abfada33/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/847baff60053a23edc689988abfada33/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 126090761,
+				"title": "Never Be Like You (Reprise to Flume feat. Kai)",
+				"title_short": "Never Be Like You",
+				"title_version": "(Reprise to Flume feat. Kai)",
+				"duration": 233,
+				"isrc": "BET231632209",
+				"readable": true,
+				"artist": {
+					"id": 10457193,
+					"name": "Joshua Lemon"
+				},
+				"album": {
+					"id": 13271613,
+					"title": "Summer Hits 2016",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/17a35cf6ed0c5d3ef7f141588c231969/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/17a35cf6ed0c5d3ef7f141588c231969/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 414117942,
+				"title": "Never Be Like You",
+				"title_short": "Never Be Like You",
+				"duration": 235,
+				"isrc": "QZ9Y21704533",
+				"readable": true,
+				"artist": {
+					"id": 1164295,
+					"name": "Flume"
+				},
+				"album": {
+					"id": 49362632,
+					"title": "The Lockbox",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6b644f89536b51a401a55fe07c23b0db/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/6b644f89536b51a401a55fe07c23b0db/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 129150558,
+				"title": "Never Be Like You - Tribute to Flume and Kai",
+				"title_short": "Never Be Like You - Tribute to Flume and Kai",
+				"duration": 232,
+				"isrc": "FR59R1640501",
+				"readable": true,
+				"artist": {
+					"id": 10530371,
+					"name": "2016 Billboard Masters"
+				},
+				"album": {
+					"id": 13659176,
+					"title": "Never Be Like You - Tribute to Flume and Kai",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/d83c09358430e8e4c8b307a609e32aae/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/d83c09358430e8e4c8b307a609e32aae/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 134265254,
+				"title": "Never Be Like You : Never Be Like You (Reprise De Flume Feat Kai)",
+				"title_short": "Never Be Like You : Never Be Like You",
+				"title_version": "(Reprise De Flume Feat Kai)",
+				"duration": 197,
+				"isrc": "CH6541617484",
+				"readable": true,
+				"artist": {
+					"id": 10375686,
+					"name": "Fiona Xsay"
+				},
+				"album": {
+					"id": 14309864,
+					"title": "Say You Won't Let Go (Pop Electro Tribute to James Arthur & Kehlani, Gangsta...)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/37a0482543ebe934477fb9764cc93434/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/37a0482543ebe934477fb9764cc93434/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 418294172,
+				"title": "Never Be Like You (Originally Performed by Flume feat. Kai) [Karaoke Version]",
+				"title_short": "Never Be Like You (Originally Performed by Flume feat. Kai) [Karaoke Version]",
+				"duration": 230,
+				"isrc": "NLHR51733495",
+				"readable": true,
+				"artist": {
+					"id": 1602701,
+					"name": "Backing Force"
+				},
+				"album": {
+					"id": 49997632,
+					"title": "Fresh Karaoke Hits - 2016 - Vol. 9",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/377ec251d21d5552d0d54c0522b12a93/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/377ec251d21d5552d0d54c0522b12a93/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 125629662,
+				"title": "Never Be Like You (Originally Performed by Flume feat. Kai) (Instrumental Version)",
+				"title_short": "Never Be Like You (Originally Performed by Flume feat. Kai)",
+				"title_version": "(Instrumental Version)",
+				"duration": 234,
+				"isrc": "USLZJ1661330",
+				"readable": true,
+				"artist": {
+					"id": 4784030,
+					"name": "Karaoke Pro"
+				},
+				"album": {
+					"id": 13214072,
+					"title": "Never Be Like You (Originally Performed by Flume feat. Kai) [Instrumental Version]",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0997e0a204f5324ad56e4b7661eb811c/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/0997e0a204f5324ad56e4b7661eb811c/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 816096432,
+				"title": "Never Be Like You (Made Popular By Flume ft. Kai) [Vocal Version]",
+				"title_short": "Never Be Like You (Made Popular By Flume ft. Kai) [Vocal Version]",
+				"title_version": "",
+				"duration": 233,
+				"isrc": "USSYS1102486",
+				"readable": true,
+				"artist": {
+					"id": 384495,
+					"name": "Party Tyme Karaoke"
+				},
+				"album": {
+					"id": 120282232,
+					"title": "Party Tyme Karaoke - Super Hits 29 (Vocal Versions)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a94a77ac2f84420ba4e8c4aea236e8b3/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a94a77ac2f84420ba4e8c4aea236e8b3/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 125644626,
+				"title": "Never Be Like You (Originally Performed by Flume and Kai) (Karaoke Instrumental)",
+				"title_short": "Never Be Like You (Originally Performed by Flume and Kai)",
+				"title_version": "(Karaoke Instrumental)",
+				"duration": 233,
+				"isrc": "ESA011619850",
+				"readable": true,
+				"artist": {
+					"id": 7977866,
+					"name": "Karaoke Freaks"
+				},
+				"album": {
+					"id": 13215966,
+					"title": "Never Be Like You (Originally Performed by Flume and Kai) (Karaoke Instrumental)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a3b6909fab413b625d4a893807618b69/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/a3b6909fab413b625d4a893807618b69/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://itunes.apple.com/search?term=Disclosure%20Latch%20Sam%20Smith&entity=song&limit=10": {
+		"resultCount": 10,
+		"results": [
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch (feat. Sam Smith)",
+				"artistName": "Disclosure",
+				"collectionName": "The Singles - EP",
+				"releaseDate": "2012-10-08T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 257299,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/71/ed/a0/71eda00a-4017-94a7-f6ee-e6a965458fd7/13UMGIM28546.rgb.jpg/100x100bb.jpg",
+				"trackId": 1471695442,
+				"collectionId": 1471695436
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch",
+				"artistName": "Disclosure & Sam Smith",
+				"collectionName": "Settle (Deluxe)",
+				"collectionArtistName": "Disclosure",
+				"releaseDate": "2012-10-08T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 255867,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/57/93/e0/5793e0d6-4877-e015-ef54-3fd4eff87344/14UMGIM12348.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440862129,
+				"collectionId": 1440862011
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch (feat. Disclosure) [Live from Madison Square Garden]",
+				"artistName": "Sam Smith",
+				"collectionName": "In the Lonely Hour (Drowning Shadows Edition)",
+				"releaseDate": "2014-05-26T12:00:00Z",
+				"primaryGenreName": "Pop",
+				"trackTimeMillis": 486890,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/6b/64/f8/6b64f8f3-b116-8704-7476-829420486cbb/15UMGIM50961.rgb.jpg/100x100bb.jpg",
+				"trackId": 1440838756,
+				"collectionId": 1440837455
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch",
+				"artistName": "Disclosure & Sam Smith",
+				"collectionName": "Settle (Special Edition)",
+				"collectionArtistName": "Disclosure",
+				"releaseDate": "2012-10-08T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 255632,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/ff/93/d6/ff93d6cb-e6f0-6afa-02a8-0db30c3dcb84/13UAEIM36153.rgb.jpg/100x100bb.jpg",
+				"trackId": 1443276396,
+				"collectionId": 1443276388
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch",
+				"artistName": "Disclosure & Sam Smith",
+				"collectionName": "In The Lonely Hour (10th Anniversary Edition / Deluxe)",
+				"collectionArtistName": "Sam Smith",
+				"releaseDate": "2012-10-08T07:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 256760,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/e6/8c/ce/e68cce7d-b240-bafd-d15f-1aef236f7343/24UMGIM49156.rgb.jpg/100x100bb.jpg",
+				"trackId": 1763639275,
+				"collectionId": 1763638888
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch",
+				"artistName": "Disclosure & Sam Smith",
+				"collectionName": "In The Lonely Hour (10th Anniversary Edition)",
+				"collectionArtistName": "Sam Smith",
+				"releaseDate": "2012-10-08T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 256760,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/0d/03/61/0d03616f-5db9-74a5-2be6-2a97419a559b/24UMGIM49156.rgb.jpg/100x100bb.jpg",
+				"trackId": 1759498143,
+				"collectionId": 1759497984
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch",
+				"artistName": "Disclosure & Sam Smith",
+				"collectionName": "Settle (Special Edition)",
+				"collectionArtistName": "Disclosure",
+				"releaseDate": "2012-10-08T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 255632,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music114/v4/ab/20/6b/ab206bd6-c102-3a6d-784a-3b5fea05dd8e/13UAEIM36153.rgb.jpg/100x100bb.jpg",
+				"trackId": 1545863930,
+				"collectionId": 1545863926
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch (feat. Sam Smith) [DJ Premier Remix]",
+				"artistName": "Disclosure",
+				"collectionName": "Settle (The Remixes)",
+				"releaseDate": "2013-01-01T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 206609,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/ad/39/bbad3922-2e60-a1c5-3116-deb0066a03b8/13UAEIM36387.rgb.jpg/100x100bb.jpg",
+				"trackId": 1444219220,
+				"collectionId": 1444219216
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch (feat. Sam Smith) [Jamie Jones Remix]",
+				"artistName": "Disclosure",
+				"collectionName": "Latch (The Remixes) - Single",
+				"releaseDate": "2012-01-01T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 391116,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/2e/b9/44/2eb944e0-a94c-ca3f-0d0a-b6a89c8e8b70/00602537234554.rgb.jpg/100x100bb.jpg",
+				"trackId": 1444443675,
+				"collectionId": 1444443470
+			},
+			{
+				"wrapperType": "track",
+				"kind": "song",
+				"trackName": "Latch (feat. Sam Smith) [T. Williams Club Remix]",
+				"artistName": "Disclosure",
+				"collectionName": "Latch (The Remixes) - Single",
+				"releaseDate": "2013-01-01T12:00:00Z",
+				"primaryGenreName": "Electronic",
+				"trackTimeMillis": 247099,
+				"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music128/v4/2e/b9/44/2eb944e0-a94c-ca3f-0d0a-b6a89c8e8b70/00602537234554.rgb.jpg/100x100bb.jpg",
+				"trackId": 1444443533,
+				"collectionId": 1444443470
+			}
+		]
+	},
+	"https://api.deezer.com/search?q=Disclosure%20Latch%20Sam%20Smith&limit=10": {
+		"total": 13,
+		"data": [
+			{
+				"id": 75526535,
+				"title": "Latch",
+				"title_short": "Latch",
+				"title_version": "",
+				"duration": 257,
+				"isrc": "GBUM71302810",
+				"readable": true,
+				"artist": {
+					"id": 409796,
+					"name": "Disclosure"
+				},
+				"album": {
+					"id": 7480190,
+					"title": "Settle (Special Edition)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e44468007c45f2523d056a0b19eed80a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/e44468007c45f2523d056a0b19eed80a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 62119190,
+				"title": "Latch (Jamie Jones Remix)",
+				"title_short": "Latch",
+				"title_version": "(Jamie Jones Remix)",
+				"duration": 391,
+				"isrc": "GBUM71207309",
+				"readable": true,
+				"artist": {
+					"id": 409796,
+					"name": "Disclosure"
+				},
+				"album": {
+					"id": 6091603,
+					"title": "Latch (The Remixes)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/14bf3adfc5c440e9978afa90b407af03/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/14bf3adfc5c440e9978afa90b407af03/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 62119189,
+				"title": "Latch (T.Williams Club Remix)",
+				"title_short": "Latch",
+				"title_version": "(T.Williams Club Remix)",
+				"duration": 247,
+				"isrc": "GBUM71207308",
+				"readable": true,
+				"artist": {
+					"id": 409796,
+					"name": "Disclosure"
+				},
+				"album": {
+					"id": 6091603,
+					"title": "Latch (The Remixes)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/14bf3adfc5c440e9978afa90b407af03/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/14bf3adfc5c440e9978afa90b407af03/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 98529070,
+				"title": "Latch (Kaik Remix)",
+				"title_short": "Latch (Kaik Remix)",
+				"duration": 202,
+				"isrc": "USCGJ1531134",
+				"readable": true,
+				"artist": {
+					"id": 409796,
+					"name": "Disclosure"
+				},
+				"album": {
+					"id": 10069422,
+					"title": "Latch (Kaik Remix)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/d5d14132a6363ea05e3b127fe85fd39d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/d5d14132a6363ea05e3b127fe85fd39d/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 75526560,
+				"title": "Latch (DJ Premier Remix)",
+				"title_short": "Latch",
+				"title_version": "(DJ Premier Remix)",
+				"duration": 206,
+				"isrc": "GBUM71308628",
+				"readable": true,
+				"artist": {
+					"id": 409796,
+					"name": "Disclosure"
+				},
+				"album": {
+					"id": 7480190,
+					"title": "Settle (Special Edition)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e44468007c45f2523d056a0b19eed80a/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/e44468007c45f2523d056a0b19eed80a/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 111780410,
+				"title": "Latch (Live From Madison Square Garden)",
+				"title_short": "Latch",
+				"title_version": "(Live From Madison Square Garden)",
+				"duration": 487,
+				"isrc": "GBUM71506207",
+				"readable": true,
+				"artist": {
+					"id": 1097709,
+					"name": "Sam Smith"
+				},
+				"album": {
+					"id": 11603598,
+					"title": "In The Lonely Hour (Drowning Shadows Edition)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/231c66c0ed260c708163eff3bb8458da/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/231c66c0ed260c708163eff3bb8458da/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 1379085032,
+				"title": "Latch",
+				"title_short": "Latch",
+				"title_version": "",
+				"duration": 209,
+				"isrc": "GBUM71406324",
+				"readable": true,
+				"artist": {
+					"id": 409796,
+					"name": "Disclosure"
+				},
+				"album": {
+					"id": 231719542,
+					"title": "Pop of the 2000s: Celebrating Pride 2021",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9e11309a4e19775caeb64e6748625a1d/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/9e11309a4e19775caeb64e6748625a1d/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 85403954,
+				"title": "La La Latch (Sam Smith/Disclosure/Naughty Boy Mashup)",
+				"title_short": "La La Latch (Sam Smith/Disclosure/Naughty Boy Mashup)",
+				"title_version": "",
+				"duration": 223,
+				"isrc": "USRC11401835",
+				"readable": true,
+				"artist": {
+					"id": 1534419,
+					"name": "Pentatonix"
+				},
+				"album": {
+					"id": 8611068,
+					"title": "PTX, Vol. III",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/c6efc61792c36ccc7a88129213261dcc/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/c6efc61792c36ccc7a88129213261dcc/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 802313562,
+				"title": "Latch (Made Popular By Disclosure ft. Sam Smith) [Vocal Version]",
+				"title_short": "Latch (Made Popular By Disclosure ft. Sam Smith) [Vocal Version]",
+				"title_version": "",
+				"duration": 256,
+				"isrc": "USSYS1101723",
+				"readable": true,
+				"artist": {
+					"id": 384495,
+					"name": "Party Tyme Karaoke"
+				},
+				"album": {
+					"id": 118376742,
+					"title": "Party Tyme Karaoke - Pop Party Pack 6 (Vocal Versions)",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e42ab31432ced136b4871754e95f0f68/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/e42ab31432ced136b4871754e95f0f68/500x500-000000-80-0-0.jpg"
+				}
+			},
+			{
+				"id": 65043669,
+				"title": "Latch (In the Style of Disclosure (& Sam Smith) ) [Karaoke Version]",
+				"title_short": "Latch (In the Style of Disclosure (& Sam Smith) ) [Karaoke Version]",
+				"duration": 255,
+				"isrc": "USV291348707",
+				"readable": true,
+				"artist": {
+					"id": 4399840,
+					"name": "Ameritz Digital Karaoke"
+				},
+				"album": {
+					"id": 6371946,
+					"title": "Latch (In the Style of Disclosure Feat. Sam Smith) [Karaoke Version] - Single",
+					"cover_xl": "https://cdn-images.dzcdn.net/images/cover/2546790fe838a847cf6146a7c60546f7/1000x1000-000000-80-0-0.jpg",
+					"cover_big": "https://cdn-images.dzcdn.net/images/cover/2546790fe838a847cf6146a7c60546f7/500x500-000000-80-0-0.jpg"
+				}
+			}
+		]
+	},
+	"https://api.deezer.com/album/103327692": {
+		"id": 103327692,
+		"title": "bad guy (with Justin Bieber)",
+		"label": "Darkroom/Interscope Records",
+		"record_type": "single",
+		"release_date": "2019-07-11",
+		"genres": {
+			"data": [
+				{
+					"id": 85,
+					"name": "Alternative",
+					"picture": "https://api.deezer.com/genre/85/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602508103025",
+		"artist": {
+			"id": 9635624,
+			"name": "Billie Eilish",
+			"picture": "https://api.deezer.com/artist/9635624/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/9635624/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/c61dbf18d17f0fc143b6379fe90b6071/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/910510411": {
+		"id": 910510411,
+		"title": "Dracula (with JENNIE)",
+		"label": "Columbia",
+		"record_type": "single",
+		"release_date": "2026-02-06",
+		"genres": {
+			"data": [
+				{
+					"id": 85,
+					"name": "Alternative",
+					"picture": "https://api.deezer.com/genre/85/image",
+					"type": "genre"
+				},
+				{
+					"id": 86,
+					"name": "Indie Pop",
+					"picture": "https://api.deezer.com/genre/86/image",
+					"type": "genre"
+				},
+				{
+					"id": 87,
+					"name": "Indie Rock",
+					"picture": "https://api.deezer.com/genre/87/image",
+					"type": "genre"
+				},
+				{
+					"id": 113,
+					"name": "Dance",
+					"picture": "https://api.deezer.com/genre/113/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "196874054246",
+		"artist": {
+			"id": 134790,
+			"name": "Tame Impala",
+			"picture": "https://api.deezer.com/artist/134790/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/134790/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/b868399da682f34dcd7d98af1c0de80b/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/980647761": {
+		"id": 980647761,
+		"title": "Dracula (with JENNIE) (Boys Noize Disko Version)",
+		"label": "Columbia",
+		"record_type": "single",
+		"release_date": "2026-05-12",
+		"genres": {
+			"data": [
+				{
+					"id": 168,
+					"name": "Disco",
+					"picture": "https://api.deezer.com/genre/168/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "196874386101",
+		"artist": {
+			"id": 134790,
+			"name": "Tame Impala",
+			"picture": "https://api.deezer.com/artist/134790/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/879015e713cc6ad6ffaeec154c027505/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/134790/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0f3c53511c226fc0fb9b769c5a389d54/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1424066": {
+		"id": 1424066,
+		"title": "Levels (Remixes)",
+		"label": "Pophouse Entertainment Group",
+		"record_type": "single",
+		"release_date": "2011-12-19",
+		"genres": {
+			"data": [
+				{
+					"id": 113,
+					"name": "Dance",
+					"picture": "https://api.deezer.com/genre/113/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602527931753",
+		"artist": {
+			"id": 293585,
+			"name": "Avicii",
+			"picture": "https://api.deezer.com/artist/293585/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/82e214b0cb39316f4a12a082fded54f6/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/293585/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/261a76e0344b83f64b19433e3ef9976b/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/753114201": {
+		"id": 753114201,
+		"title": "Deadline Records Va 05",
+		"label": "Deadline Rec",
+		"record_type": "album",
+		"release_date": "2025-05-30",
+		"genres": {
+			"data": [
+				{
+					"id": 106,
+					"name": "Electro",
+					"picture": "https://api.deezer.com/genre/106/image",
+					"type": "genre"
+				},
+				{
+					"id": 111,
+					"name": "Techno/House",
+					"picture": "https://api.deezer.com/genre/111/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "4065328668505",
+		"artist": {
+			"id": 5080,
+			"name": "Various Artists",
+			"picture": "https://api.deezer.com/artist/5080/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/5080/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/baf290b84c13a707ed7a7845dd9b82cf/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/6516139": {
+		"id": 6516139,
+		"title": "Get Lucky (Radio Edit - feat. Pharrell Williams and Nile Rodgers)",
+		"label": "Columbia",
+		"record_type": "single",
+		"release_date": "2013-04-19",
+		"genres": {
+			"data": [
+				{
+					"id": 106,
+					"name": "Electro",
+					"picture": "https://api.deezer.com/genre/106/image",
+					"type": "genre"
+				},
+				{
+					"id": 110,
+					"name": "Electro Pop/Electro Rock",
+					"picture": "https://api.deezer.com/genre/110/image",
+					"type": "genre"
+				},
+				{
+					"id": 111,
+					"name": "Techno/House",
+					"picture": "https://api.deezer.com/genre/111/image",
+					"type": "genre"
+				},
+				{
+					"id": 113,
+					"name": "Dance",
+					"picture": "https://api.deezer.com/genre/113/image",
+					"type": "genre"
+				},
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				},
+				{
+					"id": 134,
+					"name": "International Pop",
+					"picture": "https://api.deezer.com/genre/134/image",
+					"type": "genre"
+				},
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				},
+				{
+					"id": 165,
+					"name": "R&B",
+					"picture": "https://api.deezer.com/genre/165/image",
+					"type": "genre"
+				},
+				{
+					"id": 168,
+					"name": "Disco",
+					"picture": "https://api.deezer.com/genre/168/image",
+					"type": "genre"
+				},
+				{
+					"id": 169,
+					"name": "Soul & Funk",
+					"picture": "https://api.deezer.com/genre/169/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "886443973442",
+		"artist": {
+			"id": 27,
+			"name": "Daft Punk",
+			"picture": "https://api.deezer.com/artist/27/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/27/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/bc49adb87758e0c8c4e508a9c5cce85d/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/6575789": {
+		"id": 6575789,
+		"title": "Random Access Memories",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2013-05-17",
+		"genres": {
+			"data": [
+				{
+					"id": 113,
+					"name": "Dance",
+					"picture": "https://api.deezer.com/genre/113/image",
+					"type": "genre"
+				},
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "886443927087",
+		"artist": {
+			"id": 27,
+			"name": "Daft Punk",
+			"picture": "https://api.deezer.com/artist/27/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/638e69b9caaf9f9f3f8826febea7b543/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/27/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/311bba0fc112d15f72c8b5a65f0456c1/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/39949511": {
+		"id": 39949511,
+		"title": "DAMN.",
+		"label": "Aftermath",
+		"record_type": "album",
+		"release_date": "2017-04-14",
+		"genres": {
+			"data": [
+				{
+					"id": 116,
+					"name": "Rap/Hip Hop",
+					"picture": "https://api.deezer.com/genre/116/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602557608717",
+		"artist": {
+			"id": 525046,
+			"name": "Kendrick Lamar",
+			"picture": "https://api.deezer.com/artist/525046/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/be0a7c550567f4af0ed202d7235b74d6/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/be0a7c550567f4af0ed202d7235b74d6/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/be0a7c550567f4af0ed202d7235b74d6/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/be0a7c550567f4af0ed202d7235b74d6/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/525046/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/7ce6b8452fae425557067db6e6a1cad5/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007321401": {
+		"id": 1007321401,
+		"title": "Bohemian Rhapsody (The Original Soundtrack)",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2018-10-19",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602567988847",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/5bbfab8ae2def08b9d58932b5e6121a4/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007321681": {
+		"id": 1007321681,
+		"title": "A Night At The Opera",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2005-11-22",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602527644264",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/0b56f4eee05fa1ea753c5654b2cdb70c/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007460301": {
+		"id": 1007460301,
+		"title": "Live at Wembley Stadium",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2011-01-01",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602527584355",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/bffe9bbf3a5270200d59f9537c5581ed/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007451941": {
+		"id": 1007451941,
+		"title": "On Fire: Live At The Bowl",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2011-01-01",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602527585246",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/365fa3f10e91934609df4b97d66e765a/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007458461": {
+		"id": 1007458461,
+		"title": "Queen Rock Montreal",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2020-07-17",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602508886409",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/3af5b7c86864d78664a2fb03f304e70c/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007461201": {
+		"id": 1007461201,
+		"title": "Hungarian Rhapsody (Live In Budapest / 1986)",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2012-01-01",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602537185917",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9a09ec1415ae5fb8f46fe458da8e123e/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/186080352": {
+		"id": 186080352,
+		"title": "Live At Fire Fight Australia",
+		"label": "UME - Global Clearing House",
+		"record_type": "album",
+		"release_date": "2020-11-20",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602435521565",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/914621defeacd37a071bcdae31d8c778/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1007459621": {
+		"id": 1007459621,
+		"title": "Live Killers",
+		"label": "Columbia",
+		"record_type": "album",
+		"release_date": "2011-01-01",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602527584232",
+		"artist": {
+			"id": 412,
+			"name": "Queen",
+			"picture": "https://api.deezer.com/artist/412/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/71eeb9e2eeb375df35a3c0654a5a01ab/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/412/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/43f44e680dbe28480fda2f8c0666c834/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/1024980151": {
+		"id": 1024980151,
+		"title": "Occult",
+		"label": "Onlynumbers",
+		"record_type": "single",
+		"release_date": "2026-07-17",
+		"genres": {
+			"data": [
+				{
+					"id": 113,
+					"name": "Dance",
+					"picture": "https://api.deezer.com/genre/113/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "3618113807262",
+		"artist": {
+			"id": 14330391,
+			"name": "Onlynumbers",
+			"picture": "https://api.deezer.com/artist/14330391/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/1b2210195061b6d7740edd9cf0f8d2a4/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/1b2210195061b6d7740edd9cf0f8d2a4/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/1b2210195061b6d7740edd9cf0f8d2a4/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/1b2210195061b6d7740edd9cf0f8d2a4/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/14330391/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/3a882057ef59d611c21ab23ff41fa494/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/901480252": {
+		"id": 901480252,
+		"title": "The Best of Me",
+		"label": "BMG Rights Management (UK) Ltd.",
+		"record_type": "album",
+		"release_date": "2026-01-28",
+		"genres": {
+			"data": [
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "4050538598209",
+		"artist": {
+			"id": 6160,
+			"name": "Rick Astley",
+			"picture": "https://api.deezer.com/artist/6160/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/6160/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1fcfca61ca4e05027612a1af865b2e03/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/909591702": {
+		"id": 909591702,
+		"title": "Whenever You Need Somebody (Deluxe Edition / Remastered 2022)",
+		"label": "BMG Rights Management (UK) Ltd.",
+		"record_type": "album",
+		"release_date": "2026-01-28",
+		"genres": {
+			"data": [
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "4050538793840",
+		"artist": {
+			"id": 6160,
+			"name": "Rick Astley",
+			"picture": "https://api.deezer.com/artist/6160/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/6759ecf77a12ffbd9b642ce4b2c53ef0/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/6160/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/f93d54aa0c8411c092d93c65546a8f41/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/6019334": {
+		"id": 6019334,
+		"title": "The Heist",
+		"label": "Macklemore",
+		"record_type": "album",
+		"release_date": "2012-10-09",
+		"genres": {
+			"data": [
+				{
+					"id": 116,
+					"name": "Rap/Hip Hop",
+					"picture": "https://api.deezer.com/genre/116/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "707541525398",
+		"artist": {
+			"id": 893222,
+			"name": "Macklemore & Ryan Lewis",
+			"picture": "https://api.deezer.com/artist/893222/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/7b626fd854d98dc1d98b7062ff8b4b0b/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/7b626fd854d98dc1d98b7062ff8b4b0b/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/7b626fd854d98dc1d98b7062ff8b4b0b/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/7b626fd854d98dc1d98b7062ff8b4b0b/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/893222/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/238f1c36e8445fd162d1d53b8181ecb5/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/119606": {
+		"id": 119606,
+		"title": "Curtain Call: The Hits",
+		"label": "Eminem Catalog PS",
+		"record_type": "album",
+		"release_date": "2005-01-01",
+		"genres": {
+			"data": [
+				{
+					"id": 116,
+					"name": "Rap/Hip Hop",
+					"picture": "https://api.deezer.com/genre/116/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602498878934",
+		"artist": {
+			"id": 13,
+			"name": "Eminem",
+			"picture": "https://api.deezer.com/artist/13/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/0f30bbd33a680030054af004d698d6ac/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/0f30bbd33a680030054af004d698d6ac/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/0f30bbd33a680030054af004d698d6ac/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/0f30bbd33a680030054af004d698d6ac/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/13/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e2b36a9fda865cb2e9ed1476b6291a7d/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/368443007": {
+		"id": 368443007,
+		"title": "8 Mile (Music From And Inspired By The Motion Picture Expanded Edition)",
+		"label": "Shady Records",
+		"record_type": "album",
+		"release_date": "2022-10-28",
+		"genres": {
+			"data": [
+				{
+					"id": 116,
+					"name": "Rap/Hip Hop",
+					"picture": "https://api.deezer.com/genre/116/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602448355751",
+		"artist": {
+			"id": 5080,
+			"name": "Various Artists",
+			"picture": "https://api.deezer.com/artist/5080/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/5080/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/a16423673867af8c78f5f6a5337529fd/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/10719388": {
+		"id": 10719388,
+		"title": "Best Ever Soundtracks",
+		"label": "Mirror2Music",
+		"record_type": "album",
+		"release_date": "2015-07-28",
+		"genres": {
+			"data": [
+				{
+					"id": 173,
+					"name": "Films/Games",
+					"picture": "https://api.deezer.com/genre/173/image",
+					"type": "genre"
+				},
+				{
+					"id": 174,
+					"name": "Film Scores",
+					"picture": "https://api.deezer.com/genre/174/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "889845227366",
+		"artist": {
+			"id": 5080,
+			"name": "Various Artists",
+			"picture": "https://api.deezer.com/artist/5080/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/6d6503360e6cc202c9a1ed8617f3296b/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/5080/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/572c482ba64339e66e03bd27f5b5aecd/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/301663": {
+		"id": 301663,
+		"title": "Parachutes",
+		"label": "Parlophone UK",
+		"record_type": "album",
+		"release_date": "2000-07-10",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "067003016254",
+		"artist": {
+			"id": 892,
+			"name": "Coldplay",
+			"picture": "https://api.deezer.com/artist/892/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/892/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/970dce98eeea6729244c0ae71707a83d/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/80900852": {
+		"id": 80900852,
+		"title": "Live in Buenos Aires",
+		"label": "Parlophone UK",
+		"record_type": "album",
+		"release_date": "2018-12-07",
+		"genres": {
+			"data": [
+				{
+					"id": 85,
+					"name": "Alternative",
+					"picture": "https://api.deezer.com/genre/85/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "190295531003",
+		"artist": {
+			"id": 892,
+			"name": "Coldplay",
+			"picture": "https://api.deezer.com/artist/892/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/892/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/1bc81da3e04b66ccc4faa35fa3c2e74f/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/6082458": {
+		"id": 6082458,
+		"title": "Live 2012",
+		"label": "Parlophone Records Limited",
+		"record_type": "album",
+		"release_date": "2012-11-19",
+		"genres": {
+			"data": [
+				{
+					"id": 85,
+					"name": "Alternative",
+					"picture": "https://api.deezer.com/genre/85/image",
+					"type": "genre"
+				},
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				},
+				{
+					"id": 154,
+					"name": "Indie Rock/Rock Pop",
+					"picture": "https://api.deezer.com/genre/154/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "5099972543757",
+		"artist": {
+			"id": 892,
+			"name": "Coldplay",
+			"picture": "https://api.deezer.com/artist/892/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/892/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/eb56003f4c40510f1de1920a2ebc6efb/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/299223": {
+		"id": 299223,
+		"title": "Live 2003",
+		"label": "Parlophone UK",
+		"record_type": "album",
+		"release_date": "2003-10-13",
+		"genres": {
+			"data": [
+				{
+					"id": 152,
+					"name": "Rock",
+					"picture": "https://api.deezer.com/genre/152/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "724359534558",
+		"artist": {
+			"id": 892,
+			"name": "Coldplay",
+			"picture": "https://api.deezer.com/artist/892/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/3087954bca22f306324912e5ac8375c3/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/892/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/23a9aca630a3f64fb5cc7bc928084837/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/137217782": {
+		"id": 137217782,
+		"title": "After Hours",
+		"label": "Republic Records",
+		"record_type": "album",
+		"release_date": "2020-03-20",
+		"genres": {
+			"data": [
+				{
+					"id": 165,
+					"name": "R&B",
+					"picture": "https://api.deezer.com/genre/165/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602508836060",
+		"artist": {
+			"id": 4050205,
+			"name": "The Weeknd",
+			"picture": "https://api.deezer.com/artist/4050205/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/4050205/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/fd00ebd6d30d7253f813dba3bb1c66a9/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/190172832": {
+		"id": 190172832,
+		"title": "Blinding Lights (Remix)",
+		"label": "Republic Records",
+		"record_type": "single",
+		"release_date": "2020-12-04",
+		"genres": {
+			"data": [
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602435610092",
+		"artist": {
+			"id": 4050205,
+			"name": "The Weeknd",
+			"picture": "https://api.deezer.com/artist/4050205/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/4050205/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/555be3736048d8370077be6e4cb6a369/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/411519667": {
+		"id": 411519667,
+		"title": "Live At SoFi Stadium",
+		"label": "The Weeknd/Lyric",
+		"record_type": "album",
+		"release_date": "2023-03-04",
+		"genres": {
+			"data": [
+				{
+					"id": 165,
+					"name": "R&B",
+					"picture": "https://api.deezer.com/genre/165/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602455480378",
+		"artist": {
+			"id": 4050205,
+			"name": "The Weeknd",
+			"picture": "https://api.deezer.com/artist/4050205/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/4050205/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/17bf5f732c2943ad4cb2bf3778b806cc/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/172920142": {
+		"id": 172920142,
+		"title": "Blinding Lights",
+		"label": "The Weeknd/Lyric",
+		"record_type": "single",
+		"release_date": "2020-09-11",
+		"genres": {
+			"data": [
+				{
+					"id": 165,
+					"name": "R&B",
+					"picture": "https://api.deezer.com/genre/165/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602435248820",
+		"artist": {
+			"id": 4050205,
+			"name": "The Weeknd",
+			"picture": "https://api.deezer.com/artist/4050205/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/581693b4724a7fcfa754455101e13a44/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/4050205/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/cf22674710be326f668dfb27d5af9576/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/930599621": {
+		"id": 930599621,
+		"title": "Never Be Like You (feat. Kai) (Remixes)",
+		"label": "Mom+Pop",
+		"record_type": "single",
+		"release_date": "2016-03-25",
+		"genres": {
+			"data": [
+				{
+					"id": 106,
+					"name": "Electro",
+					"picture": "https://api.deezer.com/genre/106/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "886445820461",
+		"artist": {
+			"id": 1164295,
+			"name": "Flume",
+			"picture": "https://api.deezer.com/artist/1164295/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/88985ef4ee04371eeca38040ac5dbb53/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/88985ef4ee04371eeca38040ac5dbb53/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/88985ef4ee04371eeca38040ac5dbb53/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/88985ef4ee04371eeca38040ac5dbb53/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/1164295/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9e73242acab3fd21a1a1d132d1ae211f/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/51130372": {
+		"id": 51130372,
+		"title": "Unst",
+		"label": "735613 Records DK",
+		"record_type": "ep",
+		"release_date": "2017-11-05",
+		"genres": {
+			"data": [
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "192378593519",
+		"artist": {
+			"id": 9754022,
+			"name": "Unstrumental",
+			"picture": "https://api.deezer.com/artist/9754022/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/847baff60053a23edc689988abfada33/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/847baff60053a23edc689988abfada33/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/847baff60053a23edc689988abfada33/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/847baff60053a23edc689988abfada33/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/9754022/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/847baff60053a23edc689988abfada33/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/49362632": {
+		"id": 49362632,
+		"title": "The Lockbox",
+		"label": "The Amalgamates",
+		"record_type": "album",
+		"release_date": "2017-10-06",
+		"genres": {
+			"data": []
+		},
+		"upc": "192378909341",
+		"artist": {
+			"id": 1347293,
+			"name": "The Amalgamates",
+			"picture": "https://api.deezer.com/artist/1347293/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/33a52db6c7ccb69f9e9f9f63364e1d0a/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/33a52db6c7ccb69f9e9f9f63364e1d0a/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/33a52db6c7ccb69f9e9f9f63364e1d0a/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/33a52db6c7ccb69f9e9f9f63364e1d0a/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/1347293/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/6b644f89536b51a401a55fe07c23b0db/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/7480190": {
+		"id": 7480190,
+		"title": "Settle (Special Edition)",
+		"label": "Universal-Island Records Ltd.",
+		"record_type": "album",
+		"release_date": "2014-01-01",
+		"genres": {
+			"data": [
+				{
+					"id": 106,
+					"name": "Electro",
+					"picture": "https://api.deezer.com/genre/106/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602537781133",
+		"artist": {
+			"id": 409796,
+			"name": "Disclosure",
+			"picture": "https://api.deezer.com/artist/409796/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/409796/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/e44468007c45f2523d056a0b19eed80a/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/6091603": {
+		"id": 6091603,
+		"title": "Latch (The Remixes)",
+		"label": "Universal-Island Records Ltd.",
+		"record_type": "single",
+		"release_date": "2012-11-12",
+		"genres": {
+			"data": [
+				{
+					"id": 106,
+					"name": "Electro",
+					"picture": "https://api.deezer.com/genre/106/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602537234554",
+		"artist": {
+			"id": 409796,
+			"name": "Disclosure",
+			"picture": "https://api.deezer.com/artist/409796/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/409796/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/14bf3adfc5c440e9978afa90b407af03/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/10069422": {
+		"id": 10069422,
+		"title": "Latch (Kaik Remix)",
+		"label": "Disclosure",
+		"record_type": "single",
+		"release_date": "2015-04-13",
+		"genres": {
+			"data": [
+				{
+					"id": 106,
+					"name": "Electro",
+					"picture": "https://api.deezer.com/genre/106/image",
+					"type": "genre"
+				},
+				{
+					"id": 111,
+					"name": "Techno/House",
+					"picture": "https://api.deezer.com/genre/111/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "889211521449",
+		"artist": {
+			"id": 409796,
+			"name": "Disclosure",
+			"picture": "https://api.deezer.com/artist/409796/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/83aa8d9bb361fe039ee1caf0488eb0c1/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/409796/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/d5d14132a6363ea05e3b127fe85fd39d/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/11603598": {
+		"id": 11603598,
+		"title": "In The Lonely Hour (Drowning Shadows Edition)",
+		"label": "PLG - Capitol",
+		"record_type": "album",
+		"release_date": "2015-11-06",
+		"genres": {
+			"data": [
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602547605078",
+		"artist": {
+			"id": 1097709,
+			"name": "Sam Smith",
+			"picture": "https://api.deezer.com/artist/1097709/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/df9a62e39aabc1977f3b0bb85998bba8/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/df9a62e39aabc1977f3b0bb85998bba8/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/df9a62e39aabc1977f3b0bb85998bba8/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/df9a62e39aabc1977f3b0bb85998bba8/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/1097709/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/231c66c0ed260c708163eff3bb8458da/1000x1000-000000-80-0-0.jpg"
+	},
+	"https://api.deezer.com/album/231719542": {
+		"id": 231719542,
+		"title": "Pop of the 2000s: Celebrating Pride 2021",
+		"label": "UME - Global Clearing House",
+		"record_type": "album",
+		"release_date": "2021-05-28",
+		"genres": {
+			"data": [
+				{
+					"id": 132,
+					"name": "Pop",
+					"picture": "https://api.deezer.com/genre/132/image",
+					"type": "genre"
+				}
+			]
+		},
+		"upc": "602438370238",
+		"artist": {
+			"id": 108420982,
+			"name": "Various Artists",
+			"picture": "https://api.deezer.com/artist/108420982/image",
+			"picture_small": "https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/56x56-000000-80-0-0.jpg",
+			"picture_medium": "https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/250x250-000000-80-0-0.jpg",
+			"picture_big": "https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500-000000-80-0-0.jpg",
+			"picture_xl": "https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/1000x1000-000000-80-0-0.jpg",
+			"tracklist": "https://api.deezer.com/artist/108420982/top?limit=50",
+			"type": "artist"
+		},
+		"cover_xl": "https://cdn-images.dzcdn.net/images/cover/9e11309a4e19775caeb64e6748625a1d/1000x1000-000000-80-0-0.jpg"
 	}
 }

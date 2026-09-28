@@ -6,7 +6,7 @@ import {
 } from "./catalog-candidate";
 import { deezerAlbum, deezerTrackByIsrc, searchDeezer } from "./deezer-catalog";
 import { searchITunes } from "./itunes-catalog";
-import { judgeCandidates } from "./judge-candidates";
+import { judgeCandidates, namesTheSameSong } from "./judge-candidates";
 import {
 	collapseWhitespace,
 	normalizeForMatch,
@@ -101,6 +101,7 @@ export async function fetchCatalogCandidates(
 	query: TrackQuery,
 	{ timeout = DEFAULT_TIMEOUT_MS }: Pick<LookupOptions, "timeout"> = {},
 ): Promise<CatalogCandidate[]> {
+	const deadline = Date.now() + timeout;
 	const term = searchTerm(query);
 	const isrc = normalizeIsrc(query.isrc);
 
@@ -115,7 +116,57 @@ export async function fetchCatalogCandidates(
 		throw new CatalogUnavailableError();
 	}
 
-	return [...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])];
+	return withDeezerAlbumArtists(
+		query,
+		[...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])],
+		Math.max(1, deadline - Date.now()),
+	);
+}
+
+/**
+ * Deezer's search rows do not say whose album a track is on, and a knock-off
+ * credited to the real artist is otherwise indistinguishable from the real
+ * release. So every Deezer row that could match is checked against its album
+ * before anything is judged; iTunes rows already carry the credit. A row whose
+ * album cannot be read is dropped, not trusted — an unchecked row is exactly
+ * the one that wrote a knock-off's ISRC into a file. This runs once per track:
+ * the result is what the candidate cache holds.
+ */
+async function withDeezerAlbumArtists(
+	query: TrackQuery,
+	candidates: CatalogCandidate[],
+	timeout: number,
+): Promise<CatalogCandidate[]> {
+	const needsCheck = (candidate: CatalogCandidate) =>
+		candidate.source === "deezer" && namesTheSameSong(query, candidate);
+	const albumIds = [
+		...new Set(
+			candidates
+				.filter(needsCheck)
+				.flatMap((candidate) => (candidate.albumId ? [candidate.albumId] : [])),
+		),
+	];
+	const albums = new Map(
+		await Promise.all(
+			albumIds.map(
+				async (albumId) =>
+					[albumId, await deezerAlbum(albumId, { timeout })] as const,
+			),
+		),
+	);
+
+	return candidates.flatMap((candidate) => {
+		if (!needsCheck(candidate)) return [candidate];
+		const album = candidate.albumId ? albums.get(candidate.albumId) : null;
+		if (!album?.artist) return [];
+		return [
+			{
+				...candidate,
+				albumArtist: album.artist,
+				isCompilation: album.isCompilation,
+			},
+		];
+	});
 }
 
 /** Exported so the shared cache can enrich a verdict it judged from cached candidates. */

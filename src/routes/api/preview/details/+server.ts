@@ -46,10 +46,15 @@ function detailsQuery(
 			durationSeconds: track.durationSeconds,
 		};
 	}
+	/**
+	 * No `labelName`, though `details` has one: the preview and the download
+	 * resolve this identity from oEmbed, which has none, and a different
+	 * identity here is a different cache key — the card would show one verdict
+	 * and the file get another.
+	 */
 	const { artist, trackTitle } = resolveTrackIdentity({
 		rawTitle: details.title ?? "",
 		uploader: details.uploader ?? "",
-		labelName: details.label,
 	});
 	return { artist, title: trackTitle, durationSeconds: details.duration };
 }

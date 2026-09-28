@@ -183,6 +183,7 @@ describe("deezerAlbum()", () => {
 
 		// #then
 		expect(album).toEqual({
+			artist: "Billie Eilish",
 			label: "Darkroom/Interscope Records",
 			genre: "Alternative",
 			releaseDate: "2019-03-29",

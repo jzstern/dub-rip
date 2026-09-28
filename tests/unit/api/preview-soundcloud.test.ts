@@ -223,4 +223,63 @@ describe("POST /api/preview/details — SoundCloud", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ success: true });
 	});
+
+	describe("on a catalog match", () => {
+		const MATCHED = {
+			verdict: {
+				status: "matched" as const,
+				via: "isrc" as const,
+				candidate: {
+					source: "deezer" as const,
+					artist: "blk.",
+					title: "I Cant Fail",
+				},
+				metadata: {
+					artist: "blk.",
+					title: "I Cant Fail",
+					artworkUrl: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+					source: "itunes" as const,
+				},
+			},
+			candidates: [],
+		};
+
+		it("keeps the upload's own cover on the card, since the file gets that cover", async () => {
+			// #given — resolveSoundCloudAlbumArt writes the upload's cover first, so a
+			// catalog sleeve here would show a cover the MP3 never carries
+			sharedCatalogLookupMock.mockResolvedValue(MATCHED);
+
+			// #when
+			const data = await (
+				await detailsPOST(eventFor("https://soundcloud.com/a/b"))
+			).json();
+
+			// #then
+			expect(data).toEqual({
+				success: true,
+				duration: 201,
+				artist: "blk.",
+				title: "I Cant Fail",
+			});
+		});
+
+		it("supplies the catalog cover when the upload has none of its own", async () => {
+			// #given
+			getSoundCloudTrackMock.mockResolvedValue({
+				...TRACK,
+				artworkUrl: undefined,
+			});
+			sharedCatalogLookupMock.mockResolvedValue(MATCHED);
+
+			// #when
+			const data = await (
+				await detailsPOST(eventFor("https://soundcloud.com/a/b"))
+			).json();
+
+			// #then
+			expect(data.artwork).toBe(
+				"https://is1-ssl.mzstatic.com/proven/300x300bb.jpg",
+			);
+		});
+	});
 });

@@ -128,7 +128,15 @@ export const POST: RequestHandler = async ({ request }) => {
 		/**
 		 * Match-only keys, never a `canonical: null`: the client merges whatever
 		 * arrives, so an absent key leaves the heuristic identity standing.
+		 *
+		 * No catalog cover for a SoundCloud upload that has its own: the file gets
+		 * the upload's cover (`resolveSoundCloudAlbumArt` tries it first), and the
+		 * card has to show the cover the file will carry.
 		 */
+		const catalogCover =
+			verdict.status === "matched" && !track?.artworkUrl
+				? verdict.metadata.artworkUrl
+				: undefined;
 		return json({
 			success: true,
 			duration: details.duration,
@@ -136,8 +144,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				? {
 						artist: verdict.metadata.artist,
 						title: verdict.metadata.title,
-						...(verdict.metadata.artworkUrl
-							? { artwork: cardSizedArtwork(verdict.metadata.artworkUrl) }
+						...(catalogCover
+							? { artwork: cardSizedArtwork(catalogCover) }
 							: {}),
 					}
 				: {}),

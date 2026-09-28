@@ -1,12 +1,19 @@
+import { createSingleFlightCache } from "../../single-flight-cache";
 import {
 	type CatalogCandidate,
 	type CatalogVerdict,
+	isPreciseDate,
 	releaseYear,
 	type TrackQuery,
 } from "./catalog-candidate";
-import { deezerAlbum, deezerTrackByIsrc, searchDeezer } from "./deezer-catalog";
+import {
+	type DeezerAlbumInfo,
+	deezerAlbum,
+	deezerTrackByIsrc,
+	searchDeezer,
+} from "./deezer-catalog";
 import { searchITunes } from "./itunes-catalog";
-import { judgeCandidates, namesTheSameSong } from "./judge-candidates";
+import { judgeCandidates, namesTheSameRecording } from "./judge-candidates";
 import {
 	collapseWhitespace,
 	normalizeForMatch,
@@ -101,7 +108,6 @@ export async function fetchCatalogCandidates(
 	query: TrackQuery,
 	{ timeout = DEFAULT_TIMEOUT_MS }: Pick<LookupOptions, "timeout"> = {},
 ): Promise<CatalogCandidate[]> {
-	const deadline = Date.now() + timeout;
 	const term = searchTerm(query);
 	const isrc = normalizeIsrc(query.isrc);
 
@@ -116,41 +122,71 @@ export async function fetchCatalogCandidates(
 		throw new CatalogUnavailableError();
 	}
 
-	return withDeezerAlbumArtists(
-		query,
-		[...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])],
-		Math.max(1, deadline - Date.now()),
+	return [...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])];
+}
+
+/** Albums do not change and many tracks share one, so a checked album is kept far longer than a search. */
+const ALBUM_TTL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * The judge prefers a catalog's higher-ranked rows anyway, and a much-reissued
+ * song has ten albums to ask about: checking them all spent Deezer's per-IP
+ * quota — about 50 calls in 5 s, shared by every user — on rows that could not
+ * win.
+ */
+const MAX_ALBUM_CHECKS = 3;
+
+/** A failed call answers null, which the cache never keeps, so the next request asks again. */
+const albumCache = createSingleFlightCache<DeezerAlbumInfo | null>();
+
+function checkedAlbum(
+	albumId: string,
+	timeout: number,
+): Promise<DeezerAlbumInfo | null> {
+	return albumCache.get(
+		albumId,
+		() => deezerAlbum(albumId, { timeout }),
+		ALBUM_TTL_MS,
 	);
 }
 
+export function clearDeezerAlbumCache(): void {
+	albumCache.clear();
+}
+
 /**
- * Deezer's search rows do not say whose album a track is on, and a knock-off
- * credited to the real artist is otherwise indistinguishable from the real
- * release. So every Deezer row that could match is checked against its album
- * before anything is judged; iTunes rows already carry the credit. A row whose
- * album cannot be read is dropped, not trusted — an unchecked row is exactly
- * the one that wrote a knock-off's ISRC into a file. This runs once per track:
- * the result is what the candidate cache holds.
+ * The candidates the judge may see for this query. Deezer's search rows do not
+ * say whose album a track is on, and Deezer files knock-offs under the real
+ * artist's name — so a Deezer row that could match is passed on only once its
+ * album is known, and is left out when it is not: past the cap, or when the
+ * album call failed. iTunes rows carry the credit already.
+ *
+ * Runs on every lookup, against the cached search rows, and caches nothing but
+ * the albums themselves. Checking once when the rows were fetched made the
+ * result depend on whichever query filled the cache key — a lyric channel's
+ * "Never Be Like You Kai" shares a key with the official upload but names no
+ * row, so it cached them all unchecked — and cached a failed check as an
+ * answer for ten minutes.
  */
-async function withDeezerAlbumArtists(
+export async function vouchedCandidates(
 	query: TrackQuery,
 	candidates: CatalogCandidate[],
 	timeout: number,
 ): Promise<CatalogCandidate[]> {
 	const needsCheck = (candidate: CatalogCandidate) =>
-		candidate.source === "deezer" && namesTheSameSong(query, candidate);
+		candidate.source === "deezer" && namesTheSameRecording(query, candidate);
 	const albumIds = [
 		...new Set(
 			candidates
 				.filter(needsCheck)
 				.flatMap((candidate) => (candidate.albumId ? [candidate.albumId] : [])),
 		),
-	];
+	].slice(0, MAX_ALBUM_CHECKS);
 	const albums = new Map(
 		await Promise.all(
 			albumIds.map(
 				async (albumId) =>
-					[albumId, await deezerAlbum(albumId, { timeout })] as const,
+					[albumId, await checkedAlbum(albumId, timeout)] as const,
 			),
 		),
 	);
@@ -169,7 +205,12 @@ async function withDeezerAlbumArtists(
 	});
 }
 
-/** Exported so the shared cache can enrich a verdict it judged from cached candidates. */
+/**
+ * Exported so the shared cache can enrich a verdict it judged from cached
+ * candidates. The album was usually checked already, so this is a cache hit.
+ * A compilation's label, genre and date describe the compilation, not the
+ * recording, so it gives nothing but the news that the album name is wrong.
+ */
 export async function enrichVerdictFromAlbum(
 	verdict: CatalogVerdict,
 	timeout: number,
@@ -178,17 +219,27 @@ export async function enrichVerdictFromAlbum(
 	const { albumId } = verdict.candidate;
 	if (!albumId) return verdict;
 
-	const album = await deezerAlbum(albumId, { timeout });
+	const album = await checkedAlbum(albumId, timeout);
 	if (!album) return verdict;
+	if (album.isCompilation) {
+		return { ...verdict, metadata: { ...verdict.metadata, album: undefined } };
+	}
 
+	const albumYear = releaseYear(album.releaseDate);
+	const { year } = verdict.metadata;
 	return {
 		...verdict,
 		metadata: {
 			...verdict.metadata,
 			label: verdict.metadata.label ?? album.label,
 			genre: verdict.metadata.genre ?? album.genre,
-			album: album.isCompilation ? undefined : verdict.metadata.album,
-			year: verdict.metadata.year ?? releaseYear(album.releaseDate),
+			/** Deezer dates a reissue by the reissue, so a precise date can only move the year earlier. */
+			year:
+				year !== undefined &&
+				albumYear !== undefined &&
+				isPreciseDate(album.releaseDate)
+					? Math.min(year, albumYear)
+					: (year ?? albumYear),
 		},
 	};
 }
@@ -218,7 +269,10 @@ export async function lookupCatalogMetadata(
 		return { status: "unmatched", reason: "no-candidates" };
 	}
 
-	const judged = judgeCandidates(query, candidates);
+	const judged = judgeCandidates(
+		query,
+		await vouchedCandidates(query, candidates, remaining()),
+	);
 	const verdict = enrich
 		? await enrichVerdictFromAlbum(judged, remaining())
 		: judged;

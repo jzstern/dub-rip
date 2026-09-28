@@ -7,6 +7,7 @@ import {
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { CatalogCandidate } from "$lib/metadata/catalog/catalog-candidate";
+import { stubCatalogFetch } from "./catalog-fixtures";
 
 /** One Deezer row for "Adele — Hello", enough for the judge to reason about. */
 function deezerSearchBody() {
@@ -216,6 +217,32 @@ describe("sharedCatalogLookup()", () => {
 			String(call[0]).includes("/album/"),
 		);
 		expect(albumCalls).toHaveLength(1);
+	});
+
+	it("checks the albums for each lookup, whichever query filled the cache", async () => {
+		// #given — a lyric channel's title shares the official upload's cache key
+		// but names no row, so it asks about no album
+		stubCatalogFetch();
+		await sharedCatalogLookup(
+			{ artist: "Flume", title: "Never Be Like You Kai" },
+			{ timeout: 4000 },
+		);
+
+		// #when
+		const { verdict } = await sharedCatalogLookup(
+			{
+				artist: "Flume",
+				title: "Never Be Like You feat. Kai",
+				durationSeconds: 233,
+			},
+			{ timeout: 4000 },
+		);
+
+		// #then — the knock-offs beside the single are still refused
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Never Be Like You (feat. Kai) - Single" },
+		});
 	});
 
 	it("starts fresh after the cache is cleared", async () => {

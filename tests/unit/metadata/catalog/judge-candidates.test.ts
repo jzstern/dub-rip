@@ -722,7 +722,7 @@ describe("judgeCandidates() picks between accepted candidates", () => {
 		durationSeconds: 281,
 	};
 
-	it("leaves the album empty rather than name a compilation", () => {
+	it("writes only the recording's identity from a compilation", () => {
 		// #when
 		const verdict = judgeCandidates(query, [
 			candidate({
@@ -736,10 +736,11 @@ describe("judgeCandidates() picks between accepted candidates", () => {
 			}),
 		]);
 
-		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: undefined, genre: "Pop" },
+		// #then — a workout compilation's genre, date and sleeve are its own
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Avicii",
+			title: "Levels (Skrillex Remix)",
+			source: "itunes",
 		});
 	});
 
@@ -1013,7 +1014,11 @@ describe("judgeCandidates() writes only the artist's own releases", () => {
 
 		// #when
 		const verdict = judgeCandidates(
-			{ artist: "Disclosure", title: "Latch", durationSeconds: 256 },
+			{
+				artist: "Disclosure",
+				title: "Latch ft. Sam Smith",
+				durationSeconds: 256,
+			},
 			[feature],
 		);
 
@@ -1036,9 +1041,616 @@ describe("judgeCandidates() writes only the artist's own releases", () => {
 		const verdict = judgeCandidates(query, [compilation]);
 
 		// #then
+		expect(
+			verdict.status === "matched" ? verdict.metadata.album : "unmatched",
+		).toBeUndefined();
+	});
+});
+
+describe("judgeCandidates() needs the upload's lead to lead the recording", () => {
+	it("refuses a cover that only features the upload's artist", () => {
+		// #given — recorded: the Archer series' "Danger Zone", sung by Cherlene
+		const cherlene = candidate({
+			source: "itunes",
+			artist: "Cherlene",
+			title: "Danger Zone (feat. Kenny Loggins)",
+			album: "Archer: Cherlene (Songs from the TV Series)",
+			durationSeconds: 221,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Kenny Loggins", title: "Danger Zone", durationSeconds: 217 },
+			[cherlene],
+		);
+
+		// #then
+		expect(verdict).toEqual({ status: "unmatched", reason: "artist-mismatch" });
+	});
+
+	it("leaves a two-name credit alone when no other copy disputes it", () => {
+		// #given — only iTunes carries the track, crediting both singers; with no
+		// second copy to disagree, the catalogs have not contradicted themselves
+		const duet = candidate({
+			source: "itunes",
+			artist: "Frank Sinatra & Tony Bennett",
+			title: "New York, New York",
+			album: "Duets (20th Anniversary Deluxe Edition)",
+			durationSeconds: 210,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Frank Sinatra",
+				title: "New York, New York",
+				durationSeconds: 207,
+			},
+			[duet],
+		);
+
+		// #then
+		expect(verdict.status).toBe("matched");
+	});
+
+	it("refuses the other catalog's copy of that duet, credited to one singer", () => {
+		// #given — Deezer lists the same Duets track under Sinatra alone
+		const deezerCopy = candidate({
+			artist: "Frank Sinatra",
+			title: "New York, New York",
+			album: "Duets (20th Anniversary Deluxe Edition)",
+			durationSeconds: 210,
+			isrc: "USCA29300070",
+		});
+		const itunesCopy = candidate({
+			source: "itunes",
+			artist: "Frank Sinatra & Tony Bennett",
+			title: "New York, New York",
+			album: "Duets (20th Anniversary Deluxe Edition)",
+			durationSeconds: 210,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Frank Sinatra",
+				title: "New York, New York",
+				durationSeconds: 207,
+			},
+			[deezerCopy, itunesCopy],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("still accepts a duet when the upload names both singers", () => {
+		// #given
+		const duet = candidate({
+			source: "itunes",
+			artist: "Frank Sinatra & Tony Bennett",
+			title: "New York, New York",
+			album: "Duets (20th Anniversary Deluxe Edition)",
+			durationSeconds: 210,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Frank Sinatra & Tony Bennett",
+				title: "New York, New York",
+				durationSeconds: 207,
+			},
+			[duet],
+		);
+
+		// #then
+		expect(verdict.status).toBe("matched");
+	});
+});
+
+describe("judgeCandidates() writes no release fields from a compilation", () => {
+	/** Recorded: two workout compilations carry a 226 s "Hot Stuff" of their own. */
+	const WORKOUT_DEEZER = candidate({
+		artist: "Donna Summer",
+		title: "Hot Stuff",
+		album: "Body By Jake: Sweating Disco Dance Party (BPM 108-128)",
+		isCompilation: true,
+		durationSeconds: 226,
+		isrc: "USUM70852166",
+		label: "Body By Jake",
+		releaseDate: "2012-10-09",
+		artworkUrl:
+			"https://cdn-images.dzcdn.net/images/cover/workout/1000x1000-000000-80-0-0.jpg",
+	});
+	const WORKOUT_ITUNES = candidate({
+		source: "itunes",
+		artist: "Donna Summer",
+		title: "Hot Stuff",
+		album: "Don't Quit Music: Sweating Disco Dance Party",
+		isCompilation: true,
+		durationSeconds: 226,
+	});
+	const BAD_GIRLS = candidate({
+		source: "itunes",
+		artist: "Donna Summer",
+		title: "Hot Stuff",
+		album: "Bad Girls",
+		durationSeconds: 315,
+		releaseDate: "1979-04-25",
+	});
+
+	it("prefers the album release the runtime confirms over two agreeing compilations", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Donna Summer", title: "Hot Stuff", durationSeconds: 314 },
+			[WORKOUT_DEEZER, WORKOUT_ITUNES, BAD_GIRLS],
+		);
+
+		// #then
 		expect(verdict).toMatchObject({
 			status: "matched",
-			metadata: { album: undefined },
+			metadata: { album: "Bad Girls", year: 1979 },
 		});
+	});
+
+	it("writes neither the compilation's ISRC, label, date nor sleeve when it wins", () => {
+		// #given — the single-length upload, which only the compilations match
+		const query = {
+			artist: "Donna Summer",
+			title: "Hot Stuff",
+			durationSeconds: 228,
+		};
+
+		// #when
+		const verdict = judgeCandidates(query, [WORKOUT_DEEZER, WORKOUT_ITUNES]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Donna Summer",
+			title: "Hot Stuff",
+			source: "deezer",
+		});
+	});
+
+	it("keeps the upload's own ISRC when a compilation carries it", () => {
+		// #given — a SoundCloud upload whose ISRC Deezer answers with a label's best-of
+		const bestOf = candidate({
+			artist: "Pegboard Nerds",
+			title: "Hero (feat. Elizaveta)",
+			album: "Monstercat - Best of 2014",
+			isCompilation: true,
+			durationSeconds: 283,
+			isrc: "CA6D21001011",
+			releaseDate: "2015-01-26",
+		});
+		const single = candidate({
+			source: "itunes",
+			artist: "Pegboard Nerds",
+			title: "Hero (feat. Elizaveta)",
+			album: "Hero (feat. Elizaveta) - Single",
+			durationSeconds: 283,
+			releaseDate: "2014-03-17",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Pegboard Nerds",
+				title: "Hero (feat. Elizaveta)",
+				isrc: "CA6D21001011",
+				durationSeconds: 283,
+			},
+			[bestOf, single],
+		);
+
+		// #then — the date and album come from the single, not the best-of
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: {
+				isrc: "CA6D21001011",
+				year: 2014,
+				album: "Hero (feat. Elizaveta) - Single",
+			},
+		});
+	});
+
+	it("takes nothing from a compilation that supports the chosen release", () => {
+		// #given — the release has no ISRC; only the compilation's copy carries one
+		const release = candidate({
+			source: "itunes",
+			artist: "Donna Summer",
+			title: "Hot Stuff",
+			album: "Hot Stuff - Single",
+			durationSeconds: 226,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Donna Summer", title: "Hot Stuff", durationSeconds: 228 },
+			[WORKOUT_DEEZER, release],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.isrc).toBe(
+			undefined,
+		);
+	});
+});
+
+describe("judgeCandidates() accepts an official remix on the remixer's own release", () => {
+	it("counts the remixer named in the version as the album's artist", () => {
+		// #given — recorded: the Robin Schulz edit sits on Robin Schulz's "Prayer"
+		const edit = candidate({
+			artist: "Clean Bandit",
+			title: "Rather Be (feat. Jess Glynne) (Robin Schulz Edit)",
+			album: "Prayer",
+			albumArtist: "Robin Schulz",
+			durationSeconds: 192,
+			isrc: "GBAHS1400266",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Clean Bandit",
+				title: "Rather Be ft. Jess Glynne (Robin Schulz Edit)",
+				durationSeconds: 192,
+			},
+			[edit],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Prayer" },
+		});
+	});
+
+	it("still refuses someone else's album the version does not name", () => {
+		// #given
+		const knockOff = candidate({
+			artist: "Clean Bandit",
+			title: "Rather Be (feat. Jess Glynne) (Robin Schulz Edit)",
+			album: "Summer Covers",
+			albumArtist: "Hannah Adams",
+			durationSeconds: 192,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Clean Bandit",
+				title: "Rather Be ft. Jess Glynne (Robin Schulz Edit)",
+				durationSeconds: 192,
+			},
+			[knockOff],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+});
+
+describe("judgeCandidates() never garbles a title while keeping a feature", () => {
+	function titleFor(uploadTitle: string, catalogTitle: string): string | false {
+		const row = { artist: "Artist", title: catalogTitle, durationSeconds: 200 };
+		const verdict = judgeCandidates(
+			{ artist: "Artist", title: uploadTitle, durationSeconds: 200 },
+			[candidate(row), candidate({ ...row, source: "itunes" })],
+		);
+		return verdict.status === "matched" && verdict.metadata.title;
+	}
+
+	it.each([
+		[
+			"Work from Home ft. Ty Dolla Sign",
+			"Work from Home (feat. Ty Dolla $ign)",
+			"Work from Home (feat. Ty Dolla $ign)",
+		],
+		[
+			"Get Lucky ft. Pharrell",
+			"Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+			"Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+		],
+		["Latch ft. Sam Smith HD", "Latch", "Latch"],
+		["Uptown Funk ft. Bruno Mars - YouTube", "Uptown Funk", "Uptown Funk"],
+		[
+			"After The Storm ft. Tyler, The Creator, Bootsy Collins",
+			"After The Storm",
+			"After The Storm (feat. Tyler, The Creator & Bootsy Collins)",
+		],
+		["Latch ft. Sam Smith", "Latch", "Latch (feat. Sam Smith)"],
+		[
+			"One Dance ft. Wizkid & Kyla",
+			"One Dance",
+			"One Dance (feat. Wizkid & Kyla)",
+		],
+		[
+			"EARFQUAKE ft. Tyler, The Creator",
+			"EARFQUAKE",
+			"EARFQUAKE (feat. Tyler, The Creator)",
+		],
+	])("%s against the catalog's %s", (uploadTitle, catalogTitle, written) => {
+		// #when
+		const title = titleFor(uploadTitle, catalogTitle);
+
+		// #then
+		expect(title).toBe(written);
+	});
+
+	it("keeps a feature the catalog credits under a shorter name", () => {
+		// #given — the catalog credits "Pharrell"; the upload spells it out
+		const row = {
+			artist: "Artist & Pharrell",
+			title: "Song",
+			durationSeconds: 200,
+		};
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Artist",
+				title: "Song ft. Pharrell Williams",
+				durationSeconds: 200,
+			},
+			[candidate(row), candidate({ ...row, source: "itunes" })],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.title).toBe("Song");
+	});
+});
+
+describe("judgeCandidates() draws the agreement line at five seconds", () => {
+	const deezer = candidate({
+		artist: "Artist",
+		title: "Song",
+		album: "Real",
+		durationSeconds: 200,
+	});
+
+	it("counts two catalogs five seconds apart as one recording", () => {
+		// #when
+		const verdict = judgeCandidates({ artist: "Artist", title: "Song" }, [
+			deezer,
+			candidate({
+				source: "itunes",
+				artist: "Artist",
+				title: "Song",
+				durationSeconds: 205,
+			}),
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
+	});
+
+	it("does not count two catalogs six seconds apart as one recording", () => {
+		// #when
+		const verdict = judgeCandidates({ artist: "Artist", title: "Song" }, [
+			deezer,
+			candidate({
+				source: "itunes",
+				artist: "Artist",
+				title: "Song",
+				durationSeconds: 206,
+			}),
+		]);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("takes nothing from a same-titled row six seconds from the chosen one", () => {
+		// #given — the upload's runtime confirms the Deezer row alone
+		const other = candidate({
+			source: "itunes",
+			artist: "Artist",
+			title: "Song",
+			durationSeconds: 206,
+			releaseDate: "1999-05-01",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Artist", title: "Song", durationSeconds: 200 },
+			[deezer, other],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(
+			undefined,
+		);
+	});
+});
+
+describe("judgeCandidates() dates a recording by its earliest release", () => {
+	const RELEASE = candidate({
+		artist: "Stealers Wheel",
+		title: "Stuck In The Middle With You",
+		album: "Stealers Wheel",
+		durationSeconds: 208,
+	});
+
+	it("takes the original year an iTunes compilation carries over a later release's", () => {
+		// #given — iTunes dates the soundtrack's copy by the 1972 original
+		const soundtrack = candidate({
+			source: "itunes",
+			artist: "Stealers Wheel",
+			title: "Stuck in the Middle with You",
+			album: "Reservoir Dogs (Original Motion Picture Soundtrack)",
+			isCompilation: true,
+			durationSeconds: 204,
+			releaseDate: "1972-11-01",
+		});
+		const reissue = candidate({
+			source: "itunes",
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			album: "The Very Best Of",
+			durationSeconds: 208,
+			releaseDate: "2008-01-01",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Stealers Wheel",
+				title: "Stuck In The Middle With You",
+				durationSeconds: 209,
+			},
+			[RELEASE, soundtrack, reissue],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
+	});
+
+	it("does not take a placeholder Jan 1 date for the recording's year", () => {
+		// #given — recorded: an "80s hits" set iTunes dates 1980-01-01
+		const eighties = candidate({
+			source: "itunes",
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			album: "Anos 80 - Nostalgia Internacionais",
+			isCompilation: true,
+			durationSeconds: 208,
+			releaseDate: "1970-01-01",
+		});
+		const original = candidate({
+			source: "itunes",
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			album: "Stealers Wheel",
+			durationSeconds: 208,
+			releaseDate: "1972-11-01",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Stealers Wheel",
+				title: "Stuck In The Middle With You",
+				durationSeconds: 209,
+			},
+			[RELEASE, eighties, original],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
+	});
+
+	it("ignores the date on Deezer's copy from a compilation", () => {
+		// #given — Deezer dates a best-of's copy by the best-of
+		const bestOf = candidate({
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			album: "Seventies Gold",
+			isCompilation: true,
+			durationSeconds: 208,
+			releaseDate: "1970-01-01",
+		});
+		const single = candidate({
+			source: "itunes",
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			album: "Stuck In The Middle With You - Single",
+			durationSeconds: 208,
+			releaseDate: "1972-11-01",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Stealers Wheel",
+				title: "Stuck In The Middle With You",
+				durationSeconds: 209,
+			},
+			[RELEASE, bestOf, single],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
+	});
+});
+
+describe("judgeCandidates() refuses only a performer the catalogs dispute", () => {
+	it("accepts a guest iTunes lists as a lead when Deezer's copy features them", () => {
+		// #given — recorded: iTunes credits all three; Deezer features two of them
+		const itunes = candidate({
+			source: "itunes",
+			artist: "Daft Punk, Pharrell Williams & Nile Rodgers",
+			title: "Get Lucky",
+			album: "Random Access Memories",
+			durationSeconds: 370,
+		});
+		const deezer = candidate({
+			artist: "Daft Punk",
+			title: "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+			album: "Random Access Memories",
+			durationSeconds: 367,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Daft Punk", title: "Get Lucky ft. Pharrell" },
+			[itunes, deezer],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
+	});
+
+	it("counts a remixer the upload's version names", () => {
+		// #given — iTunes credits the remixer as a lead; Deezer's copy does not
+		const itunes = candidate({
+			source: "itunes",
+			artist: "Kygo & Marvin Gaye",
+			title: "Sexual Healing (Kygo Remix)",
+			album: "Sexual Healing (Kygo Remix)",
+			durationSeconds: 368,
+		});
+		const deezer = candidate({
+			artist: "Marvin Gaye",
+			title: "Sexual Healing (Kygo Remix)",
+			album: "Sexual Healing (Kygo Remix)",
+			durationSeconds: 368,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Marvin Gaye", title: "Sexual Healing (Kygo Remix)" },
+			[itunes, deezer],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
+	});
+
+	it("does not take a backing band for a second performer", () => {
+		// #given
+		const itunes = candidate({
+			source: "itunes",
+			artist: "Prince & The Revolution",
+			title: "Purple Rain",
+			album: "Purple Rain",
+			durationSeconds: 521,
+		});
+		const deezer = candidate({
+			artist: "Prince",
+			title: "Purple Rain",
+			album: "Purple Rain",
+			durationSeconds: 520,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Prince", title: "Purple Rain" },
+			[itunes, deezer],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
 	});
 });

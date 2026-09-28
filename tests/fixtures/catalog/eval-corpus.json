@@ -212,6 +212,42 @@
 			"expectArtist": "Disclosure",
 			"expectTitle": "Latch",
 			"expectAlbum": "Settle (Special Edition)"
+		},
+		{
+			"name": "lead artist only a guest on a same-titled cover",
+			"artist": "Kenny Loggins",
+			"title": "Danger Zone",
+			"durationSeconds": 217,
+			"expect": "match",
+			"expectArtist": "Kenny Loggins",
+			"expectTitle": "Danger Zone"
+		},
+		{
+			"name": "album cut beside two agreeing workout compilations",
+			"artist": "Donna Summer",
+			"title": "Hot Stuff",
+			"durationSeconds": 314,
+			"expect": "match",
+			"expectArtist": "Donna Summer",
+			"expectTitle": "Hot Stuff",
+			"expectAlbum": "Bad Girls"
+		},
+		{
+			"name": "solo record whose only same-titled rows are a later duet",
+			"artist": "Frank Sinatra",
+			"title": "New York, New York",
+			"durationSeconds": 207,
+			"expect": "none"
+		},
+		{
+			"name": "official remix on the remixer's own album",
+			"artist": "Clean Bandit",
+			"title": "Rather Be ft. Jess Glynne (Robin Schulz Edit)",
+			"durationSeconds": 192,
+			"expect": "match",
+			"expectArtist": "Clean Bandit",
+			"expectTitle": "Rather Be",
+			"expectAlbum": "Prayer"
 		}
 	]
 }

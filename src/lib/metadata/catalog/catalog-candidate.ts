@@ -75,6 +75,16 @@ export interface CatalogRequestOptions {
 	timeout?: number;
 }
 
+/** Both stores back-date a reissue to Jan 1, so such a date can neither order releases nor date one. */
+const IMPRECISE_DATE = /-01-01$/;
+
+export function isPreciseDate(releaseDate: string | undefined): boolean {
+	return (
+		releaseYear(releaseDate) !== undefined &&
+		!IMPRECISE_DATE.test(releaseDate ?? "")
+	);
+}
+
 /** Shared by both adapters and the album enrichment, so a year means one thing. */
 export function releaseYear(
 	releaseDate: string | undefined,

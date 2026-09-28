@@ -31,13 +31,13 @@ describe("mergePreviewDetails()", () => {
 	it("shows the catalog's artist and title once the match is confirmed", () => {
 		// #when
 		const merged = mergePreviewDetails(PREVIEW, {
-			artist: "Disclosure",
+			artist: "Disclosure & Sam Smith",
 			title: "Latch (feat. Sam Smith)",
 		});
 
 		// #then
 		expect([merged.artist, merged.title]).toEqual([
-			"Disclosure",
+			"Disclosure & Sam Smith",
 			"Latch (feat. Sam Smith)",
 		]);
 	});

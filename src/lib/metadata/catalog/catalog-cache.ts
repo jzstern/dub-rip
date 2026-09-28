@@ -11,8 +11,10 @@ import {
 	CANDIDATE_TTL_MS,
 	CatalogUnavailableError,
 	candidateCacheKey,
+	clearDeezerAlbumCache,
 	enrichVerdictFromAlbum,
 	fetchCatalogCandidates,
+	vouchedCandidates,
 } from "./lookup-catalog";
 
 /**
@@ -62,14 +64,18 @@ function isBlank(query: TrackQuery): boolean {
 
 /**
  * Preview and `/details`: judges the shared candidates and hands them back, so
- * artwork can fall back to today's order using the same responses. Never
- * enriches — the Deezer album call belongs to the download.
+ * artwork can fall back to today's order using the same responses. It checks
+ * the albums of the Deezer rows that could match (see `vouchedCandidates`) but
+ * never enriches — the label and genre belong to the download.
+ *
+ * `timeout` covers the searches and the album checks together.
  */
 export async function sharedCatalogLookup(
 	query: TrackQuery,
 	{ timeout }: { timeout: number },
 ): Promise<CatalogLookup> {
 	if (isBlank(query)) return { verdict: UNMATCHED, candidates: [] };
+	const deadline = Date.now() + timeout;
 
 	let candidates: CatalogCandidate[];
 	try {
@@ -87,7 +93,14 @@ export async function sharedCatalogLookup(
 	}
 
 	try {
-		const verdict = judgeCandidates(query, candidates);
+		const verdict = judgeCandidates(
+			query,
+			await vouchedCandidates(
+				query,
+				candidates,
+				Math.max(1, deadline - Date.now()),
+			),
+		);
 		console.log(
 			verdict.status === "matched"
 				? `[catalog] matched via=${verdict.via} source=${verdict.candidate.source}`
@@ -164,4 +177,5 @@ export function cardSizedArtwork(url: string | undefined): string | undefined {
 
 export function clearCatalogCandidateCache(): void {
 	cache.clear();
+	clearDeezerAlbumCache();
 }

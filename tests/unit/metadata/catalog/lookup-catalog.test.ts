@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CatalogCandidate } from "$lib/metadata/catalog/catalog-candidate";
 import {
 	candidateCacheKey,
+	clearDeezerAlbumCache,
 	fetchCatalogCandidates,
 	lookupCatalogMetadata,
 	searchTerm,
+	vouchedCandidates,
 } from "$lib/metadata/catalog/lookup-catalog";
 import { stubCatalogFetch } from "./catalog-fixtures";
 
@@ -78,94 +81,6 @@ describe("fetchCatalogCandidates()", () => {
 		await expect(attempt).rejects.toThrow(/catalog/i);
 	});
 
-	it("drops a Deezer row whose album cannot be read, rather than trust it", async () => {
-		// #given — the album call fails; only the search answers
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(async (input: unknown) => {
-				const url = String(input);
-				if (url.includes("/album/")) {
-					return { ok: false, status: 503, json: async () => ({}) };
-				}
-				return {
-					ok: true,
-					status: 200,
-					json: async () =>
-						url.includes("itunes")
-							? { results: [] }
-							: {
-									data: [
-										{
-											title: "Hello",
-											duration: 295,
-											artist: { name: "Adele" },
-											album: { id: 7, title: "25" },
-										},
-									],
-								},
-				};
-			}),
-		);
-
-		// #when
-		const candidates = await fetchCatalogCandidates({
-			artist: "Adele",
-			title: "Hello",
-		});
-
-		// #then
-		expect(candidates).toEqual([]);
-	});
-
-	it("asks no album about a row that names another song", async () => {
-		// #given
-		const fetchMock = vi.fn(async (input: unknown) => ({
-			ok: true,
-			status: 200,
-			json: async () =>
-				String(input).includes("itunes")
-					? { results: [] }
-					: {
-							data: [
-								{
-									title: "Someone Like You",
-									duration: 285,
-									artist: { name: "Adele" },
-									album: { id: 7, title: "21" },
-								},
-							],
-						},
-		}));
-		vi.stubGlobal("fetch", fetchMock);
-
-		// #when
-		await fetchCatalogCandidates({ artist: "Adele", title: "Hello" });
-
-		// #then
-		expect(
-			fetchMock.mock.calls.filter((call) =>
-				String(call[0]).includes("/album/"),
-			),
-		).toEqual([]);
-	});
-
-	it("records whose album a Deezer row sits on", async () => {
-		// #given
-		stubCatalogFetch();
-
-		// #when
-		const candidates = await fetchCatalogCandidates({
-			artist: "Flume",
-			title: "Never Be Like You feat. Kai",
-		});
-
-		// #then
-		expect(
-			candidates.find((candidate) => candidate.album === "The Lockbox")
-				?.albumArtist,
-		).toBe("The Amalgamates");
-	});
-
 	it("keeps searching out of a title we could not classify", () => {
 		// #when — "unknown" is the sentinel for an unrecognised bracket, not a word
 		const term = searchTerm({
@@ -178,7 +93,193 @@ describe("fetchCatalogCandidates()", () => {
 	});
 });
 
+describe("vouchedCandidates()", () => {
+	const QUERY = { artist: "Adele", title: "Hello" };
+
+	function deezerRow(
+		overrides: Partial<CatalogCandidate> = {},
+	): CatalogCandidate {
+		return {
+			source: "deezer",
+			artist: "Adele",
+			title: "Hello",
+			album: "25",
+			albumId: "7",
+			durationSeconds: 295,
+			...overrides,
+		};
+	}
+
+	function stubAlbums(
+		answer: (url: string) => { ok: boolean; status: number; body: unknown },
+	): ReturnType<typeof vi.fn> {
+		const fetchMock = vi.fn(async (input: unknown) => {
+			const { ok, status, body } = answer(String(input));
+			return { ok, status, json: async () => body };
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		return fetchMock;
+	}
+
+	const ADELE_ALBUM = {
+		ok: true,
+		status: 200,
+		body: { artist: { name: "Adele" }, record_type: "album" },
+	};
+
+	beforeEach(() => {
+		clearDeezerAlbumCache();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("drops a Deezer row whose album cannot be read, rather than trust it", async () => {
+		// #given
+		stubAlbums(() => ({ ok: false, status: 503, body: {} }));
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(vouched).toEqual([]);
+	});
+
+	it("asks again on the next lookup, so a failed check is never an answer", async () => {
+		// #given — the first album call fails, the second succeeds
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) })
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				json: async () => ADELE_ALBUM.body,
+			});
+		vi.stubGlobal("fetch", fetchMock);
+		await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(vouched.map((row) => row.albumArtist)).toEqual(["Adele"]);
+	});
+
+	it("drops a row whose album answers without saying whose it is", async () => {
+		// #given
+		stubAlbums(() => ({ ok: true, status: 200, body: { title: "25" } }));
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(vouched).toEqual([]);
+	});
+
+	it("asks no album about a row that names another song", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+
+		// #when
+		await vouchedCandidates(
+			QUERY,
+			[deezerRow({ title: "Someone Like You", albumId: "8" })],
+			1000,
+		);
+
+		// #then
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("checks at most three albums, taking the catalog's top rows", async () => {
+		// #given — five releases of the same song
+		stubAlbums(() => ADELE_ALBUM);
+		const rows = ["1", "2", "3", "4", "5"].map((albumId, rank) =>
+			deezerRow({ albumId, rank }),
+		);
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, rows, 1000);
+
+		// #then
+		expect(vouched.map((row) => row.albumId)).toEqual(["1", "2", "3"]);
+	});
+
+	it("spends its album checks on the upload's version, not on live takes of it", async () => {
+		// #given — three live takes rank above the studio release
+		stubAlbums(() => ADELE_ALBUM);
+		const liveTakes = ["1", "2", "3"].map((albumId, rank) =>
+			deezerRow({ title: "Hello (Live)", albumId, rank }),
+		);
+		const studio = deezerRow({ albumId: "4", rank: 3 });
+
+		// #when
+		const vouched = await vouchedCandidates(
+			QUERY,
+			[...liveTakes, studio],
+			1000,
+		);
+
+		// #then
+		expect(vouched.find((row) => row.albumId === "4")?.albumArtist).toBe(
+			"Adele",
+		);
+	});
+
+	it("asks for an album once, however many lookups need it", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+		await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #when
+		await vouchedCandidates(
+			{ ...QUERY, durationSeconds: 295 },
+			[deezerRow()],
+			1000,
+		);
+
+		// #then
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("passes iTunes rows through, which carry their collection's credit", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+		const itunesRow = deezerRow({ source: "itunes", albumId: undefined });
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [itunesRow], 1000);
+
+		// #then
+		expect([vouched, fetchMock.mock.calls.length]).toEqual([[itunesRow], 0]);
+	});
+
+	it("records whose album a Deezer row sits on", async () => {
+		// #given
+		stubCatalogFetch();
+		const query = { artist: "Flume", title: "Never Be Like You feat. Kai" };
+
+		// #when
+		const vouched = await vouchedCandidates(
+			query,
+			await fetchCatalogCandidates(query),
+			5000,
+		);
+
+		// #then
+		expect(
+			vouched.find((candidate) => candidate.album === "The Lockbox")
+				?.albumArtist,
+		).toBe("The Amalgamates");
+	});
+});
+
 describe("lookupCatalogMetadata()", () => {
+	beforeEach(() => {
+		clearDeezerAlbumCache();
+	});
+
 	afterEach(() => {
 		vi.unstubAllGlobals();
 	});
@@ -263,7 +364,7 @@ describe("lookupCatalogMetadata()", () => {
 		);
 	});
 
-	it("drops the album when enrichment reveals a compilation", async () => {
+	it("writes only the artist and title of a track found on a compilation", async () => {
 		// #given — the recorded search matches, but its album is a Various Artists set
 		const fetchMock = vi.fn(async (input: unknown) => {
 			const url = String(input);
@@ -306,13 +407,10 @@ describe("lookupCatalogMetadata()", () => {
 		);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: {
-				album: undefined,
-				label: "Deadline Rec",
-				genre: "Electronic",
-			},
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Klaps",
+			title: "Se Cura",
+			source: "deezer",
 		});
 	});
 
@@ -385,6 +483,59 @@ describe("lookupCatalogMetadata()", () => {
 				album: "Settle (Special Edition)",
 			},
 		});
+	});
+
+	it("keeps the recording's year over a Deezer album dated with a Jan 1 placeholder", async () => {
+		// #given — iTunes dates the release 1972; Deezer's album says 1970-01-01
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: unknown) => {
+				const url = String(input);
+				const body = url.includes("itunes")
+					? {
+							results: [
+								{
+									kind: "song",
+									trackName: "Stuck In The Middle With You",
+									artistName: "Stealers Wheel",
+									collectionName: "Stealers Wheel",
+									releaseDate: "1972-11-01T00:00:00Z",
+									trackTimeMillis: 208_000,
+								},
+							],
+						}
+					: url.includes("/album/")
+						? {
+								artist: { name: "Stealers Wheel" },
+								label: "A&M",
+								release_date: "1970-01-01",
+							}
+						: {
+								data: [
+									{
+										title: "Stuck In The Middle With You",
+										duration: 208,
+										artist: { name: "Stealers Wheel" },
+										album: { id: 5, title: "Stealers Wheel" },
+									},
+								],
+							};
+				return { ok: true, status: 200, json: async () => body };
+			}),
+		);
+
+		// #when
+		const verdict = await lookupCatalogMetadata(
+			{
+				artist: "Stealers Wheel",
+				title: "Stuck In The Middle With You",
+				durationSeconds: 209,
+			},
+			{ enrich: true },
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
 	});
 
 	it("survives both catalogs failing", async () => {

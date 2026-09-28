@@ -14,7 +14,7 @@ import {
 } from "../src/lib/metadata/catalog/deezer-catalog";
 import { itunesSearchUrl } from "../src/lib/metadata/catalog/itunes-catalog";
 import {
-	fetchCatalogCandidates,
+	lookupCatalogMetadata,
 	searchTerm,
 } from "../src/lib/metadata/catalog/lookup-catalog";
 
@@ -172,8 +172,8 @@ for (const albumId of ALBUM_IDS) {
 }
 
 /**
- * The albums the candidate fetch asks about — every Deezer row that names its
- * query's song and artist. Found by running the real fetch against what was
+ * The albums a lookup asks about — the Deezer rows that name its query's song
+ * and artist, up to the cap. Found by running the real lookup against what was
  * just recorded, so the fixture covers exactly the calls the app makes.
  */
 async function albumUrlsTheFetchAsksFor(): Promise<string[]> {
@@ -189,7 +189,7 @@ async function albumUrlsTheFetchAsksFor(): Promise<string[]> {
 	}) as typeof fetch;
 	try {
 		for (const query of [...QUERIES, ...ISRC_QUERIES]) {
-			await fetchCatalogCandidates(query);
+			await lookupCatalogMetadata(query, { enrich: true });
 		}
 	} finally {
 		globalThis.fetch = liveFetch;

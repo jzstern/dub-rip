@@ -20,6 +20,16 @@ vi.mock("$lib/video-details-cache", () => ({
 	getVideoDetails: vi.fn(() => Promise.resolve(null)),
 }));
 
+/**
+ * The route waits for the bgutil-pot sidecar before it starts yt-dlp. With a
+ * BGUTIL_POT_URL set and no sidecar behind it, the real wait would ping a host
+ * that does not exist until its cap. Its behavior has its own tests
+ * (download-stream-sidecar-wait.test.ts).
+ */
+vi.mock("$lib/wait-for-bgutil-pot", () => ({
+	waitForBgutilPot: async () => ({ awake: true, attempts: 1, waitedMs: 0 }),
+}));
+
 vi.mock("$lib/video-metadata", () => ({
 	fetchThumbnailBuffer: vi.fn(() => Promise.resolve(null)),
 }));

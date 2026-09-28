@@ -271,3 +271,72 @@ export async function resolveCoverArt({
 		return null;
 	}
 }
+
+export interface SoundCloudArtwork {
+	artworkUrl?: string;
+	avatarUrl?: string;
+}
+
+interface ResolveSoundCloudAlbumArtInput {
+	artist: string;
+	title: string;
+	artwork: SoundCloudArtwork;
+}
+
+async function soundCloudImage(
+	url: string | undefined,
+): Promise<AlbumArtImage | null> {
+	const buffer = url ? await fetchThumbnailBuffer(url) : null;
+	return buffer ? { buffer, mime: "image/jpeg" } : null;
+}
+
+/**
+ * The reverse of the YouTube order: the upload's own artwork comes first.
+ * SoundCloud is mostly remixes, edits and unreleased tracks, where a store
+ * search for "artist title" returns the *original* release's cover. Store
+ * artwork is only a fallback, and the uploader's avatar — what SoundCloud
+ * itself shows for a track without artwork — is the last resort. The
+ * artwork is already square (t500x500), so it is never cropped.
+ */
+export async function resolveSoundCloudAlbumArt({
+	artist,
+	title,
+	artwork,
+}: ResolveSoundCloudAlbumArtInput): Promise<AlbumArtImage | null> {
+	try {
+		const uploaded = await soundCloudImage(artwork.artworkUrl);
+		if (uploaded) {
+			console.log("[artwork] Using cover art from: soundcloud");
+			return uploaded;
+		}
+
+		const official = await fetchOfficialArtwork(artist, title);
+		if (official) {
+			console.log("[artwork] Using cover art from: itunes");
+			return { buffer: official, mime: "image/jpeg" };
+		}
+
+		const deezerUrl = await fetchDeezerArtworkUrl(artist, title);
+		const deezer = deezerUrl
+			? await fetchBufferWithTimeout(deezerUrl, DEEZER_TIMEOUT)
+			: null;
+		if (deezer) {
+			console.log("[artwork] Using cover art from: deezer");
+			return { buffer: deezer, mime: "image/jpeg" };
+		}
+
+		const avatar = await soundCloudImage(artwork.avatarUrl);
+		console.log(
+			`[artwork] ${avatar ? "Using the uploader's avatar" : "No cover art resolved"}`,
+		);
+		return avatar;
+	} catch (err) {
+		console.error("[artwork] SoundCloud cover art resolution failed:", err);
+		Sentry.captureException(err, {
+			level: "warning",
+			tags: { service: "artwork", operation: "resolve-soundcloud-art" },
+			extra: { artist, title },
+		});
+		return null;
+	}
+}

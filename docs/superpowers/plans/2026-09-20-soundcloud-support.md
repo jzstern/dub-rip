@@ -1518,7 +1518,7 @@ git -C "$ROOT" worktree add .claude/worktrees/soundcloud-support -b feat/soundcl
 - Modify: `src/lib/video-details-cache.ts` (its public API is unchanged)
 - Test: `tests/unit/services/single-flight-cache.test.ts`
 
-- [ ] **Step 1: Write the failing test.** The existing `video-details-cache.test.ts` already covers hit, miss, dedupe, TTL and not caching `null`. These two tests cover what SoundCloud needs on top.
+- [x] **Step 1: Write the failing test.** The existing `video-details-cache.test.ts` already covers hit, miss, dedupe, TTL and not caching `null`. These two tests cover what SoundCloud needs on top.
 
 ```ts
 import { describe, expect, it, vi } from "vitest";
@@ -1558,9 +1558,9 @@ describe("createSingleFlightCache()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail** (the module is not found).
+- [x] **Step 2: Run it to see it fail** (the module is not found).
 
-- [ ] **Step 3: Implement `src/lib/single-flight-cache.ts`**
+- [x] **Step 3: Implement `src/lib/single-flight-cache.ts`**
 
 ```ts
 interface CacheEntry<T> {
@@ -1614,7 +1614,7 @@ export function createSingleFlightCache<T>(): SingleFlightCache<T> {
 }
 ```
 
-- [ ] **Step 4: Rewrite `src/lib/video-details-cache.ts` on top of it.** Keep the existing docstring on `getVideoDetails`, and change "keyed by YouTube videoId" to "keyed by videoId".
+- [x] **Step 4: Rewrite `src/lib/video-details-cache.ts` on top of it.** Keep the existing docstring on `getVideoDetails`, and change "keyed by YouTube videoId" to "keyed by videoId".
 
 ```ts
 import { createSingleFlightCache } from "./single-flight-cache";
@@ -1646,8 +1646,8 @@ export function clearVideoDetailsCache(): void {
 }
 ```
 
-- [ ] **Step 5: Run the tests.** `bun run test:run tests/unit/services/single-flight-cache.test.ts tests/unit/services/video-details-cache.test.ts` → PASS, with no edits to the existing cache tests.
-- [ ] **Step 6: Commit** `refactor: extract single-flight TTL cache from video-details-cache`.
+- [x] **Step 5: Run the tests.** `bun run test:run tests/unit/services/single-flight-cache.test.ts tests/unit/services/video-details-cache.test.ts` → PASS, with no edits to the existing cache tests.
+- [x] **Step 6: Commit** `refactor: extract single-flight TTL cache from video-details-cache`.
 
 ### Task 9: SoundCloud URL parsing
 
@@ -1655,7 +1655,7 @@ export function clearVideoDetailsCache(): void {
 - Create: `src/lib/soundcloud/soundcloud-url.ts`
 - Test: `tests/unit/soundcloud/soundcloud-url.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -1748,9 +1748,9 @@ describe("parseSoundCloudShortLinkCode()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement `src/lib/soundcloud/soundcloud-url.ts`**
+- [x] **Step 3: Implement `src/lib/soundcloud/soundcloud-url.ts`**
 
 ```ts
 /**
@@ -1851,8 +1851,8 @@ export function parseSoundCloudShortLinkCode(input: string): string | null {
 }
 ```
 
-- [ ] **Step 4: Run the test** → PASS.
-- [ ] **Step 5: Commit** `feat(soundcloud): parse and canonicalize SoundCloud track and share links`.
+- [x] **Step 4: Run the test** → PASS.
+- [x] **Step 5: Commit** `feat(soundcloud): parse and canonicalize SoundCloud track and share links`.
 
 ### Task 10: `MediaLink`, and short-link resolution
 
@@ -1860,7 +1860,7 @@ export function parseSoundCloudShortLinkCode(input: string): string | null {
 - Create: `src/lib/media-link.ts`, `src/lib/resolve-media-link.ts`
 - Test: `tests/unit/media-link.test.ts`, `tests/unit/soundcloud/resolve-media-link.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/unit/media-link.test.ts`:
 
@@ -2001,9 +2001,9 @@ describe("resolveMediaLink()", () => {
 });
 ```
 
-- [ ] **Step 2: Run them to see them fail.**
+- [x] **Step 2: Run them to see them fail.**
 
-- [ ] **Step 3: Implement `src/lib/media-link.ts`**
+- [x] **Step 3: Implement `src/lib/media-link.ts`**
 
 ```ts
 import {
@@ -2045,7 +2045,7 @@ export function parseMediaLink(input: string): ParsedMediaLink | null {
 }
 ```
 
-- [ ] **Step 4: Implement `src/lib/resolve-media-link.ts`**
+- [x] **Step 4: Implement `src/lib/resolve-media-link.ts`**
 
 ```ts
 import * as Sentry from "@sentry/sveltekit";
@@ -2095,8 +2095,8 @@ export async function resolveMediaLink(input: string): Promise<MediaLink | null>
 }
 ```
 
-- [ ] **Step 5: Run the tests** → PASS.
-- [ ] **Step 6: Commit** `feat: parse YouTube and SoundCloud links into one MediaLink`.
+- [x] **Step 5: Run the tests** → PASS.
+- [x] **Step 6: Commit** `feat: parse YouTube and SoundCloud links into one MediaLink`.
 
 ### Task 11: Error classification per site
 
@@ -2105,7 +2105,7 @@ export async function resolveMediaLink(input: string): Promise<MediaLink | null>
 - Modify: `tests/unit/services/yt-dlp-error-category.test.ts:167` and `:185` (a named fixture edit; see Step 3, item 6)
 - Test: `tests/unit/services/yt-dlp-error-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -2168,9 +2168,9 @@ describe("classifyYtDlpError() for SoundCloud", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail** (`"soundcloud"` is ignored, so the 404 comes back `unknown`).
+- [x] **Step 2: Run it to see it fail** (`"soundcloud"` is ignored, so the 404 comes back `unknown`).
 
-- [ ] **Step 3: Implement.** In `src/lib/yt-dlp-errors.ts`:
+- [x] **Step 3: Implement.** In `src/lib/yt-dlp-errors.ts`:
 
 1. Add `import type { MediaLinkKind } from "./media-link";` at the top.
 2. Rename `ERROR_RULES` to `YOUTUBE_RULES`. Leave its contents byte-identical.
@@ -2252,8 +2252,8 @@ const GENERIC_ERROR_BY_SITE: Record<MediaLinkKind, ClassifiedYtDlpError> = {
 
 6. **A named fixture edit.** `tests/unit/services/yt-dlp-error-category.test.ts:167` calls `userFailures.map(classifyYtDlpError)`, and `:185` calls `transientFailures.map(classifyYtDlpError)`. `.map` passes the array index as the new `site` argument, which fails at runtime (`RULES_BY_SITE[site] is not iterable`) and in `bun run check`. Change both to `.map((message) => classifyYtDlpError(message))`. Neither line is an `expect(` line, so the Task 20 audit stays clean. Don't add a `?? YOUTUBE_RULES` fallback instead: it hides the runtime error but not the type error.
 
-- [ ] **Step 4: Run the tests.** `bun run test:run tests/unit/services` → PASS, including the existing classifier, category and canary tests.
-- [ ] **Step 5: Commit** `feat(errors): classify yt-dlp failures per site; YouTube rules unchanged`.
+- [x] **Step 4: Run the tests.** `bun run test:run tests/unit/services` → PASS, including the existing classifier, category and canary tests.
+- [x] **Step 5: Commit** `feat(errors): classify yt-dlp failures per site; YouTube rules unchanged`.
 
 ### Task 12: Fetch SoundCloud tracks
 
@@ -2261,7 +2261,7 @@ const GENERIC_ERROR_BY_SITE: Record<MediaLinkKind, ClassifiedYtDlpError> = {
 - Create: `src/lib/soundcloud/soundcloud-track.ts`
 - Test: `tests/unit/soundcloud/soundcloud-track.test.ts`
 
-- [ ] **Step 1: Write the failing test.** The fixture values are real (`billieeilish/bad-guy`, 2026-09-20).
+- [x] **Step 1: Write the failing test.** The fixture values are real (`billieeilish/bad-guy`, 2026-09-20).
 
 ```ts
 import * as Sentry from "@sentry/sveltekit";
@@ -2462,9 +2462,9 @@ describe("fetchSoundCloudTrack()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement `src/lib/soundcloud/soundcloud-track.ts`**
+- [x] **Step 3: Implement `src/lib/soundcloud/soundcloud-track.ts`**
 
 ```ts
 import * as Sentry from "@sentry/sveltekit";
@@ -2699,8 +2699,8 @@ export async function fetchSoundCloudTrack(
 }
 ```
 
-- [ ] **Step 4: Run the test** → PASS.
-- [ ] **Step 5: Commit** `feat(soundcloud): read track metadata from the page with an oEmbed fallback`.
+- [x] **Step 4: Run the test** → PASS.
+- [x] **Step 5: Commit** `feat(soundcloud): read track metadata from the page with an oEmbed fallback`.
 
 ### Task 13: SoundCloud metadata mapping and the track cache
 
@@ -2708,7 +2708,7 @@ export async function fetchSoundCloudTrack(
 - Create: `src/lib/soundcloud/soundcloud-metadata.ts`, `src/lib/soundcloud/soundcloud-track-cache.ts`
 - Test: `tests/unit/soundcloud/soundcloud-metadata.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -2797,9 +2797,9 @@ describe("soundCloudRefusal()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement `src/lib/soundcloud/soundcloud-metadata.ts`**
+- [x] **Step 3: Implement `src/lib/soundcloud/soundcloud-metadata.ts`**
 
 ```ts
 import type { DownloadTitle } from "$lib/download-pipeline/title-from-video-details";
@@ -2854,7 +2854,7 @@ export function soundCloudRefusal(track: SoundCloudTrack): string | null {
 }
 ```
 
-- [ ] **Step 4: Implement `src/lib/soundcloud/soundcloud-track-cache.ts`**
+- [x] **Step 4: Implement `src/lib/soundcloud/soundcloud-track-cache.ts`**
 
 ```ts
 import type { MediaLink } from "$lib/media-link";
@@ -2878,8 +2878,8 @@ export function clearSoundCloudTrackCache(): void {
 }
 ```
 
-- [ ] **Step 5: Run the tests** → PASS. `bun run check` → clean.
-- [ ] **Step 6: Commit** `feat(soundcloud): map tracks to title state and ID3 details`.
+- [x] **Step 5: Run the tests** → PASS. `bun run check` → clean.
+- [x] **Step 6: Commit** `feat(soundcloud): map tracks to title state and ID3 details`.
 
 ### Task 14: Split the yt-dlp runner and add the SoundCloud arguments
 
@@ -2888,7 +2888,7 @@ export function clearSoundCloudTrackCache(): void {
 - Create: `src/lib/download-pipeline/try-soundcloud.ts`
 - Test: `tests/unit/services/try-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, expect, it, vi } from "vitest";
@@ -2945,9 +2945,9 @@ describe("buildSoundCloudDownloadArgs()", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Split `src/lib/download-pipeline/try-yt-dlp.ts` without changing behavior.**
+- [x] **Step 3: Split `src/lib/download-pipeline/try-yt-dlp.ts` without changing behavior.**
   1. Add a `YouTubeDownloadArgsInput` interface with `videoUrl`, `outputPath`, `bgutilPotUrl`, `ffmpegPath`, `pluginDir` and `debugMode`.
   2. Add `export function buildYouTubeDownloadArgs({ videoUrl, outputPath, bgutilPotUrl, ffmpegPath, pluginDir, debugMode }: YouTubeDownloadArgsInput): string[]`. Its body is the current lines 53–107 moved verbatim, meaning the `args` array with every comment plus the `debugMode` push. It ends with `return args;`.
   3. Add a `RunYtDlpDownloadInput` interface: `{ args: string[]; ytDlp: YtDlpInstance; send: (data: Record<string, unknown>) => void; signal?: AbortSignal }`.
@@ -2974,7 +2974,7 @@ export async function tryYtDlpDownload({
 
 Keep `TryYtDlpInput` as it is; the canary depends on it.
 
-- [ ] **Step 4: Implement `src/lib/download-pipeline/try-soundcloud.ts`**
+- [x] **Step 4: Implement `src/lib/download-pipeline/try-soundcloud.ts`**
 
 ```ts
 import { buildJsRuntimeArgs } from "$lib/yt-dlp-binary";
@@ -3058,8 +3058,8 @@ export async function trySoundCloudDownload({
 }
 ```
 
-- [ ] **Step 5: Run the tests.** `bun run test:run tests/unit/services tests/unit/canary` → PASS. The Task 1 argv characterization must still pass unchanged.
-- [ ] **Step 6: Commit** `feat(soundcloud): SoundCloud yt-dlp argv; YouTube argv unchanged`.
+- [x] **Step 5: Run the tests.** `bun run test:run tests/unit/services tests/unit/canary` → PASS. The Task 1 argv characterization must still pass unchanged.
+- [x] **Step 6: Commit** `feat(soundcloud): SoundCloud yt-dlp argv; YouTube argv unchanged`.
 
 ### Task 15: SoundCloud cover art in `finalizeMp3`
 
@@ -3068,7 +3068,7 @@ export async function trySoundCloudDownload({
 - Modify: `src/lib/download-pipeline/finalize-mp3.ts`
 - Test: `tests/unit/artwork-soundcloud.test.ts`; append to `tests/unit/services/finalize-mp3.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 `tests/unit/artwork-soundcloud.test.ts`:
 
@@ -3182,9 +3182,9 @@ describe("finalizeMp3() SoundCloud cover art", () => {
 });
 ```
 
-- [ ] **Step 2: Run them to see them fail.**
+- [x] **Step 2: Run them to see them fail.**
 
-- [ ] **Step 3: Implement.** Append to `src/lib/artwork.ts`:
+- [x] **Step 3: Implement.** Append to `src/lib/artwork.ts`:
 
 ```ts
 export interface SoundCloudArtwork {
@@ -3279,8 +3279,8 @@ In `src/lib/download-pipeline/finalize-mp3.ts`:
 				});
 ```
 
-- [ ] **Step 4: Run the tests.** `bun run test:run tests/unit/artwork.test.ts tests/unit/artwork-soundcloud.test.ts tests/unit/services/finalize-mp3.test.ts` → PASS.
-- [ ] **Step 5: Commit** `feat(soundcloud): prefer the upload's own cover art`.
+- [x] **Step 4: Run the tests.** `bun run test:run tests/unit/artwork.test.ts tests/unit/artwork-soundcloud.test.ts tests/unit/services/finalize-mp3.test.ts` → PASS.
+- [x] **Step 5: Commit** `feat(soundcloud): prefer the upload's own cover art`.
 
 ### Task 16: Per-source download preparation and the download route
 
@@ -3290,7 +3290,7 @@ In `src/lib/download-pipeline/finalize-mp3.ts`:
 - Modify: `tests/unit/api/download-stream.test.ts:116` and `:135` (D7 only)
 - Test: `tests/unit/api/download-stream-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -3415,9 +3415,9 @@ describe("GET /api/download-stream — SoundCloud", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.** The route returns 400 `Invalid YouTube URL` for SoundCloud links.
+- [x] **Step 2: Run it to see it fail.** The route returns 400 `Invalid YouTube URL` for SoundCloud links.
 
-- [ ] **Step 3: Create `src/lib/download-pipeline/prepare-download.ts`.** The YouTube half is today's route code (lines 124–203 on `origin/main` at `d07e423`) moved behind a function. It differs from that code in only three ways:
+- [x] **Step 3: Create `src/lib/download-pipeline/prepare-download.ts`.** The YouTube half is today's route code (lines 124–203 on `origin/main` at `d07e423`) moved behind a function. It differs from that code in only three ways:
   - `if (videoId)` is gone, because it was always true.
   - The oEmbed uploader is returned as `uploader` instead of being only logged.
   - D9 applies.
@@ -3650,7 +3650,7 @@ export function prepareDownload(
 }
 ```
 
-- [ ] **Step 4: Rewrite the route to use it.** Edits to `src/routes/api/download-stream/+server.ts`. Line numbers are for `origin/main` at `d07e423`, plus the few lines Phase 1's Task 6 added.
+- [x] **Step 4: Rewrite the route to use it.** Edits to `src/routes/api/download-stream/+server.ts`. Line numbers are for `origin/main` at `d07e423`, plus the few lines Phase 1's Task 6 added.
 
 1. **Imports.**
    - Remove: `env`, `tryYtDlpDownload`, `getVideoDetails`, the whole `$lib/video-metadata` import, `buildWatchUrl` / `extractVideoId`, the whole `$lib/youtube-metadata` import, and `ensureBgutilPlugin`.
@@ -3733,8 +3733,8 @@ export function prepareDownload(
 
 8. **D7 test updates.** In `tests/unit/api/download-stream.test.ts`, change the two `expect(text).toBe("Invalid YouTube URL")` lines (116, 135) to `expect(text).toBe("Paste a YouTube video or SoundCloud track link")`.
 
-- [ ] **Step 5: Run the route tests.** `bun run test:run tests/unit/api` → PASS, the new file included. `download-stream.test.ts`, `download-stream-reporting.test.ts` and PR #134's `download-stream-title-fallback.test.ts` must all pass with no other edits. Their `$lib/video-utils` mocks still drive the route, because `media-link.ts` imports `extractVideoId` and `buildWatchUrl` from that module.
-- [ ] **Step 6: Commit** `feat(soundcloud): download SoundCloud tracks; move per-source prep out of the route`.
+- [x] **Step 5: Run the route tests.** `bun run test:run tests/unit/api` → PASS, the new file included. `download-stream.test.ts`, `download-stream-reporting.test.ts` and PR #134's `download-stream-title-fallback.test.ts` must all pass with no other edits. Their `$lib/video-utils` mocks still drive the route, because `media-link.ts` imports `extractVideoId` and `buildWatchUrl` from that module.
+- [x] **Step 6: Commit** `feat(soundcloud): download SoundCloud tracks; move per-source prep out of the route`.
 
 ### Task 17: The preview and details routes
 
@@ -3743,7 +3743,7 @@ export function prepareDownload(
 - Modify: `tests/unit/api/preview.test.ts` (one mock-factory line; one D7 assertion at line 100)
 - Test: `tests/unit/api/preview-soundcloud.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -3872,9 +3872,9 @@ describe("POST /api/preview/details — SoundCloud", () => {
 });
 ```
 
-- [ ] **Step 2: Run it to see it fail.**
+- [x] **Step 2: Run it to see it fail.**
 
-- [ ] **Step 3: Implement the preview route.** In `src/routes/api/preview/+server.ts`:
+- [x] **Step 3: Implement the preview route.** In `src/routes/api/preview/+server.ts`:
 
 1. **Imports.** Replace `import { extractVideoId } from "$lib/video-utils";` with:
 
@@ -3978,12 +3978,12 @@ Everything after that line stays as it is.
 			// read, which fetchSoundCloudTrack already reported.
 ```
 
-- [ ] **Step 4: Fixture and D7 updates in `tests/unit/api/preview.test.ts`.**
+- [x] **Step 4: Fixture and D7 updates in `tests/unit/api/preview.test.ts`.**
   - Add `buildWatchUrl: vi.fn((id: string) => \`https://www.youtube.com/watch?v=${id}\`),` to the `vi.mock("$lib/video-utils", …)` factory. `parseMediaLink` now calls it.
   - Change the `expect(data.error).toBe("Invalid YouTube URL");` line to `expect(data.error).toBe("Paste a YouTube video or SoundCloud track link");`. It's line 100 at `d07e423`, and line 101 once the factory line above is added, so find it by its text.
 
-- [ ] **Step 5: Run the tests.** `bun run test:run tests/unit/api` → PASS.
-- [ ] **Step 6: Commit** `feat(soundcloud): preview and details for SoundCloud tracks`.
+- [x] **Step 5: Run the tests.** `bun run test:run tests/unit/api` → PASS.
+- [x] **Step 6: Commit** `feat(soundcloud): preview and details for SoundCloud tracks`.
 
 ### Task 18: Client validation, copy and e2e
 
@@ -3994,7 +3994,7 @@ Use @svelte-code-writer for the `.svelte` edits.
 - Modify: `src/routes/+layout.svelte` (lines 27, 31, 36, 38), `src/app.html:29`
 - Test: append to `tests/e2e/app.spec.ts`
 
-- [ ] **Step 1: Write the failing e2e tests.** Add these inside `test.describe("dub-rip App", …)`:
+- [x] **Step 1: Write the failing e2e tests.** Add these inside `test.describe("dub-rip App", …)`:
 
 ```ts
 	test("should accept a SoundCloud track link", async ({ page }) => {
@@ -4043,9 +4043,9 @@ Use @svelte-code-writer for the `.svelte` edits.
 	});
 ```
 
-- [ ] **Step 2: Run them to see them fail.** `bun run test:e2e` → the first new test fails (Download stays disabled).
+- [x] **Step 2: Run them to see them fail.** `bun run test:e2e` → the first new test fails (Download stays disabled).
 
-- [ ] **Step 3: Implement.** In `src/routes/+page.svelte`:
+- [x] **Step 3: Implement.** In `src/routes/+page.svelte`:
   - Delete the `isValidYouTubeUrl` function (lines 20–29).
   - Add `import { parseMediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";` with the other `$lib` imports, in alphabetical order.
   - Line 43 → `let isValidUrl = $derived(parseMediaLink(url) !== null);`
@@ -4055,14 +4055,14 @@ Use @svelte-code-writer for the `.svelte` edits.
 
 In `src/routes/+layout.svelte` and `src/app.html`, change "Download YouTube audio with rich metadata" to "Download YouTube and SoundCloud audio with rich metadata" everywhere it appears (the og and twitter description and image-alt tags, and the meta description).
 
-- [ ] **Step 4: Run everything.** `bun run test:run && bun run test:e2e && bun run check && bun run lint` → green. If the e2e dev server returns 403 for client files in this worktree, see memory `dub-rip-worktree-vite-fs`: set `server.fs.strict: false` locally, and don't commit that change.
-- [ ] **Step 5: Commit** `feat(ui): accept SoundCloud links`.
+- [x] **Step 4: Run everything.** `bun run test:run && bun run test:e2e && bun run check && bun run lint` → green. If the e2e dev server returns 403 for client files in this worktree, see memory `dub-rip-worktree-vite-fs`: set `server.fs.strict: false` locally, and don't commit that change.
+- [x] **Step 5: Commit** `feat(ui): accept SoundCloud links`.
 
 ### Task 19: Documentation
 
 **Files:** `.claude/CLAUDE.md`, `README.md`, `docs/error-reporting.md`
 
-- [ ] **Step 1: Update `.claude/CLAUDE.md`.**
+- [x] **Step 1: Update `.claude/CLAUDE.md`.**
   - In the Project Overview, change "YouTube audio downloader" to "YouTube and SoundCloud audio downloader".
   - In "Before Committing", change "Test: valid URL → preview → download works" to "Test: a YouTube URL *and* a SoundCloud URL → preview → download works".
   - In the yt-dlp bullet "Every yt-dlp call is a YouTube request…", append: "SoundCloud downloads are the exception — not YouTube requests — but they take a slot in the same concurrency limiter."
@@ -4088,13 +4088,13 @@ In `src/routes/+layout.svelte` and `src/app.html`, change "Download YouTube audi
 - **The canary stays YouTube-only.** A SoundCloud canary would add scheduled wake-ups (Railway Cost Practices) for a source with no failure history here. Revisit if SoundCloud failures show up in Sentry.
 ```
 
-- [ ] **Step 2: Update `README.md`.** In the intro (line 3) and features (line 7), say YouTube and SoundCloud. In "How It Works" (line 105), change "User enters a YouTube URL" to "User enters a YouTube or SoundCloud URL". Replace the metadata sub-list under Features (lines 9–13) with the ID3 fields. List the ID3 fields: title, artist, album, year, genre, label, ISRC, remixer, catalog number, source URL, cover art.
-- [ ] **Step 3: Update `docs/error-reporting.md`.** In the "Expected failures are not issues" section (line 148), change `ERROR_RULES` to `YOUTUBE_RULES`, because Task 11 renamed it. Add a short SoundCloud subsection next to the YouTube categories:
+- [x] **Step 2: Update `README.md`.** In the intro (line 3) and features (line 7), say YouTube and SoundCloud. In "How It Works" (line 105), change "User enters a YouTube URL" to "User enters a YouTube or SoundCloud URL". Replace the metadata sub-list under Features (lines 9–13) with the ID3 fields. List the ID3 fields: title, artist, album, year, genre, label, ISRC, remixer, catalog number, source URL, cover art.
+- [x] **Step 3: Update `docs/error-reporting.md`.** In the "Expected failures are not issues" section (line 148), change `ERROR_RULES` to `YOUTUBE_RULES`, because Task 11 renamed it. Add a short SoundCloud subsection next to the YouTube categories:
   - **User:** 404/private, geo-blocked, and Go+ previews (refused before yt-dlp runs).
   - **Transient:** 403, 429, timeouts, network errors.
   - **Unknown:** everything else, including `Requested format is not available`.
   - **Warnings:** page-markup or oEmbed failures from `fetchSoundCloudTrack`, reported once per lookup.
-- [ ] **Step 4: Commit.** Git tracks the project instructions as `.claude/claude.md` (lowercase). On this Mac's case-insensitive filesystem, `git add .claude/CLAUDE.md` exits 0 but stages nothing, so use the tracked spelling:
+- [x] **Step 4: Commit.** Git tracks the project instructions as `.claude/claude.md` (lowercase). On this Mac's case-insensitive filesystem, `git add .claude/CLAUDE.md` exits 0 but stages nothing, so use the tracked spelling:
 
 ```bash
 git add .claude/claude.md README.md docs/error-reporting.md docs/superpowers/plans/2026-09-20-soundcloud-support.md
@@ -4106,9 +4106,9 @@ Expected: `--stat` lists `.claude/claude.md`, `README.md` and `docs/error-report
 
 ### Task 20: Verification and PR
 
-- [ ] **Step 1: Audit test edits.** The expect audit (Guardrail rule 2) must show only the three D7 statements.
-- [ ] **Step 2: Run the pre-commit agents** (`code-simplifier:code-simplifier`, then `security-auditor`). Point the security audit at `resolve-media-link.ts` (redirect handling), `soundcloud-url.ts` (host and path validation) and the artwork fetches (the `sndcdn.com` host check). Commit any fixes, then re-run `bun run test:run`.
-- [ ] **Step 3: Check against real tracks locally.** Start the dev server with `preview_start`. Then:
+- [x] **Step 1: Audit test edits.** The expect audit (Guardrail rule 2) must show only the three D7 statements.
+- [x] **Step 2: Run the pre-commit agents** (`code-simplifier:code-simplifier`, then `security-auditor`). Point the security audit at `resolve-media-link.ts` (redirect handling), `soundcloud-url.ts` (host and path validation) and the artwork fetches (the `sndcdn.com` host check). Commit any fixes, then re-run `bun run test:run`.
+- [x] **Step 3: Check against real tracks locally.** Start the dev server with `preview_start`. Then:
   - Preview, then download, `https://soundcloud.com/billieeilish/bad-guy`, and inspect the file:
 
 ```bash
@@ -4121,7 +4121,7 @@ node -e 'const t=require("node-id3").read(process.argv[1]); delete t.image; dele
   - Paste a `/sets/` link and a profile link. Expected: Download stays disabled.
   - Paste `https://soundcloud.com/billieeilish/does-not-exist-xyz`. Expected: "Track is unavailable or private".
   - YouTube regression: download `https://www.youtube.com/watch?v=jNQXAC9IVRw`. Expected (Phase 1's output, which is `main` by now): title "Me at the zoo", artist "jawed", album "Me at the zoo", and `audioSourceUrl: "https://www.youtube.com/watch?v=jNQXAC9IVRw"`. Year and genre appear if yt-dlp's details succeed. There should be no publisher, ISRC or remixer.
-- [ ] **Step 4: Open the PR, then test in its PR environment.** Railway creates `dub-rip-pr-<N>`. Download a SoundCloud track there. SoundCloud's behavior toward Railway's datacenter IPs is untested.
+- [x] **Step 4: Open the PR, then test in its PR environment.** Railway creates `dub-rip-pr-<N>`. Download a SoundCloud track there. SoundCloud's behavior toward Railway's datacenter IPs is untested.
   - If the logs show `SoundCloud track page returned 403` (or 429), **stop and report.** The page is blocked from Railway, and the metadata design needs revisiting. The fallback candidate is SoundCloud's api-v2 `resolve` with a scraped `client_id`, which is what yt-dlp does.
   - If yt-dlp itself gets 403s, record it the same way.
 - [ ] **Step 5: After merging, confirm on dub.rip.** Production leaves through different egress IPs than PR environments, so a pass in the PR environment is not a pass in production (memory `dub-rip-pr-env-not-prod-ip`). Download one SoundCloud track and one YouTube video on production.

@@ -145,7 +145,7 @@ those buried the real failures and burned quota. `unknown` is the important
 one — it's how new yt-dlp and YouTube breakages announce themselves, so it
 always gets full error level.
 
-Rule order in `ERROR_RULES` is part of the classification. yt-dlp appends the
+Rule order in `YOUTUBE_RULES` is part of the classification. yt-dlp appends the
 same `--cookies` remediation hint to every "sign in" reason — bot-checks, age
 gates and private videos alike — so the hint alone can't say which one it is.
 The exact bot-check sentence wins outright; the bare `cookies` match is only a
@@ -157,6 +157,18 @@ Process warnings follow the same logic: Node emits `warning` for routine
 deprecations on nearly every boot, so only defect-indicating ones
 (`MaxListenersExceededWarning`) become issues. The rest ride along as
 breadcrumbs.
+
+### SoundCloud categories
+
+`classifyYtDlpError(message, "soundcloud")` uses `SOUNDCLOUD_RULES` instead of
+`YOUTUBE_RULES`:
+
+- **User:** 404/private, geo-blocked, DRM-protected (SoundCloud serves no
+  downloadable format; this one fails inside yt-dlp), and Go+ previews (refused
+  before yt-dlp runs).
+- **Transient:** 403, 429, timeouts, network errors.
+- **Unknown:** everything else, including `Requested format is not available`.
+- **Warnings:** page-markup or oEmbed failures from `fetchSoundCloudTrack`, reported once per lookup.
 
 ## What is covered
 
@@ -207,13 +219,16 @@ breadcrumbs.
   sidecar sleeps, so a cold or slow `/ping` is the normal case and the download
   path wakes it regardless — reporting would file an event on most previews for
   something that costs nothing when it fails.
-- **The canary's bgutil-pot wake** (`waitForBgutilPot`) swallows every failed
-  `/ping` attempt, for the same reason as the prewarm: a cold sidecar is normal
-  and the download that follows wakes it regardless. The outcome is not lost —
-  when the sidecar never answers within the cap, `runCanaryDownload` writes a
-  `Sentry.logger.warn` entry (`service: "canary"`, `awake`, `attempts`,
-  `waitedMs`), which never opens an Issue, so a later canary failure can be read
-  alongside whether the sidecar was reachable.
+- **The bgutil-pot wake** (`waitForBgutilPot`, used by the canary and by
+  `/api/download-stream`) swallows every failed `/ping` attempt, for the same
+  reason as the prewarm: a cold sidecar is normal and the download that follows
+  wakes it regardless. The outcome is not lost. When the sidecar never answers
+  within the cap, `runCanaryDownload` writes a `Sentry.logger.warn` entry
+  (`service: "canary"`, `awake: false`, `attempts`, `waitedMs`) and the download
+  route leaves a `warning` breadcrumb (`videoId`, `attempts`, `waitedMs`).
+  Neither opens an Issue, and the breadcrumb rides along on any failure that
+  request goes on to report, so that failure can be read alongside whether the
+  sidecar was reachable.
 - **Temp-file `unlink` failures** in the download token registry. The usual
   cause is the file already being gone, which is exactly what was wanted, and
   the container's `/tmp` is discarded on restart either way.

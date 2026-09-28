@@ -9,6 +9,7 @@ vi.mock("$env/dynamic/private", () => ({ env: mockEnv }));
 
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(),
+	buildWatchUrl: vi.fn((id: string) => `https://www.youtube.com/watch?v=${id}`),
 }));
 
 vi.mock("$lib/youtube-metadata", () => ({
@@ -97,7 +98,7 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(response.status).toBe(400);
-			expect(data.error).toBe("Invalid YouTube URL");
+			expect(data.error).toBe("Paste a YouTube video or SoundCloud track link");
 		});
 	});
 

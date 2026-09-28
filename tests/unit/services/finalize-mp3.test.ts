@@ -9,8 +9,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * exactly when the signal aborts relative to them, rather than racing real
  * iTunes/Deezer calls or an ffmpeg crop.
  */
-const { resolveAlbumArtImageMock, registerDownloadMock } = vi.hoisted(() => ({
+const {
+	resolveAlbumArtImageMock,
+	resolveSoundCloudAlbumArtMock,
+	registerDownloadMock,
+} = vi.hoisted(() => ({
 	resolveAlbumArtImageMock: vi.fn(() => Promise.resolve(null)),
+	resolveSoundCloudAlbumArtMock: vi.fn(() => Promise.resolve(null)),
 	registerDownloadMock: vi.fn(() => "fake-token"),
 }));
 
@@ -20,6 +25,7 @@ vi.mock("node-id3", () => ({
 
 vi.mock("$lib/artwork", () => ({
 	resolveAlbumArtImage: resolveAlbumArtImageMock,
+	resolveSoundCloudAlbumArt: resolveSoundCloudAlbumArtMock,
 }));
 
 vi.mock("$lib/video-metadata", () => ({
@@ -319,5 +325,29 @@ describe("finalizeMp3() tag inputs", () => {
 				sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 			}),
 		);
+	});
+});
+
+describe("finalizeMp3() SoundCloud cover art", () => {
+	it("uses the SoundCloud artwork order when SoundCloud artwork is given", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		resolveAlbumArtImageMock.mockClear();
+
+		// #when
+		await finalizeMp3({
+			...finalizeInputFor(filePath),
+			soundCloudArtwork: {
+				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+			},
+		});
+
+		// #then
+		expect(resolveSoundCloudAlbumArtMock).toHaveBeenCalledWith({
+			artist: "Test Artist",
+			title: "Test Track",
+			artwork: { artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg" },
+		});
+		expect(resolveAlbumArtImageMock).not.toHaveBeenCalled();
 	});
 });

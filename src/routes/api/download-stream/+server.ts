@@ -3,28 +3,20 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
-import { env } from "$env/dynamic/private";
 import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
 import { pathExists } from "$lib/download-pipeline/path-exists";
+import {
+	prepareDownload,
+	sendTitleInfo,
+} from "$lib/download-pipeline/prepare-download";
 import { METADATA_PROCESSING_PERCENT } from "$lib/download-pipeline/progress-stages";
 import { titleFromVideoDetails } from "$lib/download-pipeline/title-from-video-details";
-import { tryYtDlpDownload } from "$lib/download-pipeline/try-yt-dlp";
 import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
+import { type MediaLinkKind, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import { resolveMediaLink } from "$lib/resolve-media-link";
 import { retryWithBackoff } from "$lib/retry";
 import { YT_DLP_METHOD } from "$lib/types";
-import { getVideoDetails } from "$lib/video-details-cache";
-import {
-	fetchThumbnailBuffer,
-	type ThumbnailImage,
-	type VideoDetails,
-} from "$lib/video-metadata";
-import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
-import {
-	fetchYouTubeMetadata,
-	YouTubeMetadataError,
-} from "$lib/youtube-metadata";
-import { ensureBgutilPlugin } from "$lib/yt-dlp-binary";
 import { YtDlpQueueFullError } from "$lib/yt-dlp-concurrency";
 import {
 	type ClassifiedYtDlpError,
@@ -50,6 +42,7 @@ function reportDownloadFailure(
 	error: Error,
 	classified: ClassifiedYtDlpError,
 	videoId: string,
+	source: MediaLinkKind,
 ): void {
 	if (classified.category === "user") {
 		Sentry.addBreadcrumb({
@@ -67,6 +60,7 @@ function reportDownloadFailure(
 			service: "download-stream",
 			operation: "download",
 			category: classified.category,
+			source,
 		},
 		extra: { videoId },
 	});
@@ -79,12 +73,12 @@ export const GET: RequestHandler = async ({ url }) => {
 		return new Response("URL parameter required", { status: 400 });
 	}
 
-	const videoId = extractVideoId(videoUrl);
-	if (!videoId) {
-		return new Response("Invalid YouTube URL", { status: 400 });
+	const link = await resolveMediaLink(videoUrl);
+	if (!link) {
+		return new Response(UNSUPPORTED_LINK_MESSAGE, { status: 400 });
 	}
 
-	const normalizedUrl = buildWatchUrl(videoId);
+	const videoId = link.id;
 	const abortController = new AbortController();
 
 	const stream = new ReadableStream({
@@ -121,106 +115,35 @@ export const GET: RequestHandler = async ({ url }) => {
 			const outputPath = join(tempDir, randomId);
 
 			try {
-				send({ type: "status", message: "Getting video info..." });
-
-				const titleState = {
-					videoTitle: "",
-					artist: "",
-					trackTitle: "",
-				};
-				let uploader = "";
-				const sendTitleInfo = () => {
-					send({
-						type: "info",
-						title: titleState.videoTitle,
-						artist: titleState.artist,
-						track: titleState.trackTitle,
-					});
-				};
-
-				const detailsPromise: Promise<VideoDetails | null> = getVideoDetails(
-					videoId,
-					normalizedUrl,
-				).catch(() => null);
-				const thumbnailPromise: Promise<ThumbnailImage | null> = videoId
-					? fetchThumbnailBuffer(videoId).catch(() => null)
-					: Promise.resolve(null);
-
-				if (videoId) {
-					try {
-						const metadata = await fetchYouTubeMetadata(videoId);
-						titleState.videoTitle = metadata.videoTitle;
-						titleState.artist = metadata.artist;
-						titleState.trackTitle = metadata.trackTitle;
-						uploader = metadata.uploader;
-
-						console.log("Got metadata from oEmbed:", {
-							videoTitle: titleState.videoTitle,
-							artist: titleState.artist,
-							trackTitle: titleState.trackTitle,
-							uploader: metadata.uploader,
-						});
-
-						sendTitleInfo();
-					} catch (err) {
-						if (err instanceof YouTubeMetadataError) {
-							console.log("oEmbed metadata failed:", err.message);
-							if (err.isUnavailable) {
-								send({
-									type: "error",
-									message: "Video not found or unavailable",
-								});
-								closeStream();
-								return;
-							}
-						} else {
-							console.error("Metadata fetch error:", err);
-						}
-					}
-				}
-
-				send({ type: "status", message: "Starting download..." });
-
-				if (!env.BGUTIL_POT_URL) {
-					send({
-						type: "error",
-						message:
-							"Server is misconfigured: BGUTIL_POT_URL is not set. Downloads cannot run without the bgutil-pot sidecar.",
-					});
-					Sentry.captureMessage("BGUTIL_POT_URL is unset", {
-						level: "error",
-						tags: {
-							service: "download-stream",
-							operation: "bgutil-pot-config",
-						},
-					});
+				const prepared = await prepareDownload(
+					link,
+					send,
+					abortController.signal,
+				);
+				if (!prepared) {
 					closeStream();
 					return;
 				}
+				const { titleState } = prepared;
 
 				const debugMode = url.searchParams.get("debug") === "1";
 				const ytDlp = await getYTDlp();
 				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
-				const pluginDir = await ensureBgutilPlugin();
-				const bgutilPotUrl = env.BGUTIL_POT_URL;
 
 				await retryWithBackoff(
 					() =>
-						tryYtDlpDownload({
-							videoUrl: normalizedUrl,
+						prepared.runAttempt({
 							outputPath,
-							bgutilPotUrl,
 							ffmpegPath: ffmpegInstaller.path,
-							pluginDir,
 							debugMode,
 							ytDlp,
-							send,
 							signal: abortController.signal,
 						}),
 					{
 						isRetryable: (error) =>
 							isRetryableYtDlpError(
 								error instanceof Error ? error.message : String(error),
+								link.kind,
 							),
 						onRetry: () => {
 							send({ type: "status", message: "Retrying download..." });
@@ -253,9 +176,9 @@ export const GET: RequestHandler = async ({ url }) => {
 				if (!titleState.videoTitle) {
 					Object.assign(
 						titleState,
-						titleFromVideoDetails(await detailsPromise),
+						titleFromVideoDetails(await prepared.detailsPromise),
 					);
-					if (titleState.videoTitle) sendTitleInfo();
+					if (titleState.videoTitle) sendTitleInfo(send, titleState);
 				}
 
 				console.log("Video title:", titleState.videoTitle);
@@ -280,12 +203,13 @@ export const GET: RequestHandler = async ({ url }) => {
 					trackTitle: titleState.trackTitle,
 					downloadMethod: YT_DLP_METHOD,
 					videoId,
-					detailsPromise,
-					thumbnailPromise,
+					detailsPromise: prepared.detailsPromise,
+					thumbnailPromise: prepared.thumbnailPromise,
 					send,
 					signal: abortController.signal,
-					uploader,
-					sourceUrl: normalizedUrl,
+					uploader: prepared.uploader,
+					sourceUrl: link.canonicalUrl,
+					soundCloudArtwork: prepared.soundCloudArtwork,
 				});
 
 				// The file is deliberately left on disk: the browser fetches it from
@@ -337,8 +261,13 @@ export const GET: RequestHandler = async ({ url }) => {
 							: new Error(`Unknown download error: ${String(error)}`);
 					const rawMessage =
 						error instanceof Error ? error.message : "Unknown error";
-					const classified = classifyYtDlpError(rawMessage);
-					reportDownloadFailure(normalizedError, classified, videoId);
+					const classified = classifyYtDlpError(rawMessage, link.kind);
+					reportDownloadFailure(
+						normalizedError,
+						classified,
+						videoId,
+						link.kind,
+					);
 					try {
 						send({ type: "error", message: classified.message });
 					} catch (sendErr) {

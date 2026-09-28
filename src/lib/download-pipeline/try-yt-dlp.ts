@@ -39,17 +39,23 @@ export interface TryYtDlpInput {
 	signal?: AbortSignal;
 }
 
-export async function tryYtDlpDownload({
+export interface YouTubeDownloadArgsInput {
+	videoUrl: string;
+	outputPath: string;
+	bgutilPotUrl: string;
+	ffmpegPath: string;
+	pluginDir: string;
+	debugMode: boolean;
+}
+
+export function buildYouTubeDownloadArgs({
 	videoUrl,
 	outputPath,
 	bgutilPotUrl,
 	ffmpegPath,
 	pluginDir,
 	debugMode,
-	ytDlp,
-	send,
-	signal,
-}: TryYtDlpInput): Promise<void> {
+}: YouTubeDownloadArgsInput): string[] {
 	const args = [
 		videoUrl,
 		"-x",
@@ -106,6 +112,22 @@ export async function tryYtDlpDownload({
 		args.push("-v", "--list-formats");
 	}
 
+	return args;
+}
+
+export interface RunYtDlpDownloadInput {
+	args: string[];
+	ytDlp: YtDlpInstance;
+	send: (data: Record<string, unknown>) => void;
+	signal?: AbortSignal;
+}
+
+export async function runYtDlpDownload({
+	args,
+	ytDlp,
+	send,
+	signal,
+}: RunYtDlpDownloadInput): Promise<void> {
 	await withYtDlpConcurrencyLimit(async () => {
 		if (signal?.aborted) {
 			// The caller may have aborted while this call was queued behind
@@ -195,5 +217,19 @@ export async function tryYtDlpDownload({
 			// a stale listener registered here would accumulate one per attempt.
 			signal?.removeEventListener("abort", killOnAbort);
 		}
+	});
+}
+
+export async function tryYtDlpDownload({
+	ytDlp,
+	send,
+	signal,
+	...argsInput
+}: TryYtDlpInput): Promise<void> {
+	await runYtDlpDownload({
+		args: buildYouTubeDownloadArgs(argsInput),
+		ytDlp,
+		send,
+		signal,
 	});
 }

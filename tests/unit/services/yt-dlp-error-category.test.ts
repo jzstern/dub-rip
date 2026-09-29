@@ -19,6 +19,21 @@ describe("classifyYtDlpError() reporting category", () => {
 		expect(result.category).toBe("user");
 	});
 
+	it("categorizes yt-dlp's 'This video is unavailable' wording as a user failure", () => {
+		// #given
+		const message = "ERROR: [youtube] xxxxxxxxxxx: This video is unavailable";
+
+		// #when
+		const result = classifyYtDlpError(message);
+
+		// #then
+		expect(result).toEqual({
+			category: "user",
+			retryable: false,
+			message: "This video is unavailable or private.",
+		});
+	});
+
 	it("categorizes a private video as a user failure", () => {
 		// #given
 		const message = "ERROR: This video is private";

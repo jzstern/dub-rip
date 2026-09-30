@@ -833,7 +833,7 @@ describe("judgeCandidates() picks between accepted candidates", () => {
 		);
 	});
 
-	it("prefers Deezer, which carries the ISRC and keeps feat. credits in the title", () => {
+	it("prefers Deezer, which carries the ISRC", () => {
 		// #when
 		const verdict = judgeCandidates(
 			{ artist: "Daft Punk", title: "Get Lucky", durationSeconds: 367 },
@@ -854,13 +854,9 @@ describe("judgeCandidates() picks between accepted candidates", () => {
 		);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: {
-				artist: "Daft Punk",
-				title: "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
-			},
-		});
+		expect(verdict.status === "matched" && verdict.candidate.source).toBe(
+			"deezer",
+		);
 	});
 
 	it("drops a store's country disambiguator from the artist name", () => {
@@ -976,7 +972,7 @@ describe("judgeCandidates() keeps the featured artists the upload names", () => 
 	};
 	const query = { artist: "Disclosure", title: "Latch ft. Sam Smith" };
 
-	it("adds back a feature the catalog files outside the title", () => {
+	it("leaves the title as today when the catalog files the feature outside it", () => {
 		// #when
 		const verdict = judgeCandidates(query, [
 			candidate(LATCH),
@@ -984,10 +980,9 @@ describe("judgeCandidates() keeps the featured artists the upload names", () => 
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { title: "Latch (feat. Sam Smith)" },
-		});
+		expect(verdict.status === "matched" && verdict.metadata.title).toBe(
+			undefined,
+		);
 	});
 
 	it("does not double a feature the catalog's title already carries", () => {
@@ -1391,8 +1386,11 @@ describe("judgeCandidates() accepts an official remix on the remixer's own relea
 	});
 });
 
-describe("judgeCandidates() never garbles a title while keeping a feature", () => {
-	function titleFor(uploadTitle: string, catalogTitle: string): string | false {
+describe("judgeCandidates() writes the catalog's title only when it credits the upload's guests", () => {
+	function titleFor(
+		uploadTitle: string,
+		catalogTitle: string,
+	): string | undefined | false {
 		const row = { artist: "Artist", title: catalogTitle, durationSeconds: 200 };
 		const verdict = judgeCandidates(
 			{ artist: "Artist", title: uploadTitle, durationSeconds: 200 },
@@ -1408,29 +1406,26 @@ describe("judgeCandidates() never garbles a title while keeping a feature", () =
 			"Work from Home (feat. Ty Dolla $ign)",
 		],
 		[
+			"One Dance ft. Wizkid & Kyla",
+			"One Dance (feat. Wizkid & Kyla)",
+			"One Dance (feat. Wizkid & Kyla)",
+		],
+		["Umbrella ft. JAY-Z", "Umbrella (feat. JAY Z)", "Umbrella (feat. JAY Z)"],
+		["Umbrella ft. JAY-Z", "Umbrella", undefined],
+		["Sucker for Pain ft. X Ambassadors", "Sucker for Pain", undefined],
+		[
 			"Get Lucky ft. Pharrell",
 			"Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
-			"Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+			undefined,
 		],
-		["Latch ft. Sam Smith HD", "Latch", "Latch"],
-		["Uptown Funk ft. Bruno Mars - YouTube", "Uptown Funk", "Uptown Funk"],
+		["Latch ft. Sam Smith HD", "Latch", undefined],
 		[
 			"After The Storm ft. Tyler, The Creator, Bootsy Collins",
 			"After The Storm",
-			"After The Storm (feat. Tyler, The Creator & Bootsy Collins)",
+			undefined,
 		],
-		["Latch ft. Sam Smith", "Latch", "Latch (feat. Sam Smith)"],
-		[
-			"One Dance ft. Wizkid & Kyla",
-			"One Dance",
-			"One Dance (feat. Wizkid & Kyla)",
-		],
-		[
-			"EARFQUAKE ft. Tyler, The Creator",
-			"EARFQUAKE",
-			"EARFQUAKE (feat. Tyler, The Creator)",
-		],
-	])("%s against the catalog's %s", (uploadTitle, catalogTitle, written) => {
+		["Alors On Danse", "Alors On Danse (feat. Erik Hassle)", undefined],
+	])("%s against the catalog's %s writes %s", (uploadTitle, catalogTitle, written) => {
 		// #when
 		const title = titleFor(uploadTitle, catalogTitle);
 
@@ -1438,7 +1433,7 @@ describe("judgeCandidates() never garbles a title while keeping a feature", () =
 		expect(title).toBe(written);
 	});
 
-	it("keeps the upload's guest once when the catalog shortens it to a lead", () => {
+	it("leaves the title as today when the catalog shortens its guest to a lead", () => {
 		// #given — the catalog credits "Pharrell" as a lead; the upload spells it out as a guest
 		const row = {
 			artist: "Artist & Pharrell",
@@ -1462,7 +1457,7 @@ describe("judgeCandidates() never garbles a title while keeping a feature", () =
 				verdict.metadata.artist,
 				verdict.metadata.title,
 			],
-		).toEqual(["Artist", "Song (feat. Pharrell Williams)"]);
+		).toEqual(["Artist", undefined]);
 	});
 });
 
@@ -1905,7 +1900,7 @@ describe("judgeCandidates() credits exactly who the upload credits", () => {
 		expect(verdict.status).toBe("unmatched");
 	});
 
-	it("puts the guest back in the title when the upload's artist is kept", () => {
+	it("leaves the title as today when the upload's artist is kept", () => {
 		// #given — the catalog credits Pharrell only in the artist field it won't write
 		const itunes = candidate({
 			source: "itunes",
@@ -1927,7 +1922,7 @@ describe("judgeCandidates() credits exactly who the upload credits", () => {
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.title).toBe(
-			"Get Lucky (feat. Pharrell)",
+			undefined,
 		);
 	});
 
@@ -2131,5 +2126,167 @@ describe("judgeCandidates() credits exactly who the upload credits", () => {
 
 		// #then
 		expect(verdict.status).toBe("matched");
+	});
+});
+
+describe("judgeCandidates() dates and fills a release only from its own copies", () => {
+	const ISRC = "GBBKS1500214";
+	const RELEASE = candidate({
+		artist: "Adele",
+		title: "Hello",
+		album: "25",
+		durationSeconds: 295,
+		isrc: ISRC,
+		releaseDate: "2015-11-20",
+	});
+	const COPY = candidate({
+		source: "itunes",
+		artist: "Adele",
+		title: "Hello",
+		album: "25",
+		durationSeconds: 295,
+		releaseDate: "2016-03-04",
+		genre: "Pop",
+		artworkUrl: "https://is1-ssl.mzstatic.com/25/600x600bb.jpg",
+	});
+	const query = { artist: "Adele", title: "Hello", isrc: ISRC };
+
+	it("writes no release from an ISRC row whose runtime contradicts the upload", () => {
+		// #given — the uploader's ISRC names a cut 40 s shorter than the upload
+		const shorter = { ...RELEASE, durationSeconds: 255 };
+
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 295 }, [
+			shorter,
+			COPY,
+		]);
+
+		// #then — the song still matches, through the iTunes runtime
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.title,
+				verdict.metadata.album,
+			],
+		).toEqual(["Hello", undefined]);
+	});
+
+	it("dates the release by the earlier copy when the ISRC's own row is the earlier", () => {
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 295 }, [
+			RELEASE,
+			COPY,
+		]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(2015);
+	});
+
+	it("takes nothing from a same-named album by another act", () => {
+		// #given — a tribute band's "Hello", on its own album also called "25"
+		const tribute = {
+			...COPY,
+			artist: "Adele Tribute Band",
+			genre: "Karaoke",
+			releaseDate: "2014-01-01",
+		};
+
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 295 }, [
+			{ ...RELEASE, genre: "Pop" },
+			tribute,
+		]);
+
+		// #then
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.genre,
+				verdict.metadata.year,
+			],
+		).toEqual(["Pop", undefined]);
+	});
+
+	it("takes nothing from a copy on the same album at another runtime", () => {
+		// #given — iTunes's "Hello" on "25" runs a minute longer: another cut
+		const longer = { ...COPY, durationSeconds: 355 };
+
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 295 }, [
+			RELEASE,
+			longer,
+		]);
+
+		// #then
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.year,
+				verdict.metadata.genre,
+				verdict.metadata.artworkUrl,
+			],
+		).toEqual([undefined, undefined, undefined]);
+	});
+
+	it("takes the release the catalog ranks first when neither is twinned", () => {
+		// #given — one ISRC on the single and on the album
+		const single = { ...RELEASE, album: "Hello", rank: 1 };
+		const album = { ...RELEASE, rank: 0 };
+
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 295 }, [
+			single,
+			album,
+		]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.album).toBe("25");
+	});
+});
+
+describe("judgeCandidates() reads a credit's position", () => {
+	it("accepts an upload lead the catalog credits only as a guest", () => {
+		// #given
+		const row = {
+			artist: "Calvin Harris",
+			title: "This Is What You Came For (feat. Rihanna)",
+			durationSeconds: 222,
+		};
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Calvin Harris & Rihanna",
+				title: "This Is What You Came For",
+				durationSeconds: 222,
+			},
+			[candidate(row)],
+		);
+
+		// #then
+		expect(verdict.status).toBe("matched");
+	});
+
+	it('takes a leading "The …" act for a performer, not a backing band', () => {
+		// #given — iTunes credits The Chainsmokers; Deezer's copy on the same album omits them
+		const itunes = candidate({
+			source: "itunes",
+			artist: "The Chainsmokers & Coldplay",
+			title: "Something Just Like This",
+			album: "Memories...Do Not Open",
+			durationSeconds: 247,
+		});
+		const deezer = candidate({
+			artist: "Coldplay",
+			title: "Something Just Like This",
+			album: "Memories...Do Not Open",
+			durationSeconds: 247,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Coldplay", title: "Something Just Like This" },
+			[itunes, deezer],
+		);
+
+		// #then — the catalogs dispute who performs it, so neither is trusted
+		expect(verdict.status).toBe("unmatched");
 	});
 });

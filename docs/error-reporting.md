@@ -221,10 +221,12 @@ breadcrumbs.
   the matcher refusing to guess, which is the safe outcome, and an unreachable
   iTunes or Deezer (`CatalogUnavailableError`) is logged as
   `[catalog] unmatched reason=catalogs-unreachable` and falls back to the
-  upload's own title. Either catalog failing counts as an outage, and so does a
-  failed Deezer album check (`[catalog] unmatched reason=album-check-failed`):
-  the rules that refuse a wrong release need both catalogs and every checked
-  album. Neither is cached, so the next request tries again.
+  upload's own title. Either catalog failing counts as an outage, since the
+  rules that refuse a wrong match need both; it is not cached, so the next
+  request tries again. A failed Deezer album check (logged as
+  `[catalog] deezer album lookup failed`) drops only the row it was checking, so the
+  track keeps its canonical artist and title and loses just the release fields
+  that row would have proven.
 - **Thumbnail 404s** are expected; `maxresdefault.jpg` legitimately doesn't
   exist for many videos, hence the fallback chain.
 - **The bgutil-pot prewarm ping** from `/api/preview` is fire-and-forget. The

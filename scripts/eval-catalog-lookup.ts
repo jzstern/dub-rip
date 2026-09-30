@@ -76,9 +76,14 @@ for (const testCase of cases) {
 		durationSeconds: testCase.durationSeconds,
 	});
 
+	/** A verdict without a title leaves the upload's own in place. */
+	const writtenTitle =
+		verdict.status === "matched"
+			? (verdict.metadata.title ?? testCase.title)
+			: undefined;
 	const got =
 		verdict.status === "matched"
-			? `${verdict.metadata.artist} — ${verdict.metadata.title}`
+			? `${verdict.metadata.artist} — ${writtenTitle}`
 			: `(none: ${verdict.reason})`;
 
 	if (verdict.status === "matched" && testCase.expect === "none") {
@@ -93,17 +98,14 @@ for (const testCase of cases) {
 	}
 	if (verdict.status === "matched") {
 		const titleMatches = sameTitle(
-			parseTrackTitle(verdict.metadata.title).base,
+			parseTrackTitle(writtenTitle ?? "").base,
 			testCase.expectTitle,
 		);
 		const artistMatches = sameArtist(
 			verdict.metadata.artist,
 			testCase.expectArtist,
 		);
-		const versionMatches = sameRecording(
-			testCase.title,
-			verdict.metadata.title,
-		);
+		const versionMatches = sameRecording(testCase.title, writtenTitle ?? "");
 		const albumMatches =
 			testCase.expectAlbum === undefined ||
 			sameTitle(verdict.metadata.album, testCase.expectAlbum);

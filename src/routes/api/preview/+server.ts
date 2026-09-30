@@ -1,12 +1,8 @@
 import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
+import { resolveArtworkUrl } from "$lib/artwork";
 import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
-import {
-	cardSizedArtwork,
-	catalogArtwork,
-	sharedCatalogLookup,
-} from "$lib/metadata/catalog/catalog-cache";
 import { resolveMediaLink } from "$lib/resolve-media-link";
 import {
 	soundCloudRefusal,
@@ -20,6 +16,7 @@ import {
 } from "$lib/youtube-metadata";
 import type { RequestHandler } from "./$types";
 
+const PREVIEW_ARTWORK_SIZE = 300;
 const PREVIEW_ARTWORK_TIMEOUT = 4000;
 const BGUTIL_PREWARM_TIMEOUT = 2000;
 
@@ -63,30 +60,12 @@ async function previewSoundCloud(link: MediaLink): Promise<Response> {
 		}
 
 		const { artist, trackTitle } = soundCloudTitleState(track);
-		/**
-		 * Searched only when the upload has no cover of its own. The upload's cover
-		 * always wins here, so on the normal path a lookup's only output would be
-		 * thrown away — latency the user pays for nothing. `/details` runs the
-		 * lookup that feeds the file's tags.
-		 *
-		 * After the refusal check, so a Go+ preview or a geo-blocked track costs no
-		 * catalog calls either.
-		 */
 		const artwork =
 			track.artworkUrl ??
-			cardSizedArtwork(
-				catalogArtwork(
-					await sharedCatalogLookup(
-						{
-							artist,
-							title: trackTitle,
-							isrc: track.isrc,
-							durationSeconds: track.durationSeconds,
-						},
-						{ timeout: PREVIEW_ARTWORK_TIMEOUT },
-					),
-				)?.url,
-			);
+			(await resolveArtworkUrl(artist, trackTitle, {
+				itunesSize: PREVIEW_ARTWORK_SIZE,
+				timeout: PREVIEW_ARTWORK_TIMEOUT,
+			}));
 
 		return json({
 			success: true,
@@ -128,15 +107,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		prewarmBgutilPot();
 
 		const metadata = await fetchYouTubeMetadata(videoId);
-		/**
-		 * The heuristic identity is what goes out and what gets queried: YouTube
-		 * has no duration yet, so a match here rests on text alone. `/details`
-		 * resolves the same identity server-side and re-judges the same cached
-		 * candidates with the runtime.
-		 */
-		const lookup = await sharedCatalogLookup(
-			{ artist: metadata.artist, title: metadata.trackTitle },
-			{ timeout: PREVIEW_ARTWORK_TIMEOUT },
+		const artwork = await resolveArtworkUrl(
+			metadata.artist,
+			metadata.trackTitle,
+			{ itunesSize: PREVIEW_ARTWORK_SIZE, timeout: PREVIEW_ARTWORK_TIMEOUT },
 		);
 
 		return json({
@@ -145,7 +119,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			artist: metadata.artist,
 			title: metadata.trackTitle,
 			thumbnail: metadata.thumbnailUrl,
-			artwork: cardSizedArtwork(catalogArtwork(lookup)?.url),
+			artwork: artwork ?? undefined,
 		});
 	} catch (error) {
 		/**

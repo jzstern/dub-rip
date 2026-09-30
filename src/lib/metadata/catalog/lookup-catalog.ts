@@ -56,12 +56,7 @@ export interface LookupOptions {
 
 /** Thrown when no catalog could be reached, so the miss is never cached as a result. */
 export class CatalogUnavailableError extends Error {
-	/**
-	 * @param answered The rows of the catalog that did answer. Never judged and
-	 * never cached, but still a cover for the preview card — main's artwork
-	 * lookup falls back from one catalog to the other the same way.
-	 */
-	constructor(readonly answered: CatalogCandidate[] = []) {
+	constructor() {
 		super("No music catalog could be reached");
 		this.name = "CatalogUnavailableError";
 	}
@@ -125,7 +120,7 @@ export async function fetchCatalogCandidates(
 	]);
 
 	if (itunes === null || deezer === null) {
-		throw new CatalogUnavailableError([...(itunes ?? []), ...(deezer ?? [])]);
+		throw new CatalogUnavailableError();
 	}
 
 	return [...(byIsrc ? [byIsrc] : []), ...itunes, ...deezer];
@@ -159,16 +154,17 @@ export function clearDeezerAlbumCache(): void {
 }
 
 /**
- * The candidates the judge may see for this query, or `null` when one of them
- * could not be vouched for. Only a Deezer row carrying the upload's own ISRC
- * can supply release fields (see `provesTheRelease`), and Deezer's search rows
- * do not say whose album a track is on or whether it is a compilation — so
- * such a row is passed on only with its album's artist, label, date and genre
- * attached. Every other row names at most the song, which its own credit
+ * The candidates the judge may see for this query. Only a Deezer row carrying
+ * the upload's own ISRC can supply release fields (see `provesTheRelease`), and
+ * Deezer's search rows do not say whose album a track is on or whether it is a
+ * compilation — so such a row is passed on only with its album's artist,
+ * label, date and genre attached, and is dropped when its album cannot be
+ * checked. Every other row names at most the song, which its own credit
  * already settles; a lookup without an ISRC makes no album call at all.
  *
- * A failed album call fails the whole lookup rather than just its row, so a
- * release is never judged without the evidence its album check exists for.
+ * Dropping just that row, not failing the lookup, keeps an album Deezer has
+ * since pulled — which answers 404 on every call — from costing the track its
+ * canonical artist and title for good.
  *
  * Runs on every lookup, against the cached search rows, and caches nothing but
  * the albums themselves. Checking once when the rows were fetched made the
@@ -180,7 +176,7 @@ export async function vouchedCandidates(
 	query: TrackQuery,
 	candidates: CatalogCandidate[],
 	timeout: number,
-): Promise<CatalogCandidate[] | null> {
+): Promise<CatalogCandidate[]> {
 	const isrc = normalizeIsrc(query.isrc);
 	const needsCheck = (candidate: CatalogCandidate) =>
 		isrc !== undefined &&
@@ -202,12 +198,10 @@ export async function vouchedCandidates(
 			),
 		),
 	);
-	if ([...albums.values()].some((album) => !album?.artist)) return null;
-
 	return candidates.flatMap((candidate) => {
 		if (!needsCheck(candidate)) return [candidate];
 		const album = candidate.albumId ? albums.get(candidate.albumId) : undefined;
-		if (!album) return [];
+		if (!album?.artist) return [];
 		return [
 			{
 				...candidate,
@@ -246,13 +240,10 @@ export async function lookupCatalogMetadata(
 		return { status: "unmatched", reason: "no-candidates" };
 	}
 
-	const vouched = await vouchedCandidates(query, candidates, remaining());
-	if (!vouched) {
-		console.log("[catalog] unmatched reason=album-check-failed");
-		return { status: "unmatched", reason: "no-candidates" };
-	}
-
-	const verdict = judgeCandidates(query, vouched);
+	const verdict = judgeCandidates(
+		query,
+		await vouchedCandidates(query, candidates, remaining()),
+	);
 	console.log(
 		verdict.status === "matched"
 			? `[catalog] matched via=${verdict.via} source=${verdict.candidate.source}`

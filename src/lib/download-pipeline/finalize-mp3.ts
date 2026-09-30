@@ -12,7 +12,7 @@ import {
 	PREPARING_DOWNLOAD_PERCENT,
 } from "$lib/download-pipeline/progress-stages";
 import {
-	catalogArtwork,
+	releaseCover,
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { CanonicalMetadata } from "$lib/metadata/catalog/catalog-candidate";
@@ -151,22 +151,22 @@ export async function finalizeMp3({
 			canonical = lookup.verdict.metadata;
 
 		/**
-		 * The cover the match proved, so a remix stops getting the original's
-		 * sleeve — and, when nothing matched, the same candidate cover the preview
-		 * card showed, so the file agrees with what the user saw.
+		 * The cover of the release the upload's ISRC proved; otherwise the cover
+		 * is searched for exactly as it is today, with the upload's own identity,
+		 * so it matches the one the preview card showed.
 		 */
-		const preferredArtwork = lookup ? catalogArtwork(lookup) : undefined;
+		const preferredArtwork = lookup ? releaseCover(lookup) : undefined;
 
-		const coverTitle = canonical?.title || trackTitle || videoTitle;
+		const coverTitle = trackTitle || videoTitle;
 		const image = soundCloudArtwork
 			? await resolveSoundCloudAlbumArt({
-					artist: canonical?.artist || artist,
+					artist,
 					title: coverTitle,
 					artwork: soundCloudArtwork,
 					...(preferredArtwork ? { preferredArtwork } : {}),
 				})
 			: await resolveAlbumArtImage({
-					artist: canonical?.artist || artist,
+					artist,
 					title: coverTitle,
 					videoId,
 					fallback: thumbnail,

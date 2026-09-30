@@ -17,28 +17,24 @@ import {
 } from "./lookup-catalog";
 
 /**
- * One candidate fetch per track across preview, details and download — the same
+ * One candidate fetch per track across `/details` and the download — the same
  * collapse `soundcloud-track-cache.ts` does for the track page and
  * `video-details-cache.ts` for yt-dlp's extraction.
  *
  * Candidates are cached; verdicts are not. Each stage re-judges the same
- * candidates with whatever evidence it has by then, so `/details` can accept on
- * duration what a preview could only weigh as text. That only works while all
- * three stages build the SAME query: artist and title always come from the
- * heuristic identity — never from a verdict, never from `details.track` or
+ * candidates with whatever evidence it has by then. That only works while both
+ * stages build the SAME query: artist and title always come from the heuristic
+ * identity — never from a verdict, never from `details.track` or
  * `details.artist` — and only `isrc` and `durationSeconds` vary by stage.
  */
 const cache = createSingleFlightCache<CatalogCandidate[]>();
 
 export interface CatalogLookup {
 	verdict: CatalogVerdict;
-	/** Kept so an unmatched verdict can still answer the artwork question. */
-	candidates: CatalogCandidate[];
 }
 
-const UNMATCHED: CatalogVerdict = {
-	status: "unmatched",
-	reason: "no-candidates",
+const UNMATCHED: CatalogLookup = {
+	verdict: { status: "unmatched", reason: "no-candidates" },
 };
 
 /**
@@ -62,12 +58,11 @@ function isBlank(query: TrackQuery): boolean {
 }
 
 /**
- * Preview, `/details` and the download: judges the shared candidates and hands
- * them back, so artwork can fall back to today's order using the same
- * responses. The Deezer rows that could match are checked against their albums
- * first (see `vouchedCandidates`); that album data is also where the label,
- * genre and release date of a Deezer release come from, so the download needs
- * no call of its own.
+ * `/details` and the download: judges the shared candidates. The Deezer rows
+ * carrying the upload's ISRC are checked against their albums first (see
+ * `vouchedCandidates`); that album data is also where the label, genre and
+ * release date of such a release come from, so the download needs no call of
+ * its own.
  *
  * `timeout` covers the searches and the album checks together.
  */
@@ -75,7 +70,7 @@ export async function sharedCatalogLookup(
 	query: TrackQuery,
 	{ timeout }: { timeout: number },
 ): Promise<CatalogLookup> {
-	if (isBlank(query)) return { verdict: UNMATCHED, candidates: [] };
+	if (isBlank(query)) return UNMATCHED;
 	const deadline = Date.now() + timeout;
 
 	let candidates: CatalogCandidate[];
@@ -88,58 +83,46 @@ export async function sharedCatalogLookup(
 	} catch (error) {
 		if (!(error instanceof CatalogUnavailableError)) {
 			reportLookupBug(error, query);
-			return { verdict: UNMATCHED, candidates: [] };
 		}
 		console.log("[catalog] unmatched reason=catalogs-unreachable");
-		return { verdict: UNMATCHED, candidates: error.answered };
+		return UNMATCHED;
 	}
 
 	try {
-		const vouched = await vouchedCandidates(
+		const verdict = judgeCandidates(
 			query,
-			candidates,
-			Math.max(1, deadline - Date.now()),
+			await vouchedCandidates(
+				query,
+				candidates,
+				Math.max(1, deadline - Date.now()),
+			),
 		);
-		if (!vouched) {
-			console.log("[catalog] unmatched reason=album-check-failed");
-			return { verdict: UNMATCHED, candidates };
-		}
-		const verdict = judgeCandidates(query, vouched);
 		console.log(
 			verdict.status === "matched"
 				? `[catalog] matched via=${verdict.via} source=${verdict.candidate.source}`
 				: `[catalog] unmatched reason=${verdict.reason}`,
 		);
-		return { verdict, candidates };
+		return { verdict };
 	} catch (error) {
 		reportLookupBug(error, query);
-		return { verdict: UNMATCHED, candidates };
+		return UNMATCHED;
 	}
 }
 
 /**
- * The cover the match proved, else today's order — iTunes first, then Deezer —
- * taken from the responses already in memory rather than a second pair of
- * searches. The source travels with the URL so a written cover can be labelled
- * honestly.
+ * The cover of the release the upload's own ISRC proved, or none — in which
+ * case the cover is found exactly as it is today. A catalog's top result for a
+ * song is not that song's release: it gave an Eminem upload Rihanna's "Love
+ * the Way You Lie, Pt. II" sleeve. The source travels with the URL so a written
+ * cover can be labelled honestly.
  */
-export function catalogArtwork({
+export function releaseCover({
 	verdict,
-	candidates,
 }: CatalogLookup): PreferredArtwork | undefined {
-	if (verdict.status === "matched" && verdict.metadata.artworkUrl) {
-		return {
-			url: verdict.metadata.artworkUrl,
-			source: verdict.metadata.source,
-		};
+	if (verdict.status !== "matched" || !verdict.metadata.artworkUrl) {
+		return undefined;
 	}
-	const fallback =
-		candidates.find(
-			(candidate) => candidate.source === "itunes" && candidate.artworkUrl,
-		) ?? candidates.find((candidate) => candidate.artworkUrl);
-	return fallback?.artworkUrl
-		? { url: fallback.artworkUrl, source: fallback.source }
-		: undefined;
+	return { url: verdict.metadata.artworkUrl, source: verdict.metadata.source };
 }
 
 /** The preview card is 56 px, while candidates carry the full-size cover the file gets. */

@@ -417,10 +417,6 @@ function corroboratedAssessments(assessments: Assessment[]): Set<Assessment> {
 	);
 }
 
-/** Words an uploader leaves after a credit that name no artist: "ft. Sam Smith HD". */
-const NOT_A_NAME =
-	/\b(?:official|video|audio|lyrics?|hd|hq|4k|youtube|visuali[sz]er|mv|clip|explicit|clean|remaster(?:ed)?|prod)\b|[-–—|/]/i;
-
 function nameWords(name: string): Set<string> {
 	return new Set(normalizeForMatch(name).split(" ").filter(Boolean));
 }
@@ -456,43 +452,32 @@ function artistForTag(
 }
 
 /**
- * A catalog can file a feature under the track's contributors instead of its
- * title — "Latch", not "Latch (feat. Sam Smith)" — and writing that title as-is
- * dropped the credit the upload named. It is added back only when the catalog
- * title credits no feature, the artist being written credits none of the
- * upload's names, and what the upload typed after "ft." is names: the catalog
- * spells a credit its own way ("Ty Dolla $ign"), and an uploader's trailing
- * "HD" is not a guest.
+ * The catalog's title only when it credits exactly the guests the upload does;
+ * otherwise none, and the title is written as it is today. The two part ways
+ * in both directions: a catalog files a feature under the track's contributors
+ * instead of its title — "Latch", not "Latch (feat. Sam Smith)" — and titles
+ * another recording's guest onto the song — "Alors On Danse (feat. Erik
+ * Hassle)" for a Stromae upload naming no one. Rebuilding a "feat." credit from
+ * the upload's text instead garbled "X Ambassadors" and dropped "JAY-Z", so a
+ * catalog title is taken whole or not at all.
  */
-function titleKeepingFeatures(
+function titleForTag(
 	candidate: CatalogCandidate,
 	queryTitle: ParsedTitle,
 	writtenArtist: string,
-): string {
-	if (queryTitle.featured.length === 0) return candidate.title;
+	named: string[],
+): string | undefined {
 	const candidateTitle = parseTrackTitle(candidate.title);
-	if (candidateTitle.featured.length > 0) return candidate.title;
-	if (queryTitle.featured.some((name) => NOT_A_NAME.test(name))) {
-		return candidate.title;
-	}
-	const credited = [...artistCredit(writtenArtist, candidateTitle).all];
-	const alreadyCredited = queryTitle.featured.some((name) =>
-		credited.some((creditedName) => sameCredit(name, creditedName)),
+	const credited = artistCredit(writtenArtist, candidateTitle).all;
+	const guests = (title: ParsedTitle) =>
+		title.featured.flatMap((featured) => splitArtistNames(featured));
+	const keepsEveryGuest = guests(queryTitle).every((name) =>
+		credited.has(name),
 	);
-	return alreadyCredited
-		? candidate.title
-		: `${candidate.title} (feat. ${joinCredits(queryTitle.featured)})`;
-}
-
-/**
- * "Wizkid & Kyla", "Selena Gomez, Ozuna & Cardi B". A name the upload split at
- * a comma is rejoined with one — "Tyler, The Creator" — which is why a name
- * starting with "The" is never the one an "&" goes before.
- */
-function joinCredits(names: string[]): string {
-	const last = names.at(-1) ?? "";
-	if (names.length < 2 || /^the\s/i.test(last)) return names.join(", ");
-	return `${names.slice(0, -1).join(", ")} & ${last}`;
+	const addsNoGuest = guests(candidateTitle).every((name) =>
+		named.includes(name),
+	);
+	return keepsEveryGuest && addsNoGuest ? candidate.title : undefined;
 }
 
 /**
@@ -667,11 +652,12 @@ export function judgeCandidates(
 	/** Parsed once, not once per candidate: the credit is attacker-chosen text. */
 	const queryCredit = artistCredit(query.artist, queryTitle);
 	const queryIsrc = normalizeIsrc(query.isrc);
+	const named = namedByUpload(queryCredit, queryTitle);
 	const assessments = withDisputedPerformersRefused(
 		candidates.map((candidate) =>
 			assess(query, queryTitle, queryCredit, queryIsrc, candidate),
 		),
-		namedByUpload(queryCredit, queryTitle),
+		named,
 	);
 	const corroborated = corroboratedAssessments(assessments);
 
@@ -701,7 +687,7 @@ export function judgeCandidates(
 		winner.candidate,
 		winner.credit,
 		query.artist,
-		namedByUpload(queryCredit, queryTitle),
+		named,
 	);
 	const release = releaseFields(releaseRows, assessments, queryIsrc);
 
@@ -711,7 +697,7 @@ export function judgeCandidates(
 		candidate: winner.candidate,
 		metadata: {
 			artist,
-			title: titleKeepingFeatures(winner.candidate, queryTitle, artist),
+			title: titleForTag(winner.candidate, queryTitle, artist, named),
 			...release,
 			isrc: release.isrc ?? queryIsrc,
 			source: release.source ?? winner.candidate.source,

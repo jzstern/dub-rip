@@ -27,7 +27,6 @@ const {
 		(...args: unknown[]) => Promise<Record<string, unknown>>
 	>(async () => ({
 		verdict: { status: "unmatched", reason: "no-candidates" },
-		candidates: [],
 	})),
 }));
 
@@ -50,7 +49,7 @@ vi.mock("$lib/download-pipeline/download-tokens", () => ({
 
 /**
  * Without this the real lookup runs and these tests call iTunes and Deezer for
- * real. `catalogArtwork` is pure, so it keeps its real behaviour.
+ * real. `releaseCover` is pure, so it keeps its real behaviour.
  */
 vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
 	...(await importOriginal<
@@ -410,17 +409,24 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	const MATCHED = {
 		verdict: {
 			status: "matched",
-			via: "duration",
-			candidate: { source: "itunes", artist: "Adele", title: "Hello" },
+			via: "isrc",
+			candidate: { source: "deezer", artist: "Adele", title: "Hello" },
 			metadata: {
 				artist: "Adele",
 				title: "Hello",
 				album: "25",
-				artworkUrl: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
-				source: "itunes",
+				artworkUrl: "https://e-cdns-images.dzcdn.net/1000x1000-000000.jpg",
+				source: "deezer",
 			},
 		},
-		candidates: [],
+	};
+	/** What a YouTube upload gets: the song, proven, and no release. */
+	const SONG_ONLY = {
+		verdict: {
+			...MATCHED.verdict,
+			via: "duration",
+			metadata: { artist: "Adele", title: "Hello", source: "deezer" },
+		},
 	};
 
 	beforeEach(() => {
@@ -429,7 +435,6 @@ describe("finalizeMp3() with a proven catalog match", () => {
 		resolveSoundCloudAlbumArtMock.mockReset().mockResolvedValue(null);
 		sharedCatalogLookupMock.mockReset().mockResolvedValue({
 			verdict: { status: "unmatched", reason: "no-candidates" },
-			candidates: [],
 		});
 	});
 
@@ -480,14 +485,42 @@ describe("finalizeMp3() with a proven catalog match", () => {
 		// #when
 		await finalizeMp3(finalizeInputFor(filePath));
 
-		// #then — so a remix stops inheriting the original's sleeve
+		// #then — the sleeve of the release the upload's ISRC proved
 		expect(resolveAlbumArtImageMock).toHaveBeenCalledWith(
 			expect.objectContaining({
 				preferredArtwork: {
-					url: "https://is1-ssl.mzstatic.com/600x600bb.jpg",
-					source: "itunes",
+					url: "https://e-cdns-images.dzcdn.net/1000x1000-000000.jpg",
+					source: "deezer",
 				},
 			}),
+		);
+	});
+
+	it("passes no preferred cover for a match that proved no release", async () => {
+		// #given
+		const filePath = await createTempMp3();
+		sharedCatalogLookupMock.mockResolvedValue(SONG_ONLY);
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then
+		expect(resolveAlbumArtImageMock.mock.calls[0]?.[0]).not.toHaveProperty(
+			"preferredArtwork",
+		);
+	});
+
+	it("searches for the cover with the upload's own identity, as today", async () => {
+		// #given — the catalog corrects the identity, but proves no release
+		const filePath = await createTempMp3();
+		sharedCatalogLookupMock.mockResolvedValue(SONG_ONLY);
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then — so the file carries the cover the preview card showed
+		expect(resolveAlbumArtImageMock).toHaveBeenCalledWith(
+			expect.objectContaining({ artist: "Test Artist", title: "Test Track" }),
 		);
 	});
 

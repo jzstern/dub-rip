@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	cardSizedArtwork,
-	catalogArtwork,
 	clearCatalogCandidateCache,
+	releaseCover,
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { CatalogCandidate } from "$lib/metadata/catalog/catalog-candidate";
@@ -197,7 +197,7 @@ describe("sharedCatalogLookup()", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
-	it("still offers the answering catalog's cover when the other is down", async () => {
+	it("gives no verdict on half the evidence when one catalog is down", async () => {
 		// #given — iTunes is throttled; Deezer answers
 		vi.stubGlobal(
 			"fetch",
@@ -211,16 +211,16 @@ describe("sharedCatalogLookup()", () => {
 		);
 
 		// #when
-		const lookup = await sharedCatalogLookup(QUERY, { timeout: 4000 });
+		const { verdict } = await sharedCatalogLookup(
+			{ ...QUERY, durationSeconds: 295 },
+			{ timeout: 4000 },
+		);
 
-		// #then — no verdict on half the evidence, but the card keeps a cover
-		expect([lookup.verdict.status, catalogArtwork(lookup)?.source]).toEqual([
-			"unmatched",
-			"deezer",
-		]);
+		// #then
+		expect(verdict.status).toBe("unmatched");
 	});
 
-	it("answers unmatched, not a partial verdict, when an album check fails", async () => {
+	it("names the song, but no release, when the release's album check fails", async () => {
 		// #given — the searches answer; the album of the row carrying the ISRC does not
 		vi.stubGlobal(
 			"fetch",
@@ -248,7 +248,12 @@ describe("sharedCatalogLookup()", () => {
 		);
 
 		// #then
-		expect(verdict.status).toBe("unmatched");
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.artist,
+				verdict.metadata.album,
+			],
+		).toEqual(["Adele", undefined]);
 	});
 
 	it("judges the same way whichever query filled the cache", async () => {
@@ -287,13 +292,7 @@ describe("sharedCatalogLookup()", () => {
 	});
 });
 
-describe("catalogArtwork()", () => {
-	const itunes: CatalogCandidate = {
-		source: "itunes",
-		artist: "Adele",
-		title: "Hello",
-		artworkUrl: "https://is1-ssl.mzstatic.com/itunes.jpg",
-	};
+describe("releaseCover()", () => {
 	const deezer: CatalogCandidate = {
 		source: "deezer",
 		artist: "Adele",
@@ -301,57 +300,48 @@ describe("catalogArtwork()", () => {
 		artworkUrl: "https://e-cdns-images.dzcdn.net/deezer.jpg",
 	};
 
-	it("prefers the cover the match proved, with its source", () => {
+	it("gives the proven release's cover, with its source", () => {
 		// #when
-		const artwork = catalogArtwork({
+		const artwork = releaseCover({
 			verdict: {
 				status: "matched",
-				via: "agreement",
-				candidate: itunes,
+				via: "isrc",
+				candidate: deezer,
 				metadata: {
 					artist: "Adele",
 					title: "Hello",
-					artworkUrl: "https://is1-ssl.mzstatic.com/matched.jpg",
-					source: "itunes",
+					artworkUrl: "https://e-cdns-images.dzcdn.net/deezer.jpg",
+					source: "deezer",
 				},
 			},
-			candidates: [itunes, deezer],
 		});
 
 		// #then
 		expect(artwork).toEqual({
-			url: "https://is1-ssl.mzstatic.com/matched.jpg",
-			source: "itunes",
+			url: "https://e-cdns-images.dzcdn.net/deezer.jpg",
+			source: "deezer",
 		});
 	});
 
-	it("falls back to the iTunes candidate when nothing matched", () => {
-		// #when — today's order, from the responses already in memory
-		const artwork = catalogArtwork({
-			verdict: { status: "unmatched", reason: "unverified" },
-			candidates: [deezer, itunes],
-		});
-
-		// #then
-		expect(artwork?.url).toBe(itunes.artworkUrl);
-	});
-
-	it("falls back to any candidate's cover when iTunes has none", () => {
-		// #when
-		const artwork = catalogArtwork({
-			verdict: { status: "unmatched", reason: "unverified" },
-			candidates: [{ ...itunes, artworkUrl: undefined }, deezer],
+	it("gives nothing for a match that proved the song but no release", () => {
+		// #when — the matched row's own cover may be another release's sleeve
+		const artwork = releaseCover({
+			verdict: {
+				status: "matched",
+				via: "duration",
+				candidate: deezer,
+				metadata: { artist: "Adele", title: "Hello", source: "deezer" },
+			},
 		});
 
 		// #then
-		expect(artwork).toEqual({ url: deezer.artworkUrl, source: "deezer" });
+		expect(artwork).toBeUndefined();
 	});
 
-	it("gives nothing when no candidate has a cover", () => {
+	it("gives nothing when nothing matched", () => {
 		// #when
-		const artwork = catalogArtwork({
-			verdict: { status: "unmatched", reason: "no-candidates" },
-			candidates: [],
+		const artwork = releaseCover({
+			verdict: { status: "unmatched", reason: "unverified" },
 		});
 
 		// #then

@@ -84,7 +84,6 @@ vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
 
 const NO_MATCH = {
 	verdict: { status: "unmatched" as const, reason: "no-candidates" as const },
-	candidates: [],
 };
 
 vi.mock("$lib/yt-dlp-binary", () => ({
@@ -171,7 +170,6 @@ describe("POST /api/preview/details - duration extraction", () => {
 					source: "itunes",
 				},
 			},
-			candidates: [],
 		});
 		const POST = await importPost();
 

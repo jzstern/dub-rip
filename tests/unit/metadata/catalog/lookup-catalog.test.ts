@@ -143,8 +143,24 @@ describe("vouchedCandidates()", () => {
 		// #when
 		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
 
-		// #then — the lookup fails closed rather than judge without the row
-		expect(vouched).toBeNull();
+		// #then
+		expect(vouched).toEqual([]);
+	});
+
+	it("keeps every other row when one album cannot be read", async () => {
+		// #given — Deezer has pulled the album, so it answers 404 on every call
+		stubAlbums(() => ({ ok: false, status: 404, body: {} }));
+		const itunesRow = deezerRow({ source: "itunes", albumId: undefined });
+
+		// #when
+		const vouched = await vouchedCandidates(
+			QUERY,
+			[deezerRow(), itunesRow],
+			1000,
+		);
+
+		// #then
+		expect(vouched).toEqual([itunesRow]);
 	});
 
 	it("asks again on the next lookup, so a failed check is never an answer", async () => {
@@ -164,7 +180,7 @@ describe("vouchedCandidates()", () => {
 		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
 
 		// #then
-		expect(vouched?.map((row) => row.albumArtist)).toEqual(["Adele"]);
+		expect(vouched.map((row) => row.albumArtist)).toEqual(["Adele"]);
 	});
 
 	it("drops a row whose album answers without saying whose it is", async () => {
@@ -175,7 +191,7 @@ describe("vouchedCandidates()", () => {
 		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
 
 		// #then
-		expect(vouched).toBeNull();
+		expect(vouched).toEqual([]);
 	});
 
 	it("asks no album about a row that names another song", async () => {
@@ -204,7 +220,7 @@ describe("vouchedCandidates()", () => {
 		const vouched = await vouchedCandidates(QUERY, rows, 1000);
 
 		// #then
-		expect(vouched?.map((row) => row.albumId)).toEqual(["1", "2", "3"]);
+		expect(vouched.map((row) => row.albumId)).toEqual(["1", "2", "3"]);
 	});
 
 	it("spends its album checks on the upload's version, not on live takes of it", async () => {
@@ -223,7 +239,7 @@ describe("vouchedCandidates()", () => {
 		);
 
 		// #then
-		expect(vouched?.find((row) => row.albumId === "4")?.albumArtist).toBe(
+		expect(vouched.find((row) => row.albumId === "4")?.albumArtist).toBe(
 			"Adele",
 		);
 	});
@@ -274,7 +290,7 @@ describe("vouchedCandidates()", () => {
 
 		// #then
 		expect(
-			vouched?.find((candidate) => candidate.isrc === "USUM71900764")
+			vouched.find((candidate) => candidate.isrc === "USUM71900764")
 				?.albumArtist,
 		).toBe("Billie Eilish");
 	});
@@ -485,7 +501,7 @@ describe("lookupCatalogMetadata()", () => {
 				verdict.metadata.album,
 				verdict.metadata.isrc,
 			],
-		).toEqual(["Flume", "Never Be Like You (feat. Kai)", undefined, undefined]);
+		).toEqual(["Flume", undefined, undefined, undefined]);
 	});
 
 	it("takes no ISRC or label from the knock-offs beside the real single", async () => {
@@ -508,7 +524,7 @@ describe("lookupCatalogMetadata()", () => {
 		).toEqual([undefined, undefined]);
 	});
 
-	it("keeps a feature Deezer files outside the title", async () => {
+	it("leaves the title as today when Deezer files its feature outside the title", async () => {
 		// #given
 		stubCatalogFetch();
 
@@ -520,10 +536,9 @@ describe("lookupCatalogMetadata()", () => {
 		});
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { title: "Latch (feat. Sam Smith)" },
-		});
+		expect(verdict.status === "matched" && verdict.metadata.title).toBe(
+			undefined,
+		);
 	});
 
 	it("dates a release by the other catalog's copy, even one dated Jan 1", async () => {

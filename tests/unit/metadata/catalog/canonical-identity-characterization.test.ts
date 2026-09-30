@@ -121,7 +121,7 @@ async function resolveShownIdentity(
 	return verdict.status === "matched"
 		? {
 				artist: verdict.metadata.artist,
-				title: verdict.metadata.title,
+				title: verdict.metadata.title ?? heuristic.trackTitle,
 				from: "catalog" as const,
 			}
 		: {

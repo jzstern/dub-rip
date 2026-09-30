@@ -32,7 +32,11 @@ export interface CatalogCandidate {
 /** What a proven match writes, in place of the values parsed from the upload title. */
 export interface CanonicalMetadata {
 	artist: string;
-	title: string;
+	/**
+	 * Absent when the catalog's title credits other guests than the upload
+	 * does; the title then falls back exactly as it does without a match.
+	 */
+	title?: string;
 	album?: string;
 	year?: number;
 	genre?: string;
@@ -75,7 +79,10 @@ export interface CatalogRequestOptions {
 	timeout?: number;
 }
 
-/** Both stores back-date a reissue to Jan 1, so such a date can neither order releases nor date one. */
+/**
+ * Both stores back-date a reissue to Jan 1, so such a date cannot order
+ * releases. Its year still counts once both catalogs list the release.
+ */
 const IMPRECISE_DATE = /-01-01$/;
 
 export function isPreciseDate(releaseDate: string | undefined): boolean {

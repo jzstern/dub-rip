@@ -197,6 +197,29 @@ describe("sharedCatalogLookup()", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(3);
 	});
 
+	it("still offers the answering catalog's cover when the other is down", async () => {
+		// #given — iTunes is throttled; Deezer answers
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: unknown) => {
+				const url = String(input);
+				if (url.includes("itunes")) {
+					return { ok: false, status: 403, json: async () => ({}) };
+				}
+				return { ok: true, status: 200, json: async () => deezerSearchBody() };
+			}),
+		);
+
+		// #when
+		const lookup = await sharedCatalogLookup(QUERY, { timeout: 4000 });
+
+		// #then — no verdict on half the evidence, but the card keeps a cover
+		expect([lookup.verdict.status, catalogArtwork(lookup)?.source]).toEqual([
+			"unmatched",
+			"deezer",
+		]);
+	});
+
 	it("answers unmatched, not a partial verdict, when an album check fails", async () => {
 		// #given — the searches answer; the album call does not
 		vi.stubGlobal(

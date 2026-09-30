@@ -259,23 +259,24 @@ function sameAlbum(left: CatalogCandidate, right: CatalogCandidate): boolean {
  * credited to Bob Marley & The Wailers. So every lead the upload names must be
  * credited somewhere on the candidate, as a lead or a guest — which also means
  * a written artist tag never drops a singer the upload named.
+ *
+ * Credited exactly, not by a shared word: "Simon & Garfunkel Experience" is a
+ * tribute act, and its "Garfunkel Experience" is not the upload's "Garfunkel".
+ * No lead is exempt either — "Swedish House Mafia & The Weeknd" names two
+ * acts, and a row crediting the first alone is a different credit.
  */
 function creditsEveryUploadLead(
 	query: ArtistCredit,
 	candidate: ArtistCredit,
 ): boolean {
-	const credited = [...candidate.all];
-	return [...query.leads].every(
-		(lead, position) =>
-			isBackingBand(lead, position) ||
-			credited.some((name) => sameCredit(lead, name)),
-	);
+	return [...query.leads].every((lead) => candidate.all.has(lead));
 }
 
 /**
  * "Prince & The Revolution": the band behind the lead, not a second performer.
  * Only after the lead — a credit that starts with "The Weeknd" or "The
- * Chainsmokers" names the act itself.
+ * Chainsmokers" names the act itself. Used only to keep two copies of one
+ * track from disputing each other over the band.
  */
 function isBackingBand(name: string, position: number): boolean {
 	return position > 0 && name.startsWith("the ");
@@ -437,8 +438,10 @@ function sameCredit(left: string, right: string): boolean {
  * The catalog's spelling of the artist, but never its roster. A credit that
  * adds a lead the upload never names — "Daft Punk, Pharrell Williams & Nile
  * Rodgers" for a "Daft Punk" upload, "Frank Sinatra & Tony Bennett" for a
- * Sinatra one — keeps the upload's own artist, since the catalog is then
- * describing a credit the upload does not claim.
+ * Sinatra one, "Prince & The Revolution" for a "Prince" one — keeps the
+ * upload's own artist, since the catalog is then describing a credit the
+ * upload does not claim. A lead counts as named only when the upload names it
+ * exactly.
  */
 function artistForTag(
 	candidate: CatalogCandidate,
@@ -447,9 +450,7 @@ function artistForTag(
 	named: string[],
 ): string {
 	const addsALead = [...candidateCredit.leads].some(
-		(lead, position) =>
-			!isBackingBand(lead, position) &&
-			!named.some((name) => sameCredit(lead, name)),
+		(lead) => !named.includes(lead),
 	);
 	return addsALead ? uploadArtist.trim() : artistDisplayName(candidate.artist);
 }

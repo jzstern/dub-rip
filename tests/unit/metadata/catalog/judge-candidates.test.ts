@@ -1406,8 +1406,8 @@ describe("judgeCandidates() never garbles a title while keeping a feature", () =
 		expect(title).toBe(written);
 	});
 
-	it("keeps a feature the catalog credits under a shorter name", () => {
-		// #given — the catalog credits "Pharrell"; the upload spells it out
+	it("keeps the upload's guest once when the catalog shortens it to a lead", () => {
+		// #given — the catalog credits "Pharrell" as a lead; the upload spells it out as a guest
 		const row = {
 			artist: "Artist & Pharrell",
 			title: "Song",
@@ -1424,8 +1424,13 @@ describe("judgeCandidates() never garbles a title while keeping a feature", () =
 			[candidate(row), candidate({ ...row, source: "itunes" })],
 		);
 
-		// #then
-		expect(verdict.status === "matched" && verdict.metadata.title).toBe("Song");
+		// #then — the upload's artist is kept, so its guest stays in the title
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.artist,
+				verdict.metadata.title,
+			],
+		).toEqual(["Artist", "Song (feat. Pharrell Williams)"]);
 	});
 });
 
@@ -2004,6 +2009,74 @@ describe("judgeCandidates() credits exactly who the upload credits", () => {
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.artist).toBe(
 			"Daft Punk",
+		);
+	});
+
+	it("refuses a tribute act whose name contains the upload's artists", () => {
+		// #given — recorded: "Simon & Garfunkel Experience", at the soundtrack cut's length
+		const tribute = candidate({
+			artist: "Simon & Garfunkel Experience",
+			title: "Mrs. Robinson",
+			album: "The Best of Simon & Garfunkel",
+			albumArtist: "Simon & Garfunkel Experience",
+			durationSeconds: 216,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Simon & Garfunkel",
+				title: "Mrs. Robinson",
+				durationSeconds: 216,
+			},
+			[tribute],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("needs a co-lead named 'The …' credited, not just the first act", () => {
+		// #given — recorded: Deezer credits "Moth To A Flame" to Swedish House Mafia alone
+		const deezer = candidate({
+			artist: "Swedish House Mafia",
+			title: "Moth To A Flame",
+			album: "Paradise Again",
+			durationSeconds: 234,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Swedish House Mafia & The Weeknd",
+				title: "Moth To A Flame",
+				durationSeconds: 234,
+			},
+			[deezer],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("keeps the upload's artist when the catalog adds a backing band", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Prince", title: "Purple Rain", durationSeconds: 521 },
+			[
+				candidate({
+					source: "itunes",
+					artist: "Prince & The Revolution",
+					title: "Purple Rain",
+					album: "Purple Rain",
+					durationSeconds: 521,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.artist).toBe(
+			"Prince",
 		);
 	});
 

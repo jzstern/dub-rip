@@ -56,7 +56,12 @@ export interface LookupOptions {
 
 /** Thrown when no catalog could be reached, so the miss is never cached as a result. */
 export class CatalogUnavailableError extends Error {
-	constructor() {
+	/**
+	 * @param answered The rows of the catalog that did answer. Never judged and
+	 * never cached, but still a cover for the preview card — main's artwork
+	 * lookup falls back from one catalog to the other the same way.
+	 */
+	constructor(readonly answered: CatalogCandidate[] = []) {
 		super("No music catalog could be reached");
 		this.name = "CatalogUnavailableError";
 	}
@@ -120,7 +125,7 @@ export async function fetchCatalogCandidates(
 	]);
 
 	if (itunes === null || deezer === null) {
-		throw new CatalogUnavailableError();
+		throw new CatalogUnavailableError([...(itunes ?? []), ...(deezer ?? [])]);
 	}
 
 	return [...(byIsrc ? [byIsrc] : []), ...itunes, ...deezer];

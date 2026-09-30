@@ -88,9 +88,10 @@ export async function sharedCatalogLookup(
 	} catch (error) {
 		if (!(error instanceof CatalogUnavailableError)) {
 			reportLookupBug(error, query);
+			return { verdict: UNMATCHED, candidates: [] };
 		}
 		console.log("[catalog] unmatched reason=catalogs-unreachable");
-		return { verdict: UNMATCHED, candidates: [] };
+		return { verdict: UNMATCHED, candidates: error.answered };
 	}
 
 	try {

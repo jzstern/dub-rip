@@ -19,6 +19,8 @@ describe("normalizeForMatch()", () => {
 		["Florence + The Machine", "florence and the machine"],
 		["  spaced   out  ", "spaced out"],
 		["Marea (We’ve Lost Dancing)", "marea weve lost dancing"],
+		["Ke$ha", "kesha"],
+		["A$AP Rocky", "asap rocky"],
 	])("folds %j to %j", (input, expected) => {
 		// #when
 		const normalized = normalizeForMatch(input);

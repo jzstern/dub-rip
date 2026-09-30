@@ -13,7 +13,7 @@ import {
 } from "$lib/download-pipeline/progress-stages";
 import {
 	catalogArtwork,
-	enrichedCatalogLookup,
+	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { CanonicalMetadata } from "$lib/metadata/catalog/catalog-candidate";
 import type { DownloadMethod } from "$lib/types";
@@ -138,7 +138,7 @@ export async function finalizeMp3({
 		 */
 		const lookup = signal?.aborted
 			? undefined
-			: await enrichedCatalogLookup(
+			: await sharedCatalogLookup(
 					{
 						artist,
 						title: trackTitle,

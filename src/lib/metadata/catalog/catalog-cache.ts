@@ -12,7 +12,6 @@ import {
 	CatalogUnavailableError,
 	candidateCacheKey,
 	clearDeezerAlbumCache,
-	enrichVerdictFromAlbum,
 	fetchCatalogCandidates,
 	vouchedCandidates,
 } from "./lookup-catalog";
@@ -63,10 +62,12 @@ function isBlank(query: TrackQuery): boolean {
 }
 
 /**
- * Preview and `/details`: judges the shared candidates and hands them back, so
- * artwork can fall back to today's order using the same responses. It checks
- * the albums of the Deezer rows that could match (see `vouchedCandidates`) but
- * never enriches — the label and genre belong to the download.
+ * Preview, `/details` and the download: judges the shared candidates and hands
+ * them back, so artwork can fall back to today's order using the same
+ * responses. The Deezer rows that could match are checked against their albums
+ * first (see `vouchedCandidates`); that album data is also where the label,
+ * genre and release date of a Deezer release come from, so the download needs
+ * no call of its own.
  *
  * `timeout` covers the searches and the album checks together.
  */
@@ -93,14 +94,16 @@ export async function sharedCatalogLookup(
 	}
 
 	try {
-		const verdict = judgeCandidates(
+		const vouched = await vouchedCandidates(
 			query,
-			await vouchedCandidates(
-				query,
-				candidates,
-				Math.max(1, deadline - Date.now()),
-			),
+			candidates,
+			Math.max(1, deadline - Date.now()),
 		);
+		if (!vouched) {
+			console.log("[catalog] unmatched reason=album-check-failed");
+			return { verdict: UNMATCHED, candidates };
+		}
+		const verdict = judgeCandidates(query, vouched);
 		console.log(
 			verdict.status === "matched"
 				? `[catalog] matched via=${verdict.via} source=${verdict.candidate.source}`
@@ -110,33 +113,6 @@ export async function sharedCatalogLookup(
 	} catch (error) {
 		reportLookupBug(error, query);
 		return { verdict: UNMATCHED, candidates };
-	}
-}
-
-/**
- * The download: the same cached candidates, plus the album call for the label
- * and genre. The candidates come back too, so an unmatched download falls back
- * to the same cover the preview showed rather than searching again.
- *
- * `timeout` is one budget for the searches and the album call together, so a
- * download waits at most that long here rather than twice it.
- */
-export async function enrichedCatalogLookup(
-	query: TrackQuery,
-	{ timeout }: { timeout: number },
-): Promise<CatalogLookup> {
-	const deadline = Date.now() + timeout;
-	const lookup = await sharedCatalogLookup(query, { timeout });
-	const remaining = deadline - Date.now();
-	if (lookup.verdict.status !== "matched" || remaining <= 0) return lookup;
-	try {
-		return {
-			...lookup,
-			verdict: await enrichVerdictFromAlbum(lookup.verdict, remaining),
-		};
-	} catch (error) {
-		reportLookupBug(error, query);
-		return lookup;
 	}
 }
 

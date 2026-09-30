@@ -13,7 +13,7 @@ const {
 	resolveAlbumArtImageMock,
 	resolveSoundCloudAlbumArtMock,
 	registerDownloadMock,
-	enrichedCatalogLookupMock,
+	sharedCatalogLookupMock,
 } = vi.hoisted(() => ({
 	/** Typed by their inputs so the call arguments can be asserted against. */
 	resolveAlbumArtImageMock: vi.fn<(input: unknown) => Promise<null>>(
@@ -23,7 +23,7 @@ const {
 		async () => null,
 	),
 	registerDownloadMock: vi.fn(() => "fake-token"),
-	enrichedCatalogLookupMock: vi.fn<
+	sharedCatalogLookupMock: vi.fn<
 		(...args: unknown[]) => Promise<Record<string, unknown>>
 	>(async () => ({
 		verdict: { status: "unmatched", reason: "no-candidates" },
@@ -56,7 +56,7 @@ vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
 	...(await importOriginal<
 		typeof import("$lib/metadata/catalog/catalog-cache")
 	>()),
-	enrichedCatalogLookup: enrichedCatalogLookupMock,
+	sharedCatalogLookup: sharedCatalogLookupMock,
 }));
 
 import {
@@ -427,7 +427,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 		registerDownloadMock.mockClear();
 		resolveAlbumArtImageMock.mockReset().mockResolvedValue(null);
 		resolveSoundCloudAlbumArtMock.mockReset().mockResolvedValue(null);
-		enrichedCatalogLookupMock.mockReset().mockResolvedValue({
+		sharedCatalogLookupMock.mockReset().mockResolvedValue({
 			verdict: { status: "unmatched", reason: "no-candidates" },
 			candidates: [],
 		});
@@ -447,7 +447,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 		});
 
 		// #then — the same artist and title the preview queried, so the key matches
-		expect(enrichedCatalogLookupMock).toHaveBeenCalledWith(
+		expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
 			{
 				artist: "Test Artist",
 				title: "Test Track",
@@ -461,7 +461,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	it("names the file after the canonical identity", async () => {
 		// #given
 		const filePath = await createTempMp3();
-		enrichedCatalogLookupMock.mockResolvedValue(MATCHED);
+		sharedCatalogLookupMock.mockResolvedValue(MATCHED);
 
 		// #when
 		await finalizeMp3(finalizeInputFor(filePath));
@@ -475,7 +475,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	it("hands the proven cover to the artwork resolver", async () => {
 		// #given
 		const filePath = await createTempMp3();
-		enrichedCatalogLookupMock.mockResolvedValue(MATCHED);
+		sharedCatalogLookupMock.mockResolvedValue(MATCHED);
 
 		// #when
 		await finalizeMp3(finalizeInputFor(filePath));
@@ -507,7 +507,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	it("still delivers the file when the lookup fails outright", async () => {
 		// #given
 		const filePath = await createTempMp3();
-		enrichedCatalogLookupMock.mockRejectedValue(new Error("catalog exploded"));
+		sharedCatalogLookupMock.mockRejectedValue(new Error("catalog exploded"));
 
 		// #when
 		const result = await finalizeMp3(finalizeInputFor(filePath));

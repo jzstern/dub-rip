@@ -142,8 +142,8 @@ describe("vouchedCandidates()", () => {
 		// #when
 		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
 
-		// #then
-		expect(vouched).toEqual([]);
+		// #then — the lookup fails closed rather than judge without the row
+		expect(vouched).toBeNull();
 	});
 
 	it("asks again on the next lookup, so a failed check is never an answer", async () => {
@@ -163,7 +163,7 @@ describe("vouchedCandidates()", () => {
 		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
 
 		// #then
-		expect(vouched.map((row) => row.albumArtist)).toEqual(["Adele"]);
+		expect(vouched?.map((row) => row.albumArtist)).toEqual(["Adele"]);
 	});
 
 	it("drops a row whose album answers without saying whose it is", async () => {
@@ -174,7 +174,7 @@ describe("vouchedCandidates()", () => {
 		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
 
 		// #then
-		expect(vouched).toEqual([]);
+		expect(vouched).toBeNull();
 	});
 
 	it("asks no album about a row that names another song", async () => {
@@ -203,7 +203,7 @@ describe("vouchedCandidates()", () => {
 		const vouched = await vouchedCandidates(QUERY, rows, 1000);
 
 		// #then
-		expect(vouched.map((row) => row.albumId)).toEqual(["1", "2", "3"]);
+		expect(vouched?.map((row) => row.albumId)).toEqual(["1", "2", "3"]);
 	});
 
 	it("spends its album checks on the upload's version, not on live takes of it", async () => {
@@ -222,7 +222,7 @@ describe("vouchedCandidates()", () => {
 		);
 
 		// #then
-		expect(vouched.find((row) => row.albumId === "4")?.albumArtist).toBe(
+		expect(vouched?.find((row) => row.albumId === "4")?.albumArtist).toBe(
 			"Adele",
 		);
 	});
@@ -269,7 +269,7 @@ describe("vouchedCandidates()", () => {
 
 		// #then
 		expect(
-			vouched.find((candidate) => candidate.album === "The Lockbox")
+			vouched?.find((candidate) => candidate.album === "The Lockbox")
 				?.albumArtist,
 		).toBe("The Amalgamates");
 	});
@@ -289,15 +289,12 @@ describe("lookupCatalogMetadata()", () => {
 		stubCatalogFetch();
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{
-				artist: "Billie Eilish",
-				title: "bad guy",
-				isrc: "USUM71900764",
-				durationSeconds: 194,
-			},
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Billie Eilish",
+			title: "bad guy",
+			isrc: "USUM71900764",
+			durationSeconds: 194,
+		});
 
 		// #then
 		expect(verdict).toMatchObject({
@@ -347,7 +344,7 @@ describe("lookupCatalogMetadata()", () => {
 		expect(verdict.status).toBe("unmatched");
 	});
 
-	it("writes no label unless asked to enrich", async () => {
+	it("takes a proven Deezer release's label from the album it checked", async () => {
 		// #given
 		stubCatalogFetch();
 
@@ -360,8 +357,42 @@ describe("lookupCatalogMetadata()", () => {
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.label).toBe(
-			undefined,
+			"Darkroom/Interscope Records",
 		);
+	});
+
+	it("fails closed when either catalog cannot be searched", async () => {
+		// #given — Deezer answers; iTunes is down
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: unknown) => {
+				if (String(input).includes("itunes")) throw new Error("network down");
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						data: [
+							{
+								title: "Hello",
+								duration: 295,
+								artist: { name: "Adele" },
+								album: { id: 7, title: "25" },
+							},
+						],
+					}),
+				};
+			}),
+		);
+
+		// #when
+		const verdict = await lookupCatalogMetadata({
+			artist: "Adele",
+			title: "Hello",
+			durationSeconds: 295,
+		});
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
 	});
 
 	it("writes only the artist and title of a track found on a compilation", async () => {
@@ -401,10 +432,11 @@ describe("lookupCatalogMetadata()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{ artist: "Klaps", title: "Se Cura", durationSeconds: 286 },
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Klaps",
+			title: "Se Cura",
+			durationSeconds: 286,
+		});
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata).toEqual({
@@ -419,14 +451,11 @@ describe("lookupCatalogMetadata()", () => {
 		stubCatalogFetch();
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{
-				artist: "Flume",
-				title: "Never Be Like You feat. Kai",
-				durationSeconds: 233,
-			},
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Flume",
+			title: "Never Be Like You feat. Kai",
+			durationSeconds: 233,
+		});
 
 		// #then
 		expect(verdict).toMatchObject({
@@ -443,14 +472,11 @@ describe("lookupCatalogMetadata()", () => {
 		stubCatalogFetch();
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{
-				artist: "Flume",
-				title: "Never Be Like You feat. Kai",
-				durationSeconds: 233,
-			},
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Flume",
+			title: "Never Be Like You feat. Kai",
+			durationSeconds: 233,
+		});
 
 		// #then
 		expect(
@@ -466,22 +492,16 @@ describe("lookupCatalogMetadata()", () => {
 		stubCatalogFetch();
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{
-				artist: "Disclosure",
-				title: "Latch ft. Sam Smith",
-				durationSeconds: 256,
-			},
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Disclosure",
+			title: "Latch ft. Sam Smith",
+			durationSeconds: 256,
+		});
 
 		// #then
 		expect(verdict).toMatchObject({
 			status: "matched",
-			metadata: {
-				title: "Latch (feat. Sam Smith)",
-				album: "Settle (Special Edition)",
-			},
+			metadata: { title: "Latch (feat. Sam Smith)" },
 		});
 	});
 
@@ -525,14 +545,11 @@ describe("lookupCatalogMetadata()", () => {
 		);
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{
-				artist: "Stealers Wheel",
-				title: "Stuck In The Middle With You",
-				durationSeconds: 209,
-			},
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			durationSeconds: 209,
+		});
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);

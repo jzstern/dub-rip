@@ -3,7 +3,6 @@ import {
 	cardSizedArtwork,
 	catalogArtwork,
 	clearCatalogCandidateCache,
-	enrichedCatalogLookup,
 	sharedCatalogLookup,
 } from "$lib/metadata/catalog/catalog-cache";
 import type { CatalogCandidate } from "$lib/metadata/catalog/catalog-candidate";
@@ -183,40 +182,47 @@ describe("sharedCatalogLookup()", () => {
 		]);
 	});
 
-	it("lets the download reuse the candidates the preview fetched", async () => {
+	it("lets the download reuse the searches and the album the preview checked", async () => {
 		// #given — a preview, then the download for the same track
 		const fetchMock = stubStores();
 		await sharedCatalogLookup(QUERY, { timeout: 4000 });
 
 		// #when
-		const download = await enrichedCatalogLookup(
+		await sharedCatalogLookup(
 			{ ...QUERY, durationSeconds: 295 },
 			{ timeout: 6000 },
 		);
 
-		// #then — the two searches, plus the download's own album call, and no
-		// second pair of searches
-		expect([searchesIn(fetchMock).length, download.verdict.status]).toEqual([
-			2,
-			"matched",
-		]);
+		// #then — two searches and one album call in all
+		expect(fetchMock).toHaveBeenCalledTimes(3);
 	});
 
-	it("makes no album call once the searches have spent the download's budget", async () => {
-		// #given
-		const fetchMock = stubStores();
+	it("answers unmatched, not a partial verdict, when an album check fails", async () => {
+		// #given — the searches answer; the album call does not
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: unknown) => {
+				const url = String(input);
+				if (url.includes("/album/")) {
+					return { ok: false, status: 503, json: async () => ({}) };
+				}
+				return {
+					ok: true,
+					status: 200,
+					json: async () =>
+						url.includes("itunes") ? itunesSearchBody() : deezerSearchBody(),
+				};
+			}),
+		);
 
 		// #when
-		await enrichedCatalogLookup(
+		const { verdict } = await sharedCatalogLookup(
 			{ ...QUERY, durationSeconds: 295 },
-			{ timeout: 0 },
+			{ timeout: 4000 },
 		);
 
-		// #then — the check that ran before judging, and no enrichment after it
-		const albumCalls = fetchMock.mock.calls.filter((call) =>
-			String(call[0]).includes("/album/"),
-		);
-		expect(albumCalls).toHaveLength(1);
+		// #then
+		expect(verdict.status).toBe("unmatched");
 	});
 
 	it("checks the albums for each lookup, whichever query filled the cache", async () => {

@@ -69,15 +69,12 @@ function sameRecording(uploadTitle: string, matchedTitle: string): boolean {
 }
 
 for (const testCase of cases) {
-	const verdict = await lookupCatalogMetadata(
-		{
-			artist: testCase.artist,
-			title: testCase.title,
-			isrc: testCase.isrc,
-			durationSeconds: testCase.durationSeconds,
-		},
-		{ enrich: true },
-	);
+	const verdict = await lookupCatalogMetadata({
+		artist: testCase.artist,
+		title: testCase.title,
+		isrc: testCase.isrc,
+		durationSeconds: testCase.durationSeconds,
+	});
 
 	const got =
 		verdict.status === "matched"

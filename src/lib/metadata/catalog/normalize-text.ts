@@ -54,6 +54,8 @@ export function normalizeForMatch(text: string): string {
 			.replace(/[&+]/g, " and ")
 			// Apostrophes close up rather than split, so "Can't" and "Cant" agree.
 			.replace(/['’‘`´]/g, "")
+			// A dollar sign stands in for an S: "Ke$ha" is iTunes's "Kesha", "A$AP" is "ASAP".
+			.replace(/\$/g, "s")
 			// Marks are kept: dropping them here would undo the kana rule above.
 			.replace(/[^\p{L}\p{N}\p{M}\s]/gu, " ")
 			.replace(/\s+/g, " ")

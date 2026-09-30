@@ -1,10 +1,8 @@
 import { createSingleFlightCache } from "../../single-flight-cache";
-import {
-	type CatalogCandidate,
-	type CatalogVerdict,
-	isPreciseDate,
-	releaseYear,
-	type TrackQuery,
+import type {
+	CatalogCandidate,
+	CatalogVerdict,
+	TrackQuery,
 } from "./catalog-candidate";
 import {
 	type DeezerAlbumInfo,
@@ -54,8 +52,6 @@ export interface LookupOptions {
 	/** Total budget for the whole lookup, not per request. */
 	timeout?: number;
 	cache?: CandidateCache;
-	/** Fetch the Deezer album for label and genre. Off for previews, which show neither. */
-	enrich?: boolean;
 }
 
 /** Thrown when no catalog could be reached, so the miss is never cached as a result. */
@@ -103,6 +99,12 @@ export function candidateCacheKey(query: TrackQuery): string {
  * All three calls go out together. The ISRC leg is not a short-circuit: an
  * uploader-supplied ISRC can resolve to a track that is not this upload, and
  * suppressing the searches would leave nothing for the judge to fall back on.
+ *
+ * Either search failing counts as an outage, not as a catalog with nothing to
+ * say. The rules that refuse a wrong release need both catalogs — a Deezer copy
+ * is what disputes iTunes's Sinatra & Bennett duet credit — so a lookup missing
+ * one would accept what the other would have refused, and caching that set
+ * would keep accepting it for ten minutes.
  */
 export async function fetchCatalogCandidates(
 	query: TrackQuery,
@@ -117,12 +119,11 @@ export async function fetchCatalogCandidates(
 		searchDeezer(term, { timeout }),
 	]);
 
-	/** Both searches unreachable is an outage, which must not be cached as a miss. */
-	if (itunes === null && deezer === null && !byIsrc) {
+	if (itunes === null || deezer === null) {
 		throw new CatalogUnavailableError();
 	}
 
-	return [...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])];
+	return [...(byIsrc ? [byIsrc] : []), ...itunes, ...deezer];
 }
 
 /** Albums do not change and many tracks share one, so a checked album is kept far longer than a search. */
@@ -155,24 +156,29 @@ export function clearDeezerAlbumCache(): void {
 }
 
 /**
- * The candidates the judge may see for this query. Deezer's search rows do not
- * say whose album a track is on, and Deezer files knock-offs under the real
- * artist's name — so a Deezer row that could match is passed on only once its
- * album is known, and is left out when it is not: past the cap, or when the
- * album call failed. iTunes rows carry the credit already.
+ * The candidates the judge may see for this query, or `null` when one of them
+ * could not be vouched for. Deezer's search rows do not say whose album a
+ * track is on, and Deezer files knock-offs under the real artist's name — so a
+ * Deezer row that could match is passed on only with its album's artist,
+ * label, date and genre attached. Rows past the cap are left out; the judge
+ * prefers the catalogs' top rows anyway. iTunes rows carry the credit already.
+ *
+ * A failed album call fails the whole lookup rather than just its row: the
+ * row it leaves out may be the one that refuses another — the Deezer copy
+ * that disputes a duet credit — so judging without it can accept what it
+ * would have refused.
  *
  * Runs on every lookup, against the cached search rows, and caches nothing but
  * the albums themselves. Checking once when the rows were fetched made the
  * result depend on whichever query filled the cache key — a lyric channel's
  * "Never Be Like You Kai" shares a key with the official upload but names no
- * row, so it cached them all unchecked — and cached a failed check as an
- * answer for ten minutes.
+ * row, so it cached them all unchecked.
  */
 export async function vouchedCandidates(
 	query: TrackQuery,
 	candidates: CatalogCandidate[],
 	timeout: number,
-): Promise<CatalogCandidate[]> {
+): Promise<CatalogCandidate[] | null> {
 	const needsCheck = (candidate: CatalogCandidate) =>
 		candidate.source === "deezer" && namesTheSameRecording(query, candidate);
 	const albumIds = [
@@ -190,63 +196,28 @@ export async function vouchedCandidates(
 			),
 		),
 	);
+	if ([...albums.values()].some((album) => !album?.artist)) return null;
 
 	return candidates.flatMap((candidate) => {
 		if (!needsCheck(candidate)) return [candidate];
-		const album = candidate.albumId ? albums.get(candidate.albumId) : null;
-		if (!album?.artist) return [];
+		const album = candidate.albumId ? albums.get(candidate.albumId) : undefined;
+		if (!album) return [];
 		return [
 			{
 				...candidate,
 				albumArtist: album.artist,
 				isCompilation: album.isCompilation,
+				label: candidate.label ?? album.label,
+				genre: candidate.genre ?? album.genre,
+				releaseDate: candidate.releaseDate ?? album.releaseDate,
 			},
 		];
 	});
 }
 
-/**
- * Exported so the shared cache can enrich a verdict it judged from cached
- * candidates. The album was usually checked already, so this is a cache hit.
- * A compilation's label, genre and date describe the compilation, not the
- * recording, so it gives nothing but the news that the album name is wrong.
- */
-export async function enrichVerdictFromAlbum(
-	verdict: CatalogVerdict,
-	timeout: number,
-): Promise<CatalogVerdict> {
-	if (verdict.status !== "matched") return verdict;
-	const { albumId } = verdict.candidate;
-	if (!albumId) return verdict;
-
-	const album = await checkedAlbum(albumId, timeout);
-	if (!album) return verdict;
-	if (album.isCompilation) {
-		return { ...verdict, metadata: { ...verdict.metadata, album: undefined } };
-	}
-
-	const albumYear = releaseYear(album.releaseDate);
-	const { year } = verdict.metadata;
-	return {
-		...verdict,
-		metadata: {
-			...verdict.metadata,
-			label: verdict.metadata.label ?? album.label,
-			genre: verdict.metadata.genre ?? album.genre,
-			/** Deezer dates a reissue by the reissue, so a precise date can only move the year earlier. */
-			year:
-				year !== undefined &&
-				albumYear !== undefined &&
-				isPreciseDate(album.releaseDate)
-					? Math.min(year, albumYear)
-					: (year ?? albumYear),
-		},
-	};
-}
-
 export async function lookupCatalogMetadata(
 	query: TrackQuery,
-	{ timeout = DEFAULT_TIMEOUT_MS, cache, enrich = false }: LookupOptions = {},
+	{ timeout = DEFAULT_TIMEOUT_MS, cache }: LookupOptions = {},
 ): Promise<CatalogVerdict> {
 	/** A budget, so a lookup cannot take a multiple of the caller's timeout. */
 	const deadline = Date.now() + timeout;
@@ -269,14 +240,13 @@ export async function lookupCatalogMetadata(
 		return { status: "unmatched", reason: "no-candidates" };
 	}
 
-	const judged = judgeCandidates(
-		query,
-		await vouchedCandidates(query, candidates, remaining()),
-	);
-	const verdict = enrich
-		? await enrichVerdictFromAlbum(judged, remaining())
-		: judged;
+	const vouched = await vouchedCandidates(query, candidates, remaining());
+	if (!vouched) {
+		console.log("[catalog] unmatched reason=album-check-failed");
+		return { status: "unmatched", reason: "no-candidates" };
+	}
 
+	const verdict = judgeCandidates(query, vouched);
 	console.log(
 		verdict.status === "matched"
 			? `[catalog] matched via=${verdict.via} source=${verdict.candidate.source}`

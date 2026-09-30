@@ -305,6 +305,7 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 		artist: "Toto",
 		title: "Africa",
 		album: "Classic Rock Instrumentals",
+		albumArtist: "Instrumental Hits Orchestra",
 		durationSeconds: 307,
 		rank: 4,
 	});
@@ -317,7 +318,7 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 		rank: 0,
 	});
 
-	it("keeps the release both catalogs reached when a later stage learns the duration", () => {
+	it("names the song both catalogs reached but no release its runtime does not prove", () => {
 		// #given — the upload runs 307s, which only the knock-off's runtime matches
 		const query = { artist: "Toto", title: "Africa", durationSeconds: 307 };
 
@@ -328,10 +329,11 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 			TOTO_KNOCK_OFF,
 		]);
 
-		// #then — the preview's choice stands, so the file matches what was shown
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Toto IV" },
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Toto",
+			title: "Africa",
+			source: "deezer",
 		});
 	});
 
@@ -493,9 +495,40 @@ describe("judgeCandidates() treats a longer catalog cut as a different recording
 });
 
 describe("judgeCandidates() fills gaps only from the same recording", () => {
-	it("takes year and genre from the shorter twin of a longer upload", () => {
-		// #given — the music-video case agreement exists for: the twin is the donor
+	it("writes no release fields for a music video only agreement matches", () => {
+		// #given — both catalogs carry the song; neither runtime is the upload's
 		const query = { artist: "Toto", title: "Africa", durationSeconds: 330 };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				artist: "Toto",
+				title: "Africa",
+				album: "Toto IV",
+				durationSeconds: 295,
+			}),
+			candidate({
+				source: "itunes",
+				artist: "Toto",
+				title: "Africa",
+				album: "Toto IV",
+				durationSeconds: 295,
+				releaseDate: "1982-04-08",
+				genre: "Rock",
+			}),
+		]);
+
+		// #then — the song is proven, which of its releases is not
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Toto",
+			title: "Africa",
+			source: "deezer",
+		});
+	});
+
+	it("takes the release fields from the row whose runtime proves it", () => {
+		// #given — the audio upload runs as long as the album cut
+		const query = { artist: "Toto", title: "Africa", durationSeconds: 296 };
 
 		// #when
 		const verdict = judgeCandidates(query, [
@@ -519,7 +552,7 @@ describe("judgeCandidates() fills gaps only from the same recording", () => {
 		// #then
 		expect(verdict).toMatchObject({
 			status: "matched",
-			metadata: { year: 1982, genre: "Rock" },
+			metadata: { album: "Toto IV", year: 1982, genre: "Rock" },
 		});
 	});
 
@@ -656,7 +689,6 @@ describe("judgeCandidates() accepts what it can prove", () => {
 				artist: "Billie Eilish",
 				title: "bad guy",
 				album: "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
-				year: 2019,
 				isrc: "USUM71900764",
 			},
 		});
@@ -901,11 +933,7 @@ describe("judgeCandidates() needs the catalogs to agree on a recording, not a ti
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			via: "agreement",
-			metadata: { album: "Skin" },
-		});
+		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
 	});
 });
 
@@ -1190,7 +1218,7 @@ describe("judgeCandidates() writes no release fields from a compilation", () => 
 		// #then
 		expect(verdict).toMatchObject({
 			status: "matched",
-			metadata: { album: "Bad Girls", year: 1979 },
+			metadata: { album: "Bad Girls" },
 		});
 	});
 
@@ -1244,12 +1272,11 @@ describe("judgeCandidates() writes no release fields from a compilation", () => 
 			[bestOf, single],
 		);
 
-		// #then — the date and album come from the single, not the best-of
+		// #then — the album comes from the single, not the best-of
 		expect(verdict).toMatchObject({
 			status: "matched",
 			metadata: {
 				isrc: "CA6D21001011",
-				year: 2014,
 				album: "Hero (feat. Elizaveta) - Single",
 			},
 		});
@@ -1473,15 +1500,14 @@ describe("judgeCandidates() dates a recording by its earliest release", () => {
 		durationSeconds: 208,
 	});
 
-	it("takes the original year an iTunes compilation carries over a later release's", () => {
-		// #given — iTunes dates the soundtrack's copy by the 1972 original
-		const soundtrack = candidate({
+	it("takes the earliest precise year among the releases the runtime proves", () => {
+		// #given — the original and a remaster of the same master
+		const original = candidate({
 			source: "itunes",
 			artist: "Stealers Wheel",
-			title: "Stuck in the Middle with You",
-			album: "Reservoir Dogs (Original Motion Picture Soundtrack)",
-			isCompilation: true,
-			durationSeconds: 204,
+			title: "Stuck In The Middle With You",
+			album: "Stealers Wheel",
+			durationSeconds: 208,
 			releaseDate: "1972-11-01",
 		});
 		const reissue = candidate({
@@ -1490,7 +1516,7 @@ describe("judgeCandidates() dates a recording by its earliest release", () => {
 			title: "Stuck In The Middle With You",
 			album: "The Very Best Of",
 			durationSeconds: 208,
-			releaseDate: "2008-01-01",
+			releaseDate: "2008-05-12",
 		});
 
 		// #when
@@ -1500,7 +1526,7 @@ describe("judgeCandidates() dates a recording by its earliest release", () => {
 				title: "Stuck In The Middle With You",
 				durationSeconds: 209,
 			},
-			[RELEASE, soundtrack, reissue],
+			[RELEASE, reissue, original],
 		);
 
 		// #then
@@ -1541,21 +1567,21 @@ describe("judgeCandidates() dates a recording by its earliest release", () => {
 		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
 	});
 
-	it("ignores the date on Deezer's copy from a compilation", () => {
-		// #given — Deezer dates a best-of's copy by the best-of
+	it("never dates the recording by a compilation's copy", () => {
+		// #given — a best-of dated earlier than any release it collects
 		const bestOf = candidate({
 			artist: "Stealers Wheel",
 			title: "Stuck In The Middle With You",
 			album: "Seventies Gold",
 			isCompilation: true,
 			durationSeconds: 208,
-			releaseDate: "1970-01-01",
+			releaseDate: "1970-03-01",
 		});
-		const single = candidate({
+		const album = candidate({
 			source: "itunes",
 			artist: "Stealers Wheel",
 			title: "Stuck In The Middle With You",
-			album: "Stuck In The Middle With You - Single",
+			album: "Stealers Wheel",
 			durationSeconds: 208,
 			releaseDate: "1972-11-01",
 		});
@@ -1567,7 +1593,7 @@ describe("judgeCandidates() dates a recording by its earliest release", () => {
 				title: "Stuck In The Middle With You",
 				durationSeconds: 209,
 			},
-			[RELEASE, bestOf, single],
+			[RELEASE, bestOf, album],
 		);
 
 		// #then
@@ -1652,5 +1678,306 @@ describe("judgeCandidates() refuses only a performer the catalogs dispute", () =
 
 		// #then
 		expect(verdict).toMatchObject({ status: "matched", via: "agreement" });
+	});
+});
+describe("judgeCandidates() writes a release only when the release is proven", () => {
+	/** Recorded: Bonnie Tyler's 2005 re-recording sits in both catalogs at 3:50. */
+	const REMAKE_DEEZER = candidate({
+		artist: "Bonnie Tyler",
+		title: "Total Eclipse of the Heart",
+		album: "Bonnie",
+		durationSeconds: 230,
+		isrc: "FR54E0500110",
+		label: "Ba-Ba Music",
+		releaseDate: "2005-04-14",
+	});
+	const REMAKE_ITUNES = candidate({
+		source: "itunes",
+		artist: "Bonnie Tyler",
+		title: "Total Eclipse of the Heart",
+		album: "Bonnie",
+		durationSeconds: 231,
+		releaseDate: "2005-04-14",
+	});
+	const ORIGINAL_ITUNES = candidate({
+		source: "itunes",
+		artist: "Bonnie Tyler",
+		title: "Total Eclipse of the Heart",
+		album: "Faster Than the Speed of Night",
+		durationSeconds: 330,
+		releaseDate: "1983-04-01",
+	});
+	const query = {
+		artist: "Bonnie Tyler",
+		title: "Total Eclipse of the Heart",
+	};
+
+	it("takes the release from the row the runtime proves, not from a re-recording both catalogs carry", () => {
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
+			REMAKE_DEEZER,
+			REMAKE_ITUNES,
+			ORIGINAL_ITUNES,
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Faster Than the Speed of Night" },
+		});
+	});
+
+	it("takes no ISRC or label from a re-recording the runtime rules out", () => {
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
+			REMAKE_DEEZER,
+			REMAKE_ITUNES,
+			ORIGINAL_ITUNES,
+		]);
+
+		// #then
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.isrc,
+				verdict.metadata.label,
+			],
+		).toEqual([undefined, undefined]);
+	});
+
+	it("writes no year for a release only one catalog lists", () => {
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
+			REMAKE_DEEZER,
+			REMAKE_ITUNES,
+			ORIGINAL_ITUNES,
+		]);
+
+		// #then — the catalogs date releases; one catalog alone cannot vouch for it
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(
+			undefined,
+		);
+	});
+
+	it("takes a release both catalogs list from Deezer, dated by the earlier copy", () => {
+		// #given — Deezer dates the album by its digital reissue
+		const deezerAlbum = candidate({
+			artist: "Bonnie Tyler",
+			title: "Total Eclipse of the Heart",
+			album: "Faster Than the Speed of Night",
+			durationSeconds: 331,
+			isrc: "GBBBN8302012",
+			label: "Columbia",
+			releaseDate: "2009-06-01",
+		});
+
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
+			deezerAlbum,
+			ORIGINAL_ITUNES,
+		]);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: {
+				album: "Faster Than the Speed of Night",
+				isrc: "GBBBN8302012",
+				label: "Columbia",
+				year: 1983,
+			},
+		});
+	});
+
+	it("writes no release when each catalog proves a different one", () => {
+		// #given — a budget reissue on Deezer, the label's album on iTunes
+		const budget = candidate({
+			artist: "Bonnie Tyler",
+			title: "Total Eclipse of the Heart",
+			album: "Greatest Hits Collection",
+			durationSeconds: 330,
+			label: "Budget Classics",
+		});
+
+		// #when
+		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
+			budget,
+			ORIGINAL_ITUNES,
+		]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.album).toBe(
+			undefined,
+		);
+	});
+
+	it("counts a store's ' - Single' album as the same release as the plain name", () => {
+		// #given
+		const itunesSingle = candidate({
+			source: "itunes",
+			artist: "Avicii",
+			title: "Levels",
+			album: "Levels - Single",
+			durationSeconds: 200,
+			releaseDate: "2011-10-28",
+		});
+		const deezerSingle = candidate({
+			artist: "Avicii",
+			title: "Levels",
+			album: "Levels",
+			durationSeconds: 199,
+			label: "Universal Music",
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Avicii", title: "Levels", durationSeconds: 200 },
+			[itunesSingle, deezerSingle],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({
+			status: "matched",
+			metadata: { album: "Levels", label: "Universal Music", year: 2011 },
+		});
+	});
+});
+
+describe("judgeCandidates() credits exactly who the upload credits", () => {
+	it("refuses the solo record of one singer for a duet upload", () => {
+		// #given — Exodus is credited to Bob Marley & The Wailers alone
+		const exodus = candidate({
+			artist: "Bob Marley & The Wailers",
+			title: "Turn Your Lights Down Low",
+			album: "Exodus",
+			durationSeconds: 220,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Lauryn Hill & Bob Marley",
+				title: "Turn Your Lights Down Low",
+				durationSeconds: 346,
+			},
+			[exodus, { ...exodus, source: "itunes" }],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("puts the guest back in the title when the upload's artist is kept", () => {
+		// #given — the catalog credits Pharrell only in the artist field it won't write
+		const itunes = candidate({
+			source: "itunes",
+			artist: "Daft Punk, Pharrell Williams & Nile Rodgers",
+			title: "Get Lucky",
+			album: "Random Access Memories",
+			durationSeconds: 369,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "Daft Punk",
+				title: "Get Lucky ft. Pharrell",
+				durationSeconds: 369,
+			},
+			[itunes],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.title).toBe(
+			"Get Lucky (feat. Pharrell)",
+		);
+	});
+
+	it("keeps the upload's artist when the catalog credits a lead the upload never names", () => {
+		// #given — iTunes lists the guests as co-leads
+		const itunes = candidate({
+			source: "itunes",
+			artist: "Daft Punk, Pharrell Williams & Nile Rodgers",
+			title: "Get Lucky",
+			album: "Random Access Memories",
+			durationSeconds: 369,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Daft Punk", title: "Get Lucky", durationSeconds: 369 },
+			[itunes],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.artist).toBe(
+			"Daft Punk",
+		);
+	});
+
+	it("writes the catalog's spelling when it credits the same leads", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Beyonce", title: "Halo", durationSeconds: 261 },
+			[
+				candidate({
+					source: "itunes",
+					artist: "Beyoncé",
+					title: "Halo",
+					album: "I Am... Sasha Fierce",
+					durationSeconds: 261,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.artist).toBe(
+			"Beyoncé",
+		);
+	});
+
+	it("does not let another artist's cover single dispute the real release", () => {
+		// #given — recorded: a band's cover single shares the album name and length
+		const single = candidate({
+			artist: "Ed Sheeran",
+			title: "Shape of You",
+			album: "Shape of You",
+			durationSeconds: 233,
+			isrc: "GBAHS1600463",
+		});
+		const cover = candidate({
+			source: "itunes",
+			artist: "Fame on Fire",
+			title: "Shape of You",
+			album: "Shape of You - Single",
+			durationSeconds: 236,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Ed Sheeran", title: "Shape of You", isrc: "GBAHS1600463" },
+			[single, cover],
+		);
+
+		// #then
+		expect(verdict).toMatchObject({ status: "matched", via: "isrc" });
+	});
+
+	it("matches a name spelled with a dollar sign", () => {
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Ke$ha", title: "TiK ToK", durationSeconds: 200 },
+			[
+				candidate({
+					source: "itunes",
+					artist: "Kesha",
+					title: "TiK ToK",
+					album: "Animal",
+					durationSeconds: 200,
+				}),
+			],
+		);
+
+		// #then
+		expect(verdict.status).toBe("matched");
 	});
 });

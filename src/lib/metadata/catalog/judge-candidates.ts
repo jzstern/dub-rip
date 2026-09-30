@@ -206,6 +206,7 @@ function assess(
 	const candidateCredit = artistCredit(candidate.artist, candidateTitle);
 	const artistPass =
 		songAgreement.artistPass &&
+		creditsEveryUploadLead(queryCredit, candidateCredit) &&
 		onTheArtistsOwnRelease(candidate, candidateCredit, candidateTitle);
 	const { titlePass } = songAgreement;
 
@@ -237,11 +238,36 @@ function assess(
 	};
 }
 
+/** iTunes names a single "Levels - Single" where Deezer names it "Levels". */
+const STORE_RELEASE_SUFFIX = /\s+-\s+(?:single|ep)\s*$/i;
+
+function albumKey(album: string): string {
+	return normalizeForMatch(album.replace(STORE_RELEASE_SUFFIX, ""));
+}
+
 function sameAlbum(left: CatalogCandidate, right: CatalogCandidate): boolean {
 	return (
 		left.album !== undefined &&
 		right.album !== undefined &&
-		normalizeForMatch(left.album) === normalizeForMatch(right.album)
+		albumKey(left.album) === albumKey(right.album)
+	);
+}
+
+/**
+ * A duet upload is not the solo record of one of its singers: "Lauryn Hill &
+ * Bob Marley - Turn Your Lights Down Low" is the 1999 duet, not the Exodus cut
+ * credited to Bob Marley & The Wailers. So every lead the upload names must be
+ * credited somewhere on the candidate, as a lead or a guest — which also means
+ * a written artist tag never drops a singer the upload named.
+ */
+function creditsEveryUploadLead(
+	query: ArtistCredit,
+	candidate: ArtistCredit,
+): boolean {
+	const credited = [...candidate.all];
+	return [...query.leads].every(
+		(lead) =>
+			isBackingBand(lead) || credited.some((name) => sameCredit(lead, name)),
 	);
 }
 
@@ -282,12 +308,18 @@ function withDisputedPerformersRefused(
 	assessments: Assessment[],
 	named: string[],
 ): Assessment[] {
+	/** A copy of the track is by one of its artists; a cover single of the same name is not. */
+	const sharesAnArtist = (left: Assessment, right: Assessment) =>
+		[...left.credit.leads].some((lead) =>
+			[...right.credit.all].some((name) => sameCredit(lead, name)),
+		);
 	return assessments.map((assessment) => {
 		if (!assessment.textPass) return assessment;
 		const disputed = assessments.some(
 			(copy) =>
 				copy !== assessment &&
 				copy.songPass &&
+				sharesAnArtist(copy, assessment) &&
 				copy.recordingKey === assessment.recordingKey &&
 				sameAlbum(copy.candidate, assessment.candidate) &&
 				!runtimesDisagree(copy.candidate, assessment.candidate) &&
@@ -397,18 +429,38 @@ function sameCredit(left: string, right: string): boolean {
 }
 
 /**
+ * The catalog's spelling of the artist, but never its roster. A credit that
+ * adds a lead the upload never names — "Daft Punk, Pharrell Williams & Nile
+ * Rodgers" for a "Daft Punk" upload, "Frank Sinatra & Tony Bennett" for a
+ * Sinatra one — keeps the upload's own artist, since the catalog is then
+ * describing a credit the upload does not claim.
+ */
+function artistForTag(
+	candidate: CatalogCandidate,
+	candidateCredit: ArtistCredit,
+	uploadArtist: string,
+	named: string[],
+): string {
+	const addsALead = [...candidateCredit.leads].some(
+		(lead) =>
+			!isBackingBand(lead) && !named.some((name) => sameCredit(lead, name)),
+	);
+	return addsALead ? uploadArtist.trim() : artistDisplayName(candidate.artist);
+}
+
+/**
  * A catalog can file a feature under the track's contributors instead of its
  * title — "Latch", not "Latch (feat. Sam Smith)" — and writing that title as-is
  * dropped the credit the upload named. It is added back only when the catalog
- * credits no feature at all and none of the upload's names, and only when what
- * the upload typed after "ft." is names: the catalog spells a credit its own
- * way ("Ty Dolla $ign"), and an uploader's trailing "HD" is not a guest. The
- * names are joined with commas because that is how they were split —
- * "Tyler, The Creator" comes back whole.
+ * title credits no feature, the artist being written credits none of the
+ * upload's names, and what the upload typed after "ft." is names: the catalog
+ * spells a credit its own way ("Ty Dolla $ign"), and an uploader's trailing
+ * "HD" is not a guest.
  */
 function titleKeepingFeatures(
 	candidate: CatalogCandidate,
 	queryTitle: ParsedTitle,
+	writtenArtist: string,
 ): string {
 	if (queryTitle.featured.length === 0) return candidate.title;
 	const candidateTitle = parseTrackTitle(candidate.title);
@@ -416,7 +468,7 @@ function titleKeepingFeatures(
 	if (queryTitle.featured.some((name) => NOT_A_NAME.test(name))) {
 		return candidate.title;
 	}
-	const credited = [...artistCredit(candidate.artist, candidateTitle).all];
+	const credited = [...artistCredit(writtenArtist, candidateTitle).all];
 	const alreadyCredited = queryTitle.featured.some((name) =>
 		credited.some((creditedName) => sameCredit(name, creditedName)),
 	);
@@ -437,117 +489,138 @@ function joinCredits(names: string[]): string {
 }
 
 /**
- * A compilation names the recording but not its release: its album, date,
- * label and sleeve are the compilation's, and its ISRC can belong to a
- * re-recording — a workout mix of "Hot Stuff" carries its own. So a compilation
- * contributes the artist and title, and an ISRC only when it is the upload's
- * own; the release fields come from a real release of the same recording, if
- * one is present.
+ * Whether a row proves the exact release and not just the song: the upload's
+ * own ISRC, or a runtime within tolerance, on the artist's own album rather
+ * than a compilation. Two catalogs agreeing proves the song but not which of
+ * its releases — the 1983 original, a 2005 re-recording and a budget reissue
+ * all agree on "Total Eclipse of the Heart" — so agreement alone writes no
+ * album, label, ISRC, year or cover.
  */
-function canonicalFrom(
-	candidate: CatalogCandidate,
-	queryTitle: ParsedTitle,
-	queryIsrc: string | undefined,
-): CanonicalMetadata {
-	const identity = {
-		artist: artistDisplayName(candidate.artist),
-		title: titleKeepingFeatures(candidate, queryTitle),
-		isrc: queryIsrc,
-		source: candidate.source,
-	};
-	if (candidate.isCompilation) return identity;
-	return {
-		...identity,
-		album: candidate.album,
-		genre: candidate.genre,
-		label: candidate.label,
-		isrc: candidate.isrc ?? queryIsrc,
-		artworkUrl: candidate.artworkUrl,
-	};
+function provesTheRelease(assessment: Assessment): boolean {
+	return (
+		assessment.textPass &&
+		!assessment.candidateOutruns &&
+		!assessment.candidate.isCompilation &&
+		((assessment.isrcPass && !assessment.durationContradicts) ||
+			assessment.durationPass)
+	);
+}
+
+function preciseYear(candidate: CatalogCandidate): number | undefined {
+	return isPreciseDate(candidate.releaseDate)
+		? releaseYear(candidate.releaseDate)
+		: undefined;
 }
 
 /**
- * The recording's year is its earliest release: a reissue, a remaster or a
- * compilation comes out after the original, never before it. iTunes dates each
- * track by that original release even on a compilation — the Reservoir Dogs
- * soundtrack's "Stuck in the Middle with You" says 1972 — while Deezer dates a
- * compilation's copy by the compilation, so only those are left out.
+ * The other catalog's copy of this row's release: the same song on an album of
+ * the same name, at the same runtime. Two catalogs listing one album is the
+ * best evidence either API gives that it is the artist's real release — a
+ * budget reissue or a re-recording album rarely sits in both under one name.
  */
-function earliestYear(candidates: CatalogCandidate[]): number | undefined {
-	const dated = candidates.filter(
-		(candidate) =>
-			!(candidate.isCompilation && candidate.source === "deezer") &&
-			releaseYear(candidate.releaseDate) !== undefined,
-	);
-	/** A Jan 1 date is a placeholder — an "80s hits" set dated 1980-01-01 is not the song's year. */
-	const precise = dated.filter((candidate) =>
-		isPreciseDate(candidate.releaseDate),
-	);
-	const years = (precise.length > 0 ? precise : dated).map(
-		(candidate) => releaseYear(candidate.releaseDate) as number,
-	);
-	return years.length > 0 ? Math.min(...years) : undefined;
-}
-
-/**
- * Deezer names the recording best but its search results carry no release date
- * and no genre, while iTunes carries both. When the two catalogs agree on a
- * recording, the fields one lacks are taken from the other rather than from a
- * second network call — never from a compilation, for the reasons above, except
- * the year an iTunes compilation dates the recording by.
- */
-function fillFromSupport(
-	metadata: CanonicalMetadata,
-	best: CatalogCandidate,
-	support: CatalogCandidate[],
-): CanonicalMetadata {
-	const merged = { ...metadata, year: earliestYear([best, ...support]) };
-	for (const candidate of support) {
-		if (candidate.isCompilation) continue;
-		merged.album ??= candidate.album;
-		merged.genre ??= candidate.genre;
-		merged.isrc ??= candidate.isrc;
-		merged.label ??= candidate.label;
-		merged.artworkUrl ??= candidate.artworkUrl;
-	}
-	return merged;
-}
-
-/**
- * The other candidates for the same recording, whose fields fill the gaps in
- * the best one's. The full text gate is required — `recordingKey` compares
- * titles alone, so without the artist check a different artist's same-named
- * track could supply the album, and an ISRC-reached candidate is no exception.
- *
- * A cut that OUTRUNS the upload is excluded, but a shorter one is not: a live
- * take would otherwise donate its ISRC to the studio version, while the shorter
- * catalog twin of a longer music video is exactly the donor whose year and
- * genre the match needs. What a donor may not do is disagree with the chosen
- * release's own runtime — an ISRC names one recording, so a same-titled row of
- * another length would stamp its code on the wrong one. Ranked candidates come
- * first, so a real release fills a field before a compilation does.
- */
-function supportingCandidates(
-	matches: Match[],
+function releaseTwins(
+	row: Assessment,
 	assessments: Assessment[],
-	best: Assessment,
 ): CatalogCandidate[] {
-	const support = new Set<CatalogCandidate>();
-	for (const assessment of [
-		...matches.map((match) => match.assessment),
-		...assessments,
-	]) {
-		if (
-			assessment.candidate !== best.candidate &&
-			assessment.recordingKey === best.recordingKey &&
-			!assessment.candidateOutruns &&
-			!runtimesDisagree(assessment.candidate, best.candidate) &&
-			assessment.textPass
-		) {
-			support.add(assessment.candidate);
-		}
+	return assessments
+		.filter(
+			(twin) =>
+				twin.candidate.source !== row.candidate.source &&
+				twin.textPass &&
+				!twin.candidate.isCompilation &&
+				twin.recordingKey === row.recordingKey &&
+				sameAlbum(twin.candidate, row.candidate) &&
+				!runtimesDisagree(twin.candidate, row.candidate),
+		)
+		.map((twin) => twin.candidate);
+}
+
+/**
+ * The release to write, or none. The upload's own ISRC names its release
+ * outright. Otherwise a release both catalogs list under one album name is the
+ * strongest evidence either API gives, taken from Deezer's copy, which carries
+ * the ISRC and label. A release only one catalog proves is trusted when the
+ * other proves nothing — Deezer had no copy of Flume's single — but not when
+ * each proves a different one: a budget reissue on Deezer against the label's
+ * own album on iTunes, or a single against its album, is a disagreement about
+ * the release, and the fields are left as the upload has them.
+ */
+function pickRelease(
+	rows: Assessment[],
+	assessments: Assessment[],
+): Assessment | undefined {
+	const byOrder = (left: Assessment, right: Assessment) =>
+		SOURCE_RANK[left.candidate.source] - SOURCE_RANK[right.candidate.source] ||
+		(left.candidate.rank ?? 0) - (right.candidate.rank ?? 0) ||
+		(preciseYear(left.candidate) ?? Number.POSITIVE_INFINITY) -
+			(preciseYear(right.candidate) ?? Number.POSITIVE_INFINITY);
+	const twinned = (row: Assessment) =>
+		releaseTwins(row, assessments).length > 0;
+
+	const byIsrc = rows.filter((row) => row.isrcPass);
+	if (byIsrc.length > 0) {
+		return [...byIsrc].sort(
+			(left, right) =>
+				Number(!twinned(left)) - Number(!twinned(right)) ||
+				byOrder(left, right),
+		)[0];
 	}
-	return [...support];
+	const corroborated = rows.filter(twinned);
+	if (corroborated.length > 0) return [...corroborated].sort(byOrder)[0];
+	const sources = new Set(rows.map((row) => row.candidate.source));
+	return sources.size === 1 ? [...rows].sort(byOrder)[0] : undefined;
+}
+
+type ReleaseFields = Partial<
+	Pick<
+		CanonicalMetadata,
+		"album" | "year" | "genre" | "label" | "isrc" | "artworkUrl" | "source"
+	>
+>;
+
+/**
+ * The fields of one release — never mixed across two — taken from the release
+ * `pickRelease` chose and its copy in the other catalog.
+ *
+ * The year is written only when both catalogs list the release, and then the
+ * earlier of their two precise dates. The catalogs date a release, not a
+ * recording: Deezer's "Stealers Wheel" album is its 2008 digital reissue, and
+ * nothing in a single row says which kind of date it is. When they disagree,
+ * the earlier is the closer to the original; when only one lists the release,
+ * the year is left as the upload has it. A Jan 1 date is a placeholder and
+ * dates nothing.
+ */
+function releaseFields(
+	rows: Assessment[],
+	assessments: Assessment[],
+	queryIsrc: string | undefined,
+): ReleaseFields {
+	const primary = pickRelease(rows, assessments);
+	if (!primary) return {};
+	const release = primary.candidate;
+	const twins = releaseTwins(primary, assessments);
+	const copies = [release, ...twins];
+	const years = twins.length
+		? copies.flatMap((copy) => {
+				const year = preciseYear(copy);
+				return year === undefined ? [] : [year];
+			})
+		: [];
+	return {
+		album: release.album,
+		artworkUrl:
+			release.artworkUrl ?? twins.find((twin) => twin.artworkUrl)?.artworkUrl,
+		label: release.label ?? twins.find((twin) => twin.label)?.label,
+		/** iTunes names the genre per track; a Deezer album's genre is the album's. */
+		genre:
+			copies.find((copy) => copy.source === "itunes" && copy.genre)?.genre ??
+			copies.find((copy) => copy.genre)?.genre,
+		isrc: primary.isrcPass
+			? queryIsrc
+			: (release.isrc ?? twins.find((twin) => twin.isrc)?.isrc),
+		year: years.length > 0 ? Math.min(...years) : undefined,
+		source: release.source,
+	};
 }
 
 function preciseDate(releaseDate: string | undefined): string | undefined {
@@ -636,14 +709,30 @@ export function judgeCandidates(
 		return { status: "unmatched", reason: reason ?? "no-candidates" };
 	}
 
+	const winner = best.assessment;
+	const releaseRows = assessments.filter(
+		(assessment) =>
+			assessment.recordingKey === winner.recordingKey &&
+			provesTheRelease(assessment),
+	);
+	const artist = artistForTag(
+		winner.candidate,
+		winner.credit,
+		query.artist,
+		namedByUpload(queryCredit, queryTitle),
+	);
+	const release = releaseFields(releaseRows, assessments, queryIsrc);
+
 	return {
 		status: "matched",
 		via: best.proofs[0] as MatchEvidence,
-		candidate: best.assessment.candidate,
-		metadata: fillFromSupport(
-			canonicalFrom(best.assessment.candidate, queryTitle, queryIsrc),
-			best.assessment.candidate,
-			supportingCandidates(matches, assessments, best.assessment),
-		),
+		candidate: winner.candidate,
+		metadata: {
+			artist,
+			title: titleKeepingFeatures(winner.candidate, queryTitle, artist),
+			...release,
+			isrc: release.isrc ?? queryIsrc,
+			source: release.source ?? winner.candidate.source,
+		},
 	};
 }

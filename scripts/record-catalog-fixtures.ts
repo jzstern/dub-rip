@@ -189,7 +189,7 @@ async function albumUrlsTheFetchAsksFor(): Promise<string[]> {
 	}) as typeof fetch;
 	try {
 		for (const query of [...QUERIES, ...ISRC_QUERIES]) {
-			await lookupCatalogMetadata(query, { enrich: true });
+			await lookupCatalogMetadata(query);
 		}
 	} finally {
 		globalThis.fetch = liveFetch;

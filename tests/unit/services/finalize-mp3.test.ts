@@ -359,7 +359,7 @@ describe("finalizeMp3() tag inputs", () => {
 
 		// #then
 		expect(buildID3Tags).toHaveBeenLastCalledWith(
-			expect.objectContaining({ trustPlatformLabel: false }),
+			expect.objectContaining({ trustPlatformRelease: false }),
 		);
 	});
 
@@ -377,7 +377,7 @@ describe("finalizeMp3() tag inputs", () => {
 
 		// #then
 		expect(buildID3Tags).toHaveBeenLastCalledWith(
-			expect.objectContaining({ trustPlatformLabel: true }),
+			expect.objectContaining({ trustPlatformRelease: true }),
 		);
 	});
 });

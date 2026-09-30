@@ -94,7 +94,7 @@ describe("fetchCatalogCandidates()", () => {
 });
 
 describe("vouchedCandidates()", () => {
-	const QUERY = { artist: "Adele", title: "Hello" };
+	const QUERY = { artist: "Adele", title: "Hello", isrc: "GBBKS1500214" };
 
 	function deezerRow(
 		overrides: Partial<CatalogCandidate> = {},
@@ -106,6 +106,7 @@ describe("vouchedCandidates()", () => {
 			album: "25",
 			albumId: "7",
 			durationSeconds: 295,
+			isrc: "GBBKS1500214",
 			...overrides,
 		};
 	}
@@ -255,10 +256,14 @@ describe("vouchedCandidates()", () => {
 		expect([vouched, fetchMock.mock.calls.length]).toEqual([[itunesRow], 0]);
 	});
 
-	it("records whose album a Deezer row sits on", async () => {
+	it("records whose album the row carrying the upload's ISRC sits on", async () => {
 		// #given
 		stubCatalogFetch();
-		const query = { artist: "Flume", title: "Never Be Like You feat. Kai" };
+		const query = {
+			artist: "Billie Eilish",
+			title: "bad guy",
+			isrc: "USUM71900764",
+		};
 
 		// #when
 		const vouched = await vouchedCandidates(
@@ -269,9 +274,24 @@ describe("vouchedCandidates()", () => {
 
 		// #then
 		expect(
-			vouched?.find((candidate) => candidate.album === "The Lockbox")
+			vouched?.find((candidate) => candidate.isrc === "USUM71900764")
 				?.albumArtist,
-		).toBe("The Amalgamates");
+		).toBe("Billie Eilish");
+	});
+
+	it("makes no album call for a lookup without an ISRC", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+
+		// #when
+		await vouchedCandidates(
+			{ artist: "Adele", title: "Hello" },
+			[deezerRow()],
+			1000,
+		);
+
+		// #then — only a row carrying the upload's ISRC can name a release
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });
 
@@ -446,7 +466,7 @@ describe("lookupCatalogMetadata()", () => {
 		});
 	});
 
-	it("writes the real single, not a knock-off Deezer files under the artist's name", async () => {
+	it("names the song but no release for an upload without an ISRC", async () => {
 		// #given — recorded: Deezer's same-runtime row sits on The Amalgamates' album
 		stubCatalogFetch();
 
@@ -457,14 +477,15 @@ describe("lookupCatalogMetadata()", () => {
 			durationSeconds: 233,
 		});
 
-		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: {
-				album: "Never Be Like You (feat. Kai) - Single",
-				source: "itunes",
-			},
-		});
+		// #then — the knock-offs name the same song, so only the song is written
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.artist,
+				verdict.metadata.title,
+				verdict.metadata.album,
+				verdict.metadata.isrc,
+			],
+		).toEqual(["Flume", "Never Be Like You (feat. Kai)", undefined, undefined]);
 	});
 
 	it("takes no ISRC or label from the knock-offs beside the real single", async () => {
@@ -505,8 +526,8 @@ describe("lookupCatalogMetadata()", () => {
 		});
 	});
 
-	it("keeps the recording's year over a Deezer album dated with a Jan 1 placeholder", async () => {
-		// #given — iTunes dates the release 1972; Deezer's album says 1970-01-01
+	it("dates a release by the other catalog's copy, even one dated Jan 1", async () => {
+		// #given — Deezer dates the album by its 2008 reissue; iTunes says 1972, day unknown
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async (input: unknown) => {
@@ -519,7 +540,7 @@ describe("lookupCatalogMetadata()", () => {
 									trackName: "Stuck In The Middle With You",
 									artistName: "Stealers Wheel",
 									collectionName: "Stealers Wheel",
-									releaseDate: "1972-11-01T00:00:00Z",
+									releaseDate: "1972-01-01T00:00:00Z",
 									trackTimeMillis: 208_000,
 								},
 							],
@@ -528,13 +549,14 @@ describe("lookupCatalogMetadata()", () => {
 						? {
 								artist: { name: "Stealers Wheel" },
 								label: "A&M",
-								release_date: "1970-01-01",
+								release_date: "2008-05-22",
 							}
 						: {
 								data: [
 									{
 										title: "Stuck In The Middle With You",
 										duration: 208,
+										isrc: "GBAAM7200002",
 										artist: { name: "Stealers Wheel" },
 										album: { id: 5, title: "Stealers Wheel" },
 									},
@@ -549,6 +571,7 @@ describe("lookupCatalogMetadata()", () => {
 			artist: "Stealers Wheel",
 			title: "Stuck In The Middle With You",
 			durationSeconds: 209,
+			isrc: "GBAAM7200002",
 		});
 
 		// #then

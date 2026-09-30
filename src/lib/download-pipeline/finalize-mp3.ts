@@ -183,7 +183,7 @@ export async function finalizeMp3({
 			sourceUrl,
 			canonical,
 			/** SoundCloud's label field is a distributor's; YouTube's is a scraped ℗ line. */
-			trustPlatformLabel: Boolean(soundCloudArtwork),
+			trustPlatformRelease: Boolean(soundCloudArtwork),
 		});
 
 		const { image: _image, ...tagsForLog } = tags;

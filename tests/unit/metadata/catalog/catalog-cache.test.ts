@@ -182,7 +182,7 @@ describe("sharedCatalogLookup()", () => {
 		]);
 	});
 
-	it("lets the download reuse the searches and the album the preview checked", async () => {
+	it("lets the download reuse the searches the preview made", async () => {
 		// #given — a preview, then the download for the same track
 		const fetchMock = stubStores();
 		await sharedCatalogLookup(QUERY, { timeout: 4000 });
@@ -193,8 +193,8 @@ describe("sharedCatalogLookup()", () => {
 			{ timeout: 6000 },
 		);
 
-		// #then — two searches and one album call in all
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		// #then — two searches in all, and no album call without an ISRC
+		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
 	it("still offers the answering catalog's cover when the other is down", async () => {
@@ -221,26 +221,29 @@ describe("sharedCatalogLookup()", () => {
 	});
 
 	it("answers unmatched, not a partial verdict, when an album check fails", async () => {
-		// #given — the searches answer; the album call does not
+		// #given — the searches answer; the album of the row carrying the ISRC does not
 		vi.stubGlobal(
 			"fetch",
 			vi.fn(async (input: unknown) => {
 				const url = String(input);
-				if (url.includes("/album/")) {
+				if (url.includes("/album/") || url.includes("/track/isrc")) {
 					return { ok: false, status: 503, json: async () => ({}) };
 				}
+				const deezer = {
+					data: [{ ...deezerSearchBody().data[0], isrc: "GBBKS1500214" }],
+				};
 				return {
 					ok: true,
 					status: 200,
 					json: async () =>
-						url.includes("itunes") ? itunesSearchBody() : deezerSearchBody(),
+						url.includes("itunes") ? itunesSearchBody() : deezer,
 				};
 			}),
 		);
 
 		// #when
 		const { verdict } = await sharedCatalogLookup(
-			{ ...QUERY, durationSeconds: 295 },
+			{ ...QUERY, durationSeconds: 295, isrc: "GBBKS1500214" },
 			{ timeout: 4000 },
 		);
 
@@ -248,30 +251,26 @@ describe("sharedCatalogLookup()", () => {
 		expect(verdict.status).toBe("unmatched");
 	});
 
-	it("checks the albums for each lookup, whichever query filled the cache", async () => {
+	it("judges the same way whichever query filled the cache", async () => {
 		// #given — a lyric channel's title shares the official upload's cache key
-		// but names no row, so it asks about no album
 		stubCatalogFetch();
+		const official = {
+			artist: "Flume",
+			title: "Never Be Like You feat. Kai",
+			durationSeconds: 233,
+		};
+		const alone = await sharedCatalogLookup(official, { timeout: 4000 });
+		clearCatalogCandidateCache();
 		await sharedCatalogLookup(
 			{ artist: "Flume", title: "Never Be Like You Kai" },
 			{ timeout: 4000 },
 		);
 
 		// #when
-		const { verdict } = await sharedCatalogLookup(
-			{
-				artist: "Flume",
-				title: "Never Be Like You feat. Kai",
-				durationSeconds: 233,
-			},
-			{ timeout: 4000 },
-		);
+		const afterAnother = await sharedCatalogLookup(official, { timeout: 4000 });
 
-		// #then — the knock-offs beside the single are still refused
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Never Be Like You (feat. Kai) - Single" },
-		});
+		// #then
+		expect(afterAnother.verdict).toEqual(alone.verdict);
 	});
 
 	it("starts fresh after the cache is cleared", async () => {

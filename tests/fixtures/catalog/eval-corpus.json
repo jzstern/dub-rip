@@ -1,5 +1,5 @@
 {
-	"note": "Ground truth for scripts/eval-catalog-lookup.ts. `expect` is what SHOULD happen, not what does: a wrong match is a precision failure and fails the run, while a miss is a recall number to watch. Titles are compared on their base form, so a catalog's feat. credits and version wording do not matter.",
+	"note": "Ground truth for scripts/eval-catalog-lookup.ts. `expect` is what SHOULD happen, not what does: a wrong match is a precision failure and fails the run, while a miss is a recall number to watch. Titles are compared on their base form, so a catalog's feat. credits and version wording do not matter. `expectAlbum` applies only to cases carrying an ISRC: only the upload's own ISRC proves a release.",
 	"cases": [
 		{
 			"name": "Adele music video",
@@ -200,8 +200,7 @@
 			"durationSeconds": 233,
 			"expect": "match",
 			"expectArtist": "Flume",
-			"expectTitle": "Never Be Like You",
-			"expectAlbum": "Never Be Like You (feat. Kai) - Single"
+			"expectTitle": "Never Be Like You"
 		},
 		{
 			"name": "feature the catalog files outside the title",
@@ -210,8 +209,7 @@
 			"durationSeconds": 256,
 			"expect": "match",
 			"expectArtist": "Disclosure",
-			"expectTitle": "Latch",
-			"expectAlbum": "Settle (Special Edition)"
+			"expectTitle": "Latch"
 		},
 		{
 			"name": "lead artist only a guest on a same-titled cover",
@@ -229,8 +227,7 @@
 			"durationSeconds": 314,
 			"expect": "match",
 			"expectArtist": "Donna Summer",
-			"expectTitle": "Hot Stuff",
-			"expectAlbum": "Bad Girls"
+			"expectTitle": "Hot Stuff"
 		},
 		{
 			"name": "solo record whose only same-titled rows are a later duet",
@@ -246,8 +243,7 @@
 			"durationSeconds": 192,
 			"expect": "match",
 			"expectArtist": "Clean Bandit",
-			"expectTitle": "Rather Be",
-			"expectAlbum": "Prayer"
+			"expectTitle": "Rather Be"
 		}
 	]
 }

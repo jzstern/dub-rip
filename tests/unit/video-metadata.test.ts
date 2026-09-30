@@ -572,11 +572,37 @@ describe("buildID3Tags() with a proven catalog match", () => {
 			...HEURISTIC,
 			details: { label: "Darkroom/Interscope Records" },
 			canonical: CANONICAL,
-			trustPlatformLabel: true,
+			trustPlatformRelease: true,
 		});
 
 		// #then
 		expect(tags.publisher).toBe("Darkroom/Interscope Records");
+	});
+
+	it("keeps SoundCloud's own release year over the catalog's", () => {
+		// #when — the catalog's copy can be dated by a later reissue
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { year: 2014 },
+			canonical: { ...CANONICAL, year: 2015 },
+			trustPlatformRelease: true,
+		});
+
+		// #then
+		expect(tags.year).toBe("2014");
+	});
+
+	it("lets the catalog year beat YouTube's upload date", () => {
+		// #when
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { year: 2009 },
+			canonical: { ...CANONICAL, year: 1983 },
+			trustPlatformRelease: false,
+		});
+
+		// #then
+		expect(tags.year).toBe("1983");
 	});
 
 	it("lets the catalog label beat YouTube's scraped copyright line", () => {
@@ -585,7 +611,7 @@ describe("buildID3Tags() with a proven catalog match", () => {
 			...HEURISTIC,
 			details: { label: "2015 XL Recordings Ltd under exclusive licence" },
 			canonical: CANONICAL,
-			trustPlatformLabel: false,
+			trustPlatformRelease: false,
 		});
 
 		// #then

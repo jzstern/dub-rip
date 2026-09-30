@@ -135,10 +135,8 @@ export async function fetchCatalogCandidates(
 const ALBUM_TTL_MS = 6 * 60 * 60 * 1000;
 
 /**
- * The judge prefers a catalog's higher-ranked rows anyway, and a much-reissued
- * song has ten albums to ask about: checking them all spent Deezer's per-IP
- * quota — about 50 calls in 5 s, shared by every user — on rows that could not
- * win.
+ * One ISRC rarely sits on more than a single and its album, and Deezer's
+ * per-IP quota — about 50 calls in 5 s — is shared by every user.
  */
 const MAX_ALBUM_CHECKS = 3;
 
@@ -162,16 +160,15 @@ export function clearDeezerAlbumCache(): void {
 
 /**
  * The candidates the judge may see for this query, or `null` when one of them
- * could not be vouched for. Deezer's search rows do not say whose album a
- * track is on, and Deezer files knock-offs under the real artist's name — so a
- * Deezer row that could match is passed on only with its album's artist,
- * label, date and genre attached. Rows past the cap are left out; the judge
- * prefers the catalogs' top rows anyway. iTunes rows carry the credit already.
+ * could not be vouched for. Only a Deezer row carrying the upload's own ISRC
+ * can supply release fields (see `provesTheRelease`), and Deezer's search rows
+ * do not say whose album a track is on or whether it is a compilation — so
+ * such a row is passed on only with its album's artist, label, date and genre
+ * attached. Every other row names at most the song, which its own credit
+ * already settles; a lookup without an ISRC makes no album call at all.
  *
- * A failed album call fails the whole lookup rather than just its row: the
- * row it leaves out may be the one that refuses another — the Deezer copy
- * that disputes a duet credit — so judging without it can accept what it
- * would have refused.
+ * A failed album call fails the whole lookup rather than just its row, so a
+ * release is never judged without the evidence its album check exists for.
  *
  * Runs on every lookup, against the cached search rows, and caches nothing but
  * the albums themselves. Checking once when the rows were fetched made the
@@ -184,8 +181,12 @@ export async function vouchedCandidates(
 	candidates: CatalogCandidate[],
 	timeout: number,
 ): Promise<CatalogCandidate[] | null> {
+	const isrc = normalizeIsrc(query.isrc);
 	const needsCheck = (candidate: CatalogCandidate) =>
-		candidate.source === "deezer" && namesTheSameRecording(query, candidate);
+		isrc !== undefined &&
+		candidate.source === "deezer" &&
+		normalizeIsrc(candidate.isrc) === isrc &&
+		namesTheSameRecording(query, candidate);
 	const albumIds = [
 		...new Set(
 			candidates

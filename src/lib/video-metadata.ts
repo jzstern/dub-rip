@@ -283,11 +283,12 @@ export interface ID3TagInput {
 	 */
 	canonical?: CanonicalMetadata;
 	/**
-	 * SoundCloud's `label_name` is a clean field a distributor filled in for this
-	 * exact upload, so it beats the catalog's. YouTube's is scraped out of a
-	 * free-text ℗ line, so it does not.
+	 * SoundCloud's `label_name` and release date are clean fields a distributor
+	 * filled in for this exact upload, so they beat the catalog's — whose date
+	 * can be a reissue's. YouTube's label is scraped out of a free-text ℗ line
+	 * and its date is the upload's, so the catalog's win there.
 	 */
-	trustPlatformLabel?: boolean;
+	trustPlatformRelease?: boolean;
 }
 
 export interface ID3Tags {
@@ -321,7 +322,7 @@ export function buildID3Tags({
 	uploader,
 	sourceUrl,
 	canonical,
-	trustPlatformLabel,
+	trustPlatformRelease,
 }: ID3TagInput): ID3Tags {
 	const title = (
 		canonical?.title ||
@@ -359,7 +360,9 @@ export function buildID3Tags({
 
 	const genre = canonical?.genre || details?.genre;
 	if (genre) tags.genre = genre;
-	const year = canonical?.year ?? details?.year;
+	const year = trustPlatformRelease
+		? (details?.year ?? canonical?.year)
+		: (canonical?.year ?? details?.year);
 	if (typeof year === "number") tags.year = String(year);
 	if (typeof details?.bpm === "number")
 		tags.bpm = String(Math.round(details.bpm));
@@ -368,7 +371,7 @@ export function buildID3Tags({
 		labelName: details?.label,
 	});
 	const label = resolveLabel({
-		platformLabel: trustPlatformLabel
+		platformLabel: trustPlatformRelease
 			? (details?.label ?? canonical?.label)
 			: (canonical?.label ?? details?.label),
 		titleLabel: titleCredits.label,

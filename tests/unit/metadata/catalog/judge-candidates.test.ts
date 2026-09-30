@@ -388,10 +388,9 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Whenever You Need Somebody" },
-		});
+		expect(verdict.status === "matched" && verdict.candidate.album).toBe(
+			"Whenever You Need Somebody",
+		);
 	});
 
 	it("takes the earlier release when both dates are precise", () => {
@@ -419,7 +418,7 @@ describe("judgeCandidates() ranks the same recording stably", () => {
 		);
 
 		// #then
-		expect(verdict).toMatchObject({ metadata: { album: "25" } });
+		expect(verdict.status === "matched" && verdict.candidate.album).toBe("25");
 	});
 });
 
@@ -526,9 +525,14 @@ describe("judgeCandidates() fills gaps only from the same recording", () => {
 		});
 	});
 
-	it("takes the release fields from the row whose runtime proves it", () => {
-		// #given — the audio upload runs as long as the album cut
-		const query = { artist: "Toto", title: "Africa", durationSeconds: 296 };
+	it("takes the release fields from the row carrying the upload's ISRC", () => {
+		// #given — a SoundCloud distributor upload carrying its own ISRC
+		const query = {
+			artist: "Toto",
+			title: "Africa",
+			durationSeconds: 296,
+			isrc: "USSM19801941",
+		};
 
 		// #when
 		const verdict = judgeCandidates(query, [
@@ -537,6 +541,7 @@ describe("judgeCandidates() fills gaps only from the same recording", () => {
 				title: "Africa",
 				album: "Toto IV",
 				durationSeconds: 295,
+				isrc: "USSM19801941",
 			}),
 			candidate({
 				source: "itunes",
@@ -553,6 +558,30 @@ describe("judgeCandidates() fills gaps only from the same recording", () => {
 		expect(verdict).toMatchObject({
 			status: "matched",
 			metadata: { album: "Toto IV", year: 1982, genre: "Rock" },
+		});
+	});
+
+	it("writes no release fields when only the runtime matches", () => {
+		// #given — a matching runtime does not tell a release from a re-recording
+		const query = { artist: "Toto", title: "Africa", durationSeconds: 296 };
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			candidate({
+				source: "itunes",
+				artist: "Toto",
+				title: "Africa",
+				album: "Toto IV",
+				durationSeconds: 295,
+				releaseDate: "1982-04-08",
+			}),
+		]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Toto",
+			title: "Africa",
+			source: "itunes",
 		});
 	});
 
@@ -584,10 +613,13 @@ describe("judgeCandidates() fills gaps only from the same recording", () => {
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: undefined, genre: undefined, year: undefined },
-		});
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.album,
+				verdict.metadata.genre,
+				verdict.metadata.year,
+			],
+		).toEqual([undefined, undefined, undefined]);
 	});
 
 	it("writes the ISRC in its canonical form, not as the uploader typed it", () => {
@@ -640,10 +672,9 @@ describe("judgeCandidates() fills gaps only from the same recording", () => {
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "25", isrc: undefined },
-		});
+		expect(verdict.status === "matched" && verdict.metadata.isrc).toBe(
+			undefined,
+		);
 	});
 });
 
@@ -892,10 +923,9 @@ describe("judgeCandidates() needs the catalogs to agree on a recording, not a ti
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Skin" },
-		});
+		expect(verdict.status === "matched" && verdict.candidate.album).toBe(
+			"Skin",
+		);
 	});
 
 	it("takes no ISRC from a same-titled release of another length", () => {
@@ -1021,13 +1051,15 @@ describe("judgeCandidates() writes only the artist's own releases", () => {
 		});
 
 		// #when
-		const verdict = judgeCandidates(query, [knockOff, SINGLE]);
+		const verdict = judgeCandidates({ ...query, isrc: "QZ9Y21704533" }, [
+			knockOff,
+			SINGLE,
+		]);
 
-		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Never Be Like You (feat. Kai) - Single" },
-		});
+		// #then — even carrying the upload's ISRC, it names no release
+		expect(verdict.status === "matched" && verdict.metadata.album).toBe(
+			undefined,
+		);
 	});
 
 	it("accepts a feature on the other credited artist's album", () => {
@@ -1216,10 +1248,9 @@ describe("judgeCandidates() writes no release fields from a compilation", () => 
 		);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Bad Girls" },
-		});
+		expect(verdict.status === "matched" && verdict.candidate.album).toBe(
+			"Bad Girls",
+		);
 	});
 
 	it("writes neither the compilation's ISRC, label, date nor sleeve when it wins", () => {
@@ -1241,7 +1272,7 @@ describe("judgeCandidates() writes no release fields from a compilation", () => 
 		});
 	});
 
-	it("keeps the upload's own ISRC when a compilation carries it", () => {
+	it("keeps the upload's own ISRC but no release when only a compilation carries it", () => {
 		// #given — a SoundCloud upload whose ISRC Deezer answers with a label's best-of
 		const bestOf = candidate({
 			artist: "Pegboard Nerds",
@@ -1272,14 +1303,14 @@ describe("judgeCandidates() writes no release fields from a compilation", () => 
 			[bestOf, single],
 		);
 
-		// #then — the album comes from the single, not the best-of
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: {
-				isrc: "CA6D21001011",
-				album: "Hero (feat. Elizaveta) - Single",
-			},
-		});
+		// #then — the best-of's album and date are not the upload's release
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.isrc,
+				verdict.metadata.album,
+				verdict.metadata.year,
+			],
+		).toEqual(["CA6D21001011", undefined, undefined]);
 	});
 
 	it("takes nothing from a compilation that supports the chosen release", () => {
@@ -1323,6 +1354,7 @@ describe("judgeCandidates() accepts an official remix on the remixer's own relea
 				artist: "Clean Bandit",
 				title: "Rather Be ft. Jess Glynne (Robin Schulz Edit)",
 				durationSeconds: 192,
+				isrc: "GBAHS1400266",
 			},
 			[edit],
 		);
@@ -1497,109 +1529,106 @@ describe("judgeCandidates() draws the agreement line at five seconds", () => {
 	});
 });
 
-describe("judgeCandidates() dates a recording by its earliest release", () => {
-	const RELEASE = candidate({
+describe("judgeCandidates() dates a release by both catalogs' copies of it", () => {
+	const ISRC = "GBAAM7200002";
+	const query = {
+		artist: "Stealers Wheel",
+		title: "Stuck In The Middle With You",
+		durationSeconds: 209,
+		isrc: ISRC,
+	};
+	const deezerAlbum = candidate({
 		artist: "Stealers Wheel",
 		title: "Stuck In The Middle With You",
 		album: "Stealers Wheel",
 		durationSeconds: 208,
+		isrc: ISRC,
+		releaseDate: "2008-05-22",
 	});
-
-	it("takes the earliest precise year among the releases the runtime proves", () => {
-		// #given — the original and a remaster of the same master
-		const original = candidate({
+	const itunesAlbum = (releaseDate: string) =>
+		candidate({
 			source: "itunes",
 			artist: "Stealers Wheel",
 			title: "Stuck In The Middle With You",
 			album: "Stealers Wheel",
 			durationSeconds: 208,
-			releaseDate: "1972-11-01",
-		});
-		const reissue = candidate({
-			source: "itunes",
-			artist: "Stealers Wheel",
-			title: "Stuck In The Middle With You",
-			album: "The Very Best Of",
-			durationSeconds: 208,
-			releaseDate: "2008-05-12",
+			releaseDate,
 		});
 
-		// #when
-		const verdict = judgeCandidates(
-			{
-				artist: "Stealers Wheel",
-				title: "Stuck In The Middle With You",
-				durationSeconds: 209,
-			},
-			[RELEASE, reissue, original],
-		);
+	it("takes the earlier of the two copies' years", () => {
+		// #when — Deezer dates the album by its digital reissue
+		const verdict = judgeCandidates(query, [
+			deezerAlbum,
+			itunesAlbum("1972-11-01"),
+		]);
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
 	});
 
-	it("does not take a placeholder Jan 1 date for the recording's year", () => {
-		// #given — recorded: an "80s hits" set iTunes dates 1980-01-01
-		const eighties = candidate({
-			source: "itunes",
-			artist: "Stealers Wheel",
-			title: "Stuck In The Middle With You",
-			album: "Anos 80 - Nostalgia Internacionais",
-			isCompilation: true,
-			durationSeconds: 208,
-			releaseDate: "1970-01-01",
-		});
-		const original = candidate({
-			source: "itunes",
-			artist: "Stealers Wheel",
-			title: "Stuck In The Middle With You",
-			album: "Stealers Wheel",
-			durationSeconds: 208,
-			releaseDate: "1972-11-01",
-		});
-
-		// #when
-		const verdict = judgeCandidates(
-			{
-				artist: "Stealers Wheel",
-				title: "Stuck In The Middle With You",
-				durationSeconds: 209,
-			},
-			[RELEASE, eighties, original],
-		);
+	it("counts a Jan 1 date on the other copy as that release's year", () => {
+		// #when — recorded: iTunes dates the original album 1987-01-01, the day unknown
+		const verdict = judgeCandidates(query, [
+			deezerAlbum,
+			itunesAlbum("1972-01-01"),
+		]);
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
 	});
 
-	it("never dates the recording by a compilation's copy", () => {
-		// #given — a best-of dated earlier than any release it collects
+	it("prefers the release carrying the ISRC that the other catalog lists too", () => {
+		// #given — the recording sits on a single Deezer ranks first, and on the album
+		const deezerSingle = candidate({
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			album: "Stuck In The Middle With You",
+			durationSeconds: 208,
+			isrc: ISRC,
+			rank: 0,
+		});
+
+		// #when
+		const verdict = judgeCandidates(query, [
+			deezerSingle,
+			{ ...deezerAlbum, rank: 1 },
+			itunesAlbum("1972-11-01"),
+		]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.album).toBe(
+			"Stealers Wheel",
+		);
+	});
+
+	it("writes no year when only one catalog lists the release", () => {
+		// #when
+		const verdict = judgeCandidates(query, [deezerAlbum]);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(
+			undefined,
+		);
+	});
+
+	it("never dates the release by a compilation's copy", () => {
+		// #given — a best-of dated earlier than the release it collects
 		const bestOf = candidate({
+			source: "itunes",
 			artist: "Stealers Wheel",
 			title: "Stuck In The Middle With You",
-			album: "Seventies Gold",
+			album: "Stealers Wheel",
 			isCompilation: true,
 			durationSeconds: 208,
 			releaseDate: "1970-03-01",
 		});
-		const album = candidate({
-			source: "itunes",
-			artist: "Stealers Wheel",
-			title: "Stuck In The Middle With You",
-			album: "Stealers Wheel",
-			durationSeconds: 208,
-			releaseDate: "1972-11-01",
-		});
 
 		// #when
-		const verdict = judgeCandidates(
-			{
-				artist: "Stealers Wheel",
-				title: "Stuck In The Middle With You",
-				durationSeconds: 209,
-			},
-			[RELEASE, bestOf, album],
-		);
+		const verdict = judgeCandidates(query, [
+			deezerAlbum,
+			bestOf,
+			itunesAlbum("1972-11-01"),
+		]);
 
 		// #then
 		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
@@ -1717,7 +1746,7 @@ describe("judgeCandidates() writes a release only when the release is proven", (
 		title: "Total Eclipse of the Heart",
 	};
 
-	it("takes the release from the row the runtime proves, not from a re-recording both catalogs carry", () => {
+	it("writes no release a runtime alone would pick, even over a re-recording both catalogs carry", () => {
 		// #when
 		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
 			REMAKE_DEEZER,
@@ -1726,10 +1755,9 @@ describe("judgeCandidates() writes a release only when the release is proven", (
 		]);
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: { album: "Faster Than the Speed of Night" },
-		});
+		expect(verdict.status === "matched" && verdict.metadata.album).toBe(
+			undefined,
+		);
 	});
 
 	it("takes no ISRC or label from a re-recording the runtime rules out", () => {
@@ -1763,7 +1791,7 @@ describe("judgeCandidates() writes a release only when the release is proven", (
 		);
 	});
 
-	it("takes a release both catalogs list from Deezer, dated by the earlier copy", () => {
+	it("takes the release carrying the upload's ISRC, dated by the other catalog's copy", () => {
 		// #given — Deezer dates the album by its digital reissue
 		const deezerAlbum = candidate({
 			artist: "Bonnie Tyler",
@@ -1776,10 +1804,10 @@ describe("judgeCandidates() writes a release only when the release is proven", (
 		});
 
 		// #when
-		const verdict = judgeCandidates({ ...query, durationSeconds: 330 }, [
-			deezerAlbum,
-			ORIGINAL_ITUNES,
-		]);
+		const verdict = judgeCandidates(
+			{ ...query, durationSeconds: 330, isrc: "GBBBN8302012" },
+			[deezerAlbum, ORIGINAL_ITUNES],
+		);
 
 		// #then
 		expect(verdict).toMatchObject({
@@ -1831,15 +1859,21 @@ describe("judgeCandidates() writes a release only when the release is proven", (
 			album: "Levels",
 			durationSeconds: 199,
 			label: "Universal Music",
+			isrc: "SEUM71100962",
 		});
 
 		// #when
 		const verdict = judgeCandidates(
-			{ artist: "Avicii", title: "Levels", durationSeconds: 200 },
+			{
+				artist: "Avicii",
+				title: "Levels",
+				durationSeconds: 200,
+				isrc: "SEUM71100962",
+			},
 			[itunesSingle, deezerSingle],
 		);
 
-		// #then
+		// #then — the iTunes copy dates it
 		expect(verdict).toMatchObject({
 			status: "matched",
 			metadata: { album: "Levels", label: "Universal Music", year: 2011 },

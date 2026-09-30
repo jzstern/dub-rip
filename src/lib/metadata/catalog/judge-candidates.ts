@@ -496,34 +496,30 @@ function joinCredits(names: string[]): string {
 }
 
 /**
- * Whether a row proves the exact release and not just the song: the upload's
- * own ISRC, or a runtime within tolerance, on the artist's own album rather
- * than a compilation. Two catalogs agreeing proves the song but not which of
- * its releases — the 1983 original, a 2005 re-recording and a budget reissue
- * all agree on "Total Eclipse of the Heart" — so agreement alone writes no
- * album, label, ISRC, year or cover.
+ * Whether a row proves the exact release and not just the song: it carries
+ * the upload's own ISRC, on the artist's own album rather than a compilation.
+ * An ISRC names one recording. Nothing else the catalogs give does — two
+ * catalogs agreeing proves the song, and a matching runtime does not tell a
+ * release from a re-recording cut to the original's length: Rick Springfield's
+ * 2019 orchestral "Jessie's Girl" runs within a second of the 1981 single, and
+ * both catalogs list its album. So only an upload that carries its ISRC — in
+ * practice a SoundCloud distributor upload — gets album, label, ISRC, year,
+ * genre or cover from a catalog.
  */
 function provesTheRelease(assessment: Assessment): boolean {
 	return (
 		assessment.textPass &&
 		!assessment.candidateOutruns &&
 		!assessment.candidate.isCompilation &&
-		((assessment.isrcPass && !assessment.durationContradicts) ||
-			assessment.durationPass)
+		assessment.isrcPass &&
+		!assessment.durationContradicts
 	);
-}
-
-function preciseYear(candidate: CatalogCandidate): number | undefined {
-	return isPreciseDate(candidate.releaseDate)
-		? releaseYear(candidate.releaseDate)
-		: undefined;
 }
 
 /**
  * The other catalog's copy of this row's release: the same song on an album of
- * the same name, at the same runtime. Two catalogs listing one album is the
- * best evidence either API gives that it is the artist's real release — a
- * budget reissue or a re-recording album rarely sits in both under one name.
+ * the same name, at the same runtime. It fills what the ISRC's own row lacks —
+ * iTunes names the genre per track — and dates the release.
  */
 function releaseTwins(
 	row: Assessment,
@@ -543,39 +539,21 @@ function releaseTwins(
 }
 
 /**
- * The release to write, or none. The upload's own ISRC names its release
- * outright. Otherwise a release both catalogs list under one album name is the
- * strongest evidence either API gives, taken from Deezer's copy, which carries
- * the ISRC and label. A release only one catalog proves is trusted when the
- * other proves nothing — Deezer had no copy of Flume's single — but not when
- * each proves a different one: a budget reissue on Deezer against the label's
- * own album on iTunes, or a single against its album, is a disagreement about
- * the release, and the fields are left as the upload has them.
+ * One recording can sit on several releases — a single and its album both
+ * carry the ISRC. A release the other catalog lists too comes first, then the
+ * catalog's own order.
  */
 function pickRelease(
 	rows: Assessment[],
 	assessments: Assessment[],
 ): Assessment | undefined {
-	const byOrder = (left: Assessment, right: Assessment) =>
-		SOURCE_RANK[left.candidate.source] - SOURCE_RANK[right.candidate.source] ||
-		(left.candidate.rank ?? 0) - (right.candidate.rank ?? 0) ||
-		(preciseYear(left.candidate) ?? Number.POSITIVE_INFINITY) -
-			(preciseYear(right.candidate) ?? Number.POSITIVE_INFINITY);
 	const twinned = (row: Assessment) =>
 		releaseTwins(row, assessments).length > 0;
-
-	const byIsrc = rows.filter((row) => row.isrcPass);
-	if (byIsrc.length > 0) {
-		return [...byIsrc].sort(
-			(left, right) =>
-				Number(!twinned(left)) - Number(!twinned(right)) ||
-				byOrder(left, right),
-		)[0];
-	}
-	const corroborated = rows.filter(twinned);
-	if (corroborated.length > 0) return [...corroborated].sort(byOrder)[0];
-	const sources = new Set(rows.map((row) => row.candidate.source));
-	return sources.size === 1 ? [...rows].sort(byOrder)[0] : undefined;
+	return [...rows].sort(
+		(left, right) =>
+			Number(!twinned(left)) - Number(!twinned(right)) ||
+			(left.candidate.rank ?? 0) - (right.candidate.rank ?? 0),
+	)[0];
 }
 
 type ReleaseFields = Partial<
@@ -589,13 +567,12 @@ type ReleaseFields = Partial<
  * The fields of one release — never mixed across two — taken from the release
  * `pickRelease` chose and its copy in the other catalog.
  *
- * The year is written only when both catalogs list the release, and then the
- * earlier of their two precise dates. The catalogs date a release, not a
- * recording: Deezer's "Stealers Wheel" album is its 2008 digital reissue, and
- * nothing in a single row says which kind of date it is. When they disagree,
- * the earlier is the closer to the original; when only one lists the release,
- * the year is left as the upload has it. A Jan 1 date is a placeholder and
- * dates nothing.
+ * The year is written only when both catalogs list the release, as the earlier
+ * of their two years. The catalogs date a release, not a recording — Deezer
+ * often dates an album by its digital reissue — and one row cannot say which
+ * kind of date it has; the other catalog's copy of the same release is the
+ * check. Its year counts even from a Jan 1 date, which is that release's year
+ * with the day unknown.
  */
 function releaseFields(
 	rows: Assessment[],
@@ -609,7 +586,7 @@ function releaseFields(
 	const copies = [release, ...twins];
 	const years = twins.length
 		? copies.flatMap((copy) => {
-				const year = preciseYear(copy);
+				const year = releaseYear(copy.releaseDate);
 				return year === undefined ? [] : [year];
 			})
 		: [];
@@ -622,9 +599,7 @@ function releaseFields(
 		genre:
 			copies.find((copy) => copy.source === "itunes" && copy.genre)?.genre ??
 			copies.find((copy) => copy.genre)?.genre,
-		isrc: primary.isrcPass
-			? queryIsrc
-			: (release.isrc ?? twins.find((twin) => twin.isrc)?.isrc),
+		isrc: queryIsrc,
 		year: years.length > 0 ? Math.min(...years) : undefined,
 		source: release.source,
 	};

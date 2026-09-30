@@ -1962,6 +1962,51 @@ describe("judgeCandidates() credits exactly who the upload credits", () => {
 		expect(verdict).toMatchObject({ status: "matched", via: "isrc" });
 	});
 
+	it("counts a lead act named 'The …' as a performer, not a backing band", () => {
+		// #given — a Daft Punk solo row for a song the upload credits to both acts
+		const solo = candidate({
+			artist: "Daft Punk",
+			title: "Starboy",
+			album: "Starboy",
+			durationSeconds: 230,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{
+				artist: "The Weeknd & Daft Punk",
+				title: "Starboy",
+				durationSeconds: 230,
+			},
+			[solo, { ...solo, source: "itunes" }],
+		);
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("does not add a lead act named 'The …' to an upload's artist", () => {
+		// #given
+		const itunes = candidate({
+			source: "itunes",
+			artist: "The Weeknd, Daft Punk",
+			title: "Starboy",
+			album: "Starboy",
+			durationSeconds: 230,
+		});
+
+		// #when
+		const verdict = judgeCandidates(
+			{ artist: "Daft Punk", title: "Starboy", durationSeconds: 230 },
+			[itunes],
+		);
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.artist).toBe(
+			"Daft Punk",
+		);
+	});
+
 	it("matches a name spelled with a dollar sign", () => {
 		// #when
 		const verdict = judgeCandidates(

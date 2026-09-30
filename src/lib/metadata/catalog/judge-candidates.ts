@@ -266,14 +266,19 @@ function creditsEveryUploadLead(
 ): boolean {
 	const credited = [...candidate.all];
 	return [...query.leads].every(
-		(lead) =>
-			isBackingBand(lead) || credited.some((name) => sameCredit(lead, name)),
+		(lead, position) =>
+			isBackingBand(lead, position) ||
+			credited.some((name) => sameCredit(lead, name)),
 	);
 }
 
-/** "Prince & The Revolution": the band behind the lead, not a second performer. */
-function isBackingBand(name: string): boolean {
-	return name.startsWith("the ");
+/**
+ * "Prince & The Revolution": the band behind the lead, not a second performer.
+ * Only after the lead — a credit that starts with "The Weeknd" or "The
+ * Chainsmokers" names the act itself.
+ */
+function isBackingBand(name: string, position: number): boolean {
+	return position > 0 && name.startsWith("the ");
 }
 
 /**
@@ -288,8 +293,8 @@ function leadTheOtherOmits(
 	const credits = (names: Iterable<string>, lead: string) =>
 		[...names].some((name) => sameCredit(lead, name));
 	return [...from.credit.leads].some(
-		(lead) =>
-			!isBackingBand(lead) &&
+		(lead, position) =>
+			!isBackingBand(lead, position) &&
 			!credits(named, lead) &&
 			!credits(other.credit.all, lead),
 	);
@@ -442,8 +447,9 @@ function artistForTag(
 	named: string[],
 ): string {
 	const addsALead = [...candidateCredit.leads].some(
-		(lead) =>
-			!isBackingBand(lead) && !named.some((name) => sameCredit(lead, name)),
+		(lead, position) =>
+			!isBackingBand(lead, position) &&
+			!named.some((name) => sameCredit(lead, name)),
 	);
 	return addsALead ? uploadArtist.trim() : artistDisplayName(candidate.artist);
 }

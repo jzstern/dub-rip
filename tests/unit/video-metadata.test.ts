@@ -491,3 +491,173 @@ describe("buildID3Tags", () => {
 		expect(tags.bpm).toBe("128");
 	});
 });
+
+describe("buildID3Tags() with a proven catalog match", () => {
+	const HEURISTIC = {
+		trackTitle: "Hello (Official Music Video)",
+		videoTitle: "Adele - Hello (Official Music Video)",
+		artist: "AdeleVEVO",
+		image: null,
+	};
+
+	const CANONICAL = {
+		artist: "Adele",
+		title: "Hello",
+		album: "25",
+		year: 2015,
+		genre: "Pop",
+		label: "XL Recordings",
+		isrc: "GBBKS1500214",
+		source: "itunes" as const,
+	};
+
+	it("outranks both the yt-dlp details and the parsed title", () => {
+		// #when — details carries a worse answer for every field the catalog knows
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: {
+				track: "Hello (Official Music Video)",
+				artist: "AdeleVEVO",
+				album: "Hello (Official Music Video)",
+				year: 2016,
+				genre: "Music",
+			},
+			canonical: CANONICAL,
+		});
+
+		// #then
+		expect(tags).toMatchObject({
+			title: "Hello",
+			artist: "Adele",
+			album: "25",
+			year: "2015",
+			genre: "Pop",
+		});
+	});
+
+	it("is ignored entirely when there was no match", () => {
+		// #when
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { track: "Hello", artist: "Adele", album: "25" },
+			canonical: undefined,
+		});
+
+		// #then — today's behaviour, unchanged
+		expect(tags).toMatchObject({
+			title: "Hello",
+			artist: "Adele",
+			album: "25",
+		});
+	});
+
+	it("falls through to the details album when a compilation left it empty", () => {
+		// #given — a match whose album was dropped, because it was a Various Artists set
+		const canonical = { ...CANONICAL, album: undefined };
+
+		// #when
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { album: "Deadline Records Va 05" },
+			canonical,
+		});
+
+		// #then
+		expect(tags.album).toBe("Deadline Records Va 05");
+	});
+
+	it("keeps SoundCloud's own label over the catalog's", () => {
+		// #when — a distributor filled in label_name for this exact upload
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { label: "Darkroom/Interscope Records" },
+			canonical: CANONICAL,
+			trustPlatformRelease: true,
+		});
+
+		// #then
+		expect(tags.publisher).toBe("Darkroom/Interscope Records");
+	});
+
+	it("keeps SoundCloud's own release year over the catalog's", () => {
+		// #when — the catalog's copy can be dated by a later reissue
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { year: 2014 },
+			canonical: { ...CANONICAL, year: 2015 },
+			trustPlatformRelease: true,
+		});
+
+		// #then
+		expect(tags.year).toBe("2014");
+	});
+
+	it("lets the catalog year beat YouTube's upload date", () => {
+		// #when
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { year: 2009 },
+			canonical: { ...CANONICAL, year: 1983 },
+			trustPlatformRelease: false,
+		});
+
+		// #then
+		expect(tags.year).toBe("1983");
+	});
+
+	it("lets the catalog label beat YouTube's scraped copyright line", () => {
+		// #when
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { label: "2015 XL Recordings Ltd under exclusive licence" },
+			canonical: CANONICAL,
+			trustPlatformRelease: false,
+		});
+
+		// #then
+		expect(tags.publisher).toBe("XL Recordings");
+	});
+
+	it("keeps the platform's own ISRC ahead of the catalog's", () => {
+		// #when — details.isrc only ever comes from SoundCloud's publisher metadata
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: { isrc: "USUM71900764" },
+			canonical: CANONICAL,
+		});
+
+		// #then
+		expect(tags.ISRC).toBe("USUM71900764");
+	});
+
+	it("writes the catalog ISRC when the platform supplied none", () => {
+		// #when
+		const tags = buildID3Tags({
+			...HEURISTIC,
+			details: null,
+			canonical: CANONICAL,
+		});
+
+		// #then
+		expect(tags.ISRC).toBe("GBBKS1500214");
+	});
+
+	it("reads the remixer off the canonical title, not the upload's", () => {
+		// #when
+		const tags = buildID3Tags({
+			trackTitle: "Levels (Official Video)",
+			videoTitle: "Avicii - Levels (Official Video)",
+			artist: "Avicii",
+			image: null,
+			details: null,
+			canonical: {
+				...CANONICAL,
+				artist: "Avicii",
+				title: "Levels (Skrillex Remix)",
+			},
+		});
+
+		// #then
+		expect(tags.remixArtist).toBe("Skrillex");
+	});
+});

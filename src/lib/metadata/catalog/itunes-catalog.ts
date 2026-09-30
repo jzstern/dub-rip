@@ -73,6 +73,7 @@ function toCandidate(
 		artist,
 		title,
 		album: optionalString(result.collectionName),
+		albumArtist: optionalString(result.collectionArtistName),
 		isCompilation:
 			optionalString(result.collectionArtistName)?.toLowerCase() ===
 			COMPILATION_ARTIST,

@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import * as Sentry from "@sentry/sveltekit";
+import type { CanonicalMetadata } from "./metadata/catalog/catalog-candidate";
 import { cleanUploadTitle } from "./metadata/clean-upload-title";
 import { extractRemixer, resolveLabel } from "./metadata/credits";
 import { retryWithBackoff } from "./retry";
@@ -275,6 +276,19 @@ export interface ID3TagInput {
 	uploader?: string;
 	/** Canonical URL of the upload, written to WOAS. */
 	sourceUrl?: string;
+	/**
+	 * A proven catalog match. It outranks `details`, which outranks the values
+	 * parsed out of the upload title — see the field table in
+	 * docs/superpowers/specs/2026-09-22-catalog-metadata-lookup-design.md.
+	 */
+	canonical?: CanonicalMetadata;
+	/**
+	 * SoundCloud's `label_name` and release date are clean fields a distributor
+	 * filled in for this exact upload, so they beat the catalog's — whose date
+	 * can be a reissue's. YouTube's label is scraped out of a free-text ℗ line
+	 * and its date is the upload's, so the catalog's win there.
+	 */
+	trustPlatformRelease?: boolean;
 }
 
 export interface ID3Tags {
@@ -307,15 +321,33 @@ export function buildID3Tags({
 	image,
 	uploader,
 	sourceUrl,
+	canonical,
+	trustPlatformRelease,
 }: ID3TagInput): ID3Tags {
-	const title = (details?.track || trackTitle || videoTitle || "").trim();
-	const finalArtist = (details?.artist || artist || "Unknown Artist").trim();
+	const title = (
+		canonical?.title ||
+		details?.track ||
+		trackTitle ||
+		videoTitle ||
+		""
+	).trim();
+	const finalArtist = (
+		canonical?.artist ||
+		details?.artist ||
+		artist ||
+		"Unknown Artist"
+	).trim();
 	const performerInfo = (
 		details?.albumArtist ||
 		finalArtist ||
 		"Unknown Artist"
 	).trim();
-	const album = (details?.album || title || "Unknown Album").trim();
+	const album = (
+		canonical?.album ||
+		details?.album ||
+		title ||
+		"Unknown Album"
+	).trim();
 	const composer = (details?.composer || finalArtist || "").trim();
 
 	const tags: ID3Tags = {
@@ -326,8 +358,12 @@ export function buildID3Tags({
 		composer,
 	};
 
-	if (details?.genre) tags.genre = details.genre;
-	if (typeof details?.year === "number") tags.year = String(details.year);
+	const genre = canonical?.genre || details?.genre;
+	if (genre) tags.genre = genre;
+	const year = trustPlatformRelease
+		? (details?.year ?? canonical?.year)
+		: (canonical?.year ?? details?.year);
+	if (typeof year === "number") tags.year = String(year);
 	if (typeof details?.bpm === "number")
 		tags.bpm = String(Math.round(details.bpm));
 
@@ -335,13 +371,17 @@ export function buildID3Tags({
 		labelName: details?.label,
 	});
 	const label = resolveLabel({
-		platformLabel: details?.label,
+		platformLabel: trustPlatformRelease
+			? (details?.label ?? canonical?.label)
+			: (canonical?.label ?? details?.label),
 		titleLabel: titleCredits.label,
 		uploader: uploader || details?.uploader,
 		artist: finalArtist,
 	});
 	if (label) tags.publisher = label;
-	if (details?.isrc) tags.ISRC = details.isrc;
+	/** `details.isrc` only ever comes from SoundCloud's own publisher metadata. */
+	const isrc = details?.isrc || canonical?.isrc;
+	if (isrc) tags.ISRC = isrc;
 	const remixer = extractRemixer(tags.title);
 	if (remixer) tags.remixArtist = remixer;
 	if (titleCredits.catalogNumber) {

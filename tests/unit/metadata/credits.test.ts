@@ -40,6 +40,10 @@ describe("extractRemixer()", () => {
 		"Song (Lyric Video Edit)",
 		"Song (Video Mix Edit)",
 		"Song (Clean Intro Edit)",
+		"Spin Me Round (Full Edit)",
+		'Heart of Glass (12" Edit)',
+		"Heart of Glass (12 Inch Edit)",
+		"Heart of Glass (12-Inch Edit)",
 	])("names nobody for %j", (title) => {
 		// #when
 		const remixer = extractRemixer(title);

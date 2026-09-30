@@ -47,6 +47,8 @@ interface DeezerError {
 }
 
 export interface DeezerAlbumInfo {
+	/** The album's own artist credit, which search results leave out. */
+	artist?: string;
 	label?: string;
 	genre?: string;
 	releaseDate?: string;
@@ -219,6 +221,7 @@ export async function deezerAlbum(
 	if (!body) return null;
 
 	return {
+		artist: optionalString(body.artist?.name),
 		label: optionalString(body.label),
 		genre: optionalString(body.genres?.data?.[0]?.name),
 		releaseDate: optionalString(body.release_date)?.slice(0, 10),

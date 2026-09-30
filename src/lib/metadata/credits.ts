@@ -1,9 +1,14 @@
 const VERSION_CREDIT =
 	/[([]\s*([^()[\]]+?)\s+(?:remix|re-?edit|edit|bootleg|flip|rework|refix)\s*[)\]]/gi;
 
-/** A word that describes a version rather than naming the person who made it. */
+/**
+ * A word that describes a version rather than naming the person who made it.
+ * `full`, `inch` and the `12"` / `12-inch` forms cover the length variants a
+ * catalog match now writes as the title: without them "(Full Edit)" and
+ * '(12" Edit)' credited remixers called "Full" and '12"'.
+ */
 const GENERIC_VERSION_WORD =
-	/^(?:original|radio|extended|club|dub|instrumental|album|single|clean|explicit|dirty|short|long|main|intro|outro|dj|vocal|acoustic|live|official|video|lyrics?|tv|promo|vip|deluxe|festival|acapella|a|capella|cappella|super|tiktok|summer|trap|house|techno|hardstyle|slowed|sped|speed|up|nightcore|mix|edit|\d+)$/i;
+	/^(?:original|radio|extended|club|dub|instrumental|album|single|clean|explicit|dirty|short|long|full|main|intro|outro|dj|vocal|acoustic|live|official|video|lyrics?|tv|promo|vip|deluxe|festival|acapella|a|capella|cappella|super|tiktok|summer|trap|house|techno|hardstyle|slowed|sped|speed|up|nightcore|mix|edit|inch|\d+(?:"|-?inch)?)$/i;
 
 /**
  * Every word has to be generic, so "Video Mix" describes a version while

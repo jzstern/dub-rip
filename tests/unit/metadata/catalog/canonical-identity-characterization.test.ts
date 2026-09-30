@@ -38,9 +38,9 @@ const CANONICAL_YOUTUBE_TITLES: [
 	[
 		"Macklemore & Ryan Lewis - Can't Hold Us feat. Ray Dalton (Official Music Video)",
 		"Macklemore",
-		"Macklemore",
-		"Can't Hold Us (feat. Ray Dalton)",
-		"catalog",
+		"Macklemore & Ryan Lewis",
+		"Can't Hold Us feat. Ray Dalton",
+		"heuristic",
 	],
 	["Eminem: Lose Yourself", "EminemVEVO", "Eminem", "Lose Yourself", "catalog"],
 	["Coldplay | Yellow", "Coldplay", "Coldplay", "Yellow", "catalog"],
@@ -121,7 +121,7 @@ async function resolveShownIdentity(
 	return verdict.status === "matched"
 		? {
 				artist: verdict.metadata.artist,
-				title: verdict.metadata.title,
+				title: verdict.metadata.title ?? heuristic.trackTitle,
 				from: "catalog" as const,
 			}
 		: {
@@ -150,7 +150,7 @@ describe("canonical identity characterization", () => {
 		expect(shown).toEqual({ artist, title, from });
 	});
 
-	it("fills album, year and genre from the catalogs that agreed", async () => {
+	it("names the song but no release when only agreement proves it", async () => {
 		// #given
 		stubCatalogFetch();
 
@@ -160,15 +160,11 @@ describe("canonical identity characterization", () => {
 			title: "Get Lucky ft. Pharrell Williams, Nile Rodgers",
 		});
 
-		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: {
-				album: "Random Access Memories",
-				year: 2013,
-				genre: "Pop",
-				isrc: "USQX91300108",
-			},
+		// #then — a music video's runtime proves none of the song's releases
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Daft Punk",
+			title: "Get Lucky (feat. Pharrell Williams and Nile Rodgers)",
+			source: "deezer",
 		});
 	});
 });

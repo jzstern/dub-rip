@@ -50,6 +50,23 @@ describe("searchITunes()", () => {
 		).toBe(true);
 	});
 
+	it("keeps whose collection a track sits on", async () => {
+		// #given
+		stubCatalogFetch();
+
+		// #when
+		const candidates = await searchITunes(
+			searchTerm({ artist: "Avicii", title: "Levels (Skrillex Remix)" }),
+		);
+
+		// #then
+		expect(
+			candidates?.find((candidate) =>
+				candidate.album?.startsWith("Body By Jake"),
+			)?.albumArtist,
+		).toBe("Various Artists");
+	});
+
 	it("asks for more than one result, so a cover cannot be the only answer", () => {
 		// #when
 		const url = itunesSearchUrl("Adele Hello");

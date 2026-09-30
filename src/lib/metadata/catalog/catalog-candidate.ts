@@ -8,6 +8,12 @@ export interface CatalogCandidate {
 	album?: string;
 	/** Deezer's album id, which the label and genre come from. */
 	albumId?: string;
+	/**
+	 * Whose release the album is. A catalog can credit a track to the real
+	 * artist on somebody else's album — a knock-off label's — and only the
+	 * album's own credit gives it away.
+	 */
+	albumArtist?: string;
 	isCompilation?: boolean;
 	releaseDate?: string;
 	durationSeconds?: number;
@@ -26,7 +32,11 @@ export interface CatalogCandidate {
 /** What a proven match writes, in place of the values parsed from the upload title. */
 export interface CanonicalMetadata {
 	artist: string;
-	title: string;
+	/**
+	 * Absent when the catalog's title credits other guests than the upload
+	 * does; the title then falls back exactly as it does without a match.
+	 */
+	title?: string;
 	album?: string;
 	year?: number;
 	genre?: string;
@@ -67,6 +77,19 @@ export type CatalogVerdict =
 
 export interface CatalogRequestOptions {
 	timeout?: number;
+}
+
+/**
+ * Both stores back-date a reissue to Jan 1, so such a date cannot order
+ * releases. Its year still counts once both catalogs list the release.
+ */
+const IMPRECISE_DATE = /-01-01$/;
+
+export function isPreciseDate(releaseDate: string | undefined): boolean {
+	return (
+		releaseYear(releaseDate) !== undefined &&
+		!IMPRECISE_DATE.test(releaseDate ?? "")
+	);
 }
 
 /** Shared by both adapters and the album enrichment, so a year means one thing. */

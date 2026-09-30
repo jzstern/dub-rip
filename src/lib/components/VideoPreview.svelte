@@ -9,15 +9,21 @@ interface Props {
 let { preview, formatDuration }: Props = $props();
 
 let imageLoaded = $state(false);
-let artworkFailed = $state(false);
+/**
+ * The URL that failed, not a boolean: /details can replace `preview.artwork`
+ * after mount, and a latched flag would suppress the replacement too.
+ */
+let failedArtwork = $state<string | null>(null);
 
 let imageSrc = $derived(
-	preview.artwork && !artworkFailed ? preview.artwork : preview.thumbnail,
+	preview.artwork && preview.artwork !== failedArtwork
+		? preview.artwork
+		: preview.thumbnail,
 );
 
 function handleArtworkError() {
-	if (preview.artwork && !artworkFailed) {
-		artworkFailed = true;
+	if (preview.artwork) {
+		failedArtwork = preview.artwork;
 	}
 }
 </script>

@@ -13,7 +13,10 @@ import {
 	deezerSearchUrl,
 } from "../src/lib/metadata/catalog/deezer-catalog";
 import { itunesSearchUrl } from "../src/lib/metadata/catalog/itunes-catalog";
-import { searchTerm } from "../src/lib/metadata/catalog/lookup-catalog";
+import {
+	lookupCatalogMetadata,
+	searchTerm,
+} from "../src/lib/metadata/catalog/lookup-catalog";
 
 const FIXTURE_PATH = "tests/fixtures/catalog/catalog-responses.json";
 
@@ -46,12 +49,18 @@ const QUERIES = [
 	{ artist: "Coldplay", title: "Yellow" },
 	{ artist: "Metallica", title: "Enter Sandman (Remastered)" },
 	{ artist: "The Weeknd", title: "Blinding Lights" },
+	{ artist: "Flume", title: "Never Be Like You feat. Kai" },
+	{ artist: "Disclosure", title: "Latch ft. Sam Smith" },
 	{ artist: "Artist", title: "Title" },
 ];
 
 const SEARCH_TERMS = [...new Set(QUERIES.map(searchTerm))];
 
 const ISRCS = ["USUM71900764"];
+/** Queries that reach Deezer through their ISRC, whose rows are checked too. */
+const ISRC_QUERIES = [
+	{ artist: "Billie Eilish", title: "bad guy", isrc: "USUM71900764" },
+];
 const ALBUM_IDS = ["91598612"];
 
 const ITUNES_FIELDS = [
@@ -160,6 +169,38 @@ for (const albumId of ALBUM_IDS) {
 			pick(body, DEEZER_ALBUM_FIELDS),
 		),
 	);
+}
+
+/**
+ * The albums a lookup asks about — the Deezer rows that name its query's song
+ * and artist, up to the cap. Found by running the real lookup against what was
+ * just recorded, so the fixture covers exactly the calls the app makes.
+ */
+async function albumUrlsTheFetchAsksFor(): Promise<string[]> {
+	const recorded = new Map(entries);
+	const asked = new Set<string>();
+	const liveFetch = globalThis.fetch;
+	globalThis.fetch = (async (input: unknown) => {
+		const url = String(input);
+		const body = recorded.get(url);
+		if (body !== undefined) return new Response(JSON.stringify(body));
+		if (url.startsWith("https://api.deezer.com/album/")) asked.add(url);
+		return new Response("{}", { status: 404 });
+	}) as typeof fetch;
+	try {
+		for (const query of [...QUERIES, ...ISRC_QUERIES]) {
+			await lookupCatalogMetadata(query);
+		}
+	} finally {
+		globalThis.fetch = liveFetch;
+	}
+	return [...asked].filter((url) => !recorded.has(url));
+}
+
+for (const url of await albumUrlsTheFetchAsksFor()) {
+	entries.push(await record(url, (body) => pick(body, DEEZER_ALBUM_FIELDS)));
+	/** Deezer allows 50 calls per 5 seconds per IP. */
+	await new Promise((resolve) => setTimeout(resolve, 150));
 }
 
 await writeFile(

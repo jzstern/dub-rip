@@ -1,12 +1,17 @@
-import {
-	type CatalogCandidate,
-	type CatalogVerdict,
-	releaseYear,
-	type TrackQuery,
+import { createSingleFlightCache } from "../../single-flight-cache";
+import type {
+	CatalogCandidate,
+	CatalogVerdict,
+	TrackQuery,
 } from "./catalog-candidate";
-import { deezerAlbum, deezerTrackByIsrc, searchDeezer } from "./deezer-catalog";
+import {
+	type DeezerAlbumInfo,
+	deezerAlbum,
+	deezerTrackByIsrc,
+	searchDeezer,
+} from "./deezer-catalog";
 import { searchITunes } from "./itunes-catalog";
-import { judgeCandidates } from "./judge-candidates";
+import { judgeCandidates, namesTheSameRecording } from "./judge-candidates";
 import {
 	collapseWhitespace,
 	normalizeForMatch,
@@ -47,8 +52,6 @@ export interface LookupOptions {
 	/** Total budget for the whole lookup, not per request. */
 	timeout?: number;
 	cache?: CandidateCache;
-	/** Fetch the Deezer album for label and genre. Off for previews, which show neither. */
-	enrich?: boolean;
 }
 
 /** Thrown when no catalog could be reached, so the miss is never cached as a result. */
@@ -96,6 +99,12 @@ export function candidateCacheKey(query: TrackQuery): string {
  * All three calls go out together. The ISRC leg is not a short-circuit: an
  * uploader-supplied ISRC can resolve to a track that is not this upload, and
  * suppressing the searches would leave nothing for the judge to fall back on.
+ *
+ * Either search failing counts as an outage, not as a catalog with nothing to
+ * say. The rules that refuse a wrong release need both catalogs — a Deezer copy
+ * is what disputes iTunes's Sinatra & Bennett duet credit — so a lookup missing
+ * one would accept what the other would have refused, and caching that set
+ * would keep accepting it for ten minutes.
  */
 export async function fetchCatalogCandidates(
 	query: TrackQuery,
@@ -110,40 +119,105 @@ export async function fetchCatalogCandidates(
 		searchDeezer(term, { timeout }),
 	]);
 
-	/** Both searches unreachable is an outage, which must not be cached as a miss. */
-	if (itunes === null && deezer === null && !byIsrc) {
+	if (itunes === null || deezer === null) {
 		throw new CatalogUnavailableError();
 	}
 
-	return [...(byIsrc ? [byIsrc] : []), ...(itunes ?? []), ...(deezer ?? [])];
+	return [...(byIsrc ? [byIsrc] : []), ...itunes, ...deezer];
 }
 
-async function enrichFromAlbum(
-	verdict: CatalogVerdict,
+/** Albums do not change and many tracks share one, so a checked album is kept far longer than a search. */
+const ALBUM_TTL_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * One ISRC rarely sits on more than a single and its album, and Deezer's
+ * per-IP quota — about 50 calls in 5 s — is shared by every user.
+ */
+const MAX_ALBUM_CHECKS = 3;
+
+/** A failed call answers null, which the cache never keeps, so the next request asks again. */
+const albumCache = createSingleFlightCache<DeezerAlbumInfo | null>();
+
+function checkedAlbum(
+	albumId: string,
 	timeout: number,
-): Promise<CatalogVerdict> {
-	if (verdict.status !== "matched") return verdict;
-	const { albumId } = verdict.candidate;
-	if (!albumId) return verdict;
+): Promise<DeezerAlbumInfo | null> {
+	return albumCache.get(
+		albumId,
+		() => deezerAlbum(albumId, { timeout }),
+		ALBUM_TTL_MS,
+	);
+}
 
-	const album = await deezerAlbum(albumId, { timeout });
-	if (!album) return verdict;
+export function clearDeezerAlbumCache(): void {
+	albumCache.clear();
+}
 
-	return {
-		...verdict,
-		metadata: {
-			...verdict.metadata,
-			label: verdict.metadata.label ?? album.label,
-			genre: verdict.metadata.genre ?? album.genre,
-			album: album.isCompilation ? undefined : verdict.metadata.album,
-			year: verdict.metadata.year ?? releaseYear(album.releaseDate),
-		},
-	};
+/**
+ * The candidates the judge may see for this query. Only a Deezer row carrying
+ * the upload's own ISRC can supply release fields (see `provesTheRelease`), and
+ * Deezer's search rows do not say whose album a track is on or whether it is a
+ * compilation — so such a row is passed on only with its album's artist,
+ * label, date and genre attached, and is dropped when its album cannot be
+ * checked. Every other row names at most the song, which its own credit
+ * already settles; a lookup without an ISRC makes no album call at all.
+ *
+ * Dropping just that row, not failing the lookup, keeps an album Deezer has
+ * since pulled — which answers 404 on every call — from costing the track its
+ * canonical artist and title for good.
+ *
+ * Runs on every lookup, against the cached search rows, and caches nothing but
+ * the albums themselves. Checking once when the rows were fetched made the
+ * result depend on whichever query filled the cache key — a lyric channel's
+ * "Never Be Like You Kai" shares a key with the official upload but names no
+ * row, so it cached them all unchecked.
+ */
+export async function vouchedCandidates(
+	query: TrackQuery,
+	candidates: CatalogCandidate[],
+	timeout: number,
+): Promise<CatalogCandidate[]> {
+	const isrc = normalizeIsrc(query.isrc);
+	const needsCheck = (candidate: CatalogCandidate) =>
+		isrc !== undefined &&
+		candidate.source === "deezer" &&
+		normalizeIsrc(candidate.isrc) === isrc &&
+		namesTheSameRecording(query, candidate);
+	const albumIds = [
+		...new Set(
+			candidates
+				.filter(needsCheck)
+				.flatMap((candidate) => (candidate.albumId ? [candidate.albumId] : [])),
+		),
+	].slice(0, MAX_ALBUM_CHECKS);
+	const albums = new Map(
+		await Promise.all(
+			albumIds.map(
+				async (albumId) =>
+					[albumId, await checkedAlbum(albumId, timeout)] as const,
+			),
+		),
+	);
+	return candidates.flatMap((candidate) => {
+		if (!needsCheck(candidate)) return [candidate];
+		const album = candidate.albumId ? albums.get(candidate.albumId) : undefined;
+		if (!album?.artist) return [];
+		return [
+			{
+				...candidate,
+				albumArtist: album.artist,
+				isCompilation: album.isCompilation,
+				label: candidate.label ?? album.label,
+				genre: candidate.genre ?? album.genre,
+				releaseDate: candidate.releaseDate ?? album.releaseDate,
+			},
+		];
+	});
 }
 
 export async function lookupCatalogMetadata(
 	query: TrackQuery,
-	{ timeout = DEFAULT_TIMEOUT_MS, cache, enrich = false }: LookupOptions = {},
+	{ timeout = DEFAULT_TIMEOUT_MS, cache }: LookupOptions = {},
 ): Promise<CatalogVerdict> {
 	/** A budget, so a lookup cannot take a multiple of the caller's timeout. */
 	const deadline = Date.now() + timeout;
@@ -166,9 +240,10 @@ export async function lookupCatalogMetadata(
 		return { status: "unmatched", reason: "no-candidates" };
 	}
 
-	const judged = judgeCandidates(query, candidates);
-	const verdict = enrich ? await enrichFromAlbum(judged, remaining()) : judged;
-
+	const verdict = judgeCandidates(
+		query,
+		await vouchedCandidates(query, candidates, remaining()),
+	);
 	console.log(
 		verdict.status === "matched"
 			? `[catalog] matched via=${verdict.via} source=${verdict.candidate.source}`

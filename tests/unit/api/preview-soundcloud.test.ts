@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getSoundCloudTrackMock } = vi.hoisted(() => ({
+const { getSoundCloudTrackMock, sharedCatalogLookupMock } = vi.hoisted(() => ({
 	getSoundCloudTrackMock: vi.fn(),
+	sharedCatalogLookupMock: vi.fn(),
 }));
+
+/** Without this the real lookup runs and these tests call iTunes and Deezer. */
+const NO_MATCH = {
+	verdict: { status: "unmatched" as const, reason: "no-candidates" as const },
+};
 const mockEnv = vi.hoisted(
 	() => ({ BGUTIL_POT_URL: "http://bgutil" }) as Record<string, string>,
 );
@@ -13,6 +19,12 @@ vi.mock("$lib/soundcloud/soundcloud-track-cache", () => ({
 }));
 vi.mock("$lib/artwork", () => ({
 	resolveArtworkUrl: vi.fn(async () => "https://store/art.jpg"),
+}));
+vi.mock("$lib/metadata/catalog/catalog-cache", async (importOriginal) => ({
+	...(await importOriginal<
+		typeof import("$lib/metadata/catalog/catalog-cache")
+	>()),
+	sharedCatalogLookup: sharedCatalogLookupMock,
 }));
 vi.mock("$lib/youtube-metadata", () => ({
 	fetchYouTubeMetadata: vi.fn(),
@@ -49,6 +61,7 @@ describe("POST /api/preview — SoundCloud", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		getSoundCloudTrackMock.mockResolvedValue(TRACK);
+		sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
 	});
 
 	it("previews the resolved identity with the upload's own artwork", async () => {
@@ -137,6 +150,29 @@ describe("POST /api/preview/details — SoundCloud", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		getSoundCloudTrackMock.mockResolvedValue(TRACK);
+		sharedCatalogLookupMock.mockResolvedValue(NO_MATCH);
+	});
+
+	it("queries the catalog with the upload's own ISRC and duration", async () => {
+		// #given — the two pieces of evidence a SoundCloud page carries and YouTube does not
+		getSoundCloudTrackMock.mockResolvedValue({
+			...TRACK,
+			isrc: "USUM71900764",
+		});
+
+		// #when
+		await detailsPOST(eventFor("https://soundcloud.com/a/b"));
+
+		// #then
+		expect(sharedCatalogLookupMock).toHaveBeenCalledWith(
+			{
+				artist: "blk.",
+				title: "I Cant Fail",
+				isrc: "USUM71900764",
+				durationSeconds: 201,
+			},
+			{ timeout: 4000 },
+		);
 	});
 
 	it("returns the duration from the cached track, with no yt-dlp run", async () => {
@@ -160,5 +196,63 @@ describe("POST /api/preview/details — SoundCloud", () => {
 		// #then
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ success: true });
+	});
+
+	describe("on a catalog match", () => {
+		const MATCHED = {
+			verdict: {
+				status: "matched" as const,
+				via: "isrc" as const,
+				candidate: {
+					source: "deezer" as const,
+					artist: "blk.",
+					title: "I Cant Fail",
+				},
+				metadata: {
+					artist: "blk.",
+					title: "I Cant Fail",
+					artworkUrl: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+					source: "itunes" as const,
+				},
+			},
+		};
+
+		it("keeps the upload's own cover on the card, since the file gets that cover", async () => {
+			// #given — resolveSoundCloudAlbumArt writes the upload's cover first, so a
+			// catalog sleeve here would show a cover the MP3 never carries
+			sharedCatalogLookupMock.mockResolvedValue(MATCHED);
+
+			// #when
+			const data = await (
+				await detailsPOST(eventFor("https://soundcloud.com/a/b"))
+			).json();
+
+			// #then
+			expect(data).toEqual({
+				success: true,
+				duration: 201,
+				artist: "blk.",
+				title: "I Cant Fail",
+			});
+		});
+
+		it("supplies the catalog cover when the upload has none of its own", async () => {
+			// #given
+			getSoundCloudTrackMock.mockResolvedValue({
+				...TRACK,
+				artworkUrl: undefined,
+			});
+			sharedCatalogLookupMock.mockResolvedValue(MATCHED);
+
+			// #when
+			const data = await (
+				await detailsPOST(eventFor("https://soundcloud.com/a/b"))
+			).json();
+
+			// #then
+			expect(data.artwork).toBe(
+				"https://is1-ssl.mzstatic.com/proven/300x300bb.jpg",
+			);
+		});
 	});
 });

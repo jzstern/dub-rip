@@ -494,3 +494,123 @@ describe("resolveCoverArt", () => {
 		expect(result).toBeNull();
 	});
 });
+
+describe("resolveCoverArt() with a cover the match proved", () => {
+	const PREFERRED = {
+		url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
+		source: "itunes" as const,
+	};
+
+	beforeEach(() => {
+		mockFetch.mockReset();
+	});
+
+	it("uses the proven cover and searches no store at all", async () => {
+		// #given — the searches would return the ORIGINAL's sleeve for a remix
+		mockFetch.mockResolvedValue({
+			ok: true,
+			status: 200,
+			arrayBuffer: async () => new ArrayBuffer(16),
+		});
+
+		// #when
+		const result = await resolveCoverArt({
+			artist: "Avicii",
+			title: "Levels (Skrillex Remix)",
+			thumbnailUrl: "https://i.ytimg.com/vi/x/hqdefault.jpg",
+			preferredArtwork: PREFERRED,
+		});
+
+		// #then — one fetch, for the proven URL, labelled with its source
+		expect([
+			result?.source,
+			mockFetch.mock.calls.length,
+			mockFetch.mock.calls[0]?.[0],
+		]).toEqual(["itunes", 1, PREFERRED.url]);
+	});
+
+	it("does not follow a redirect away from the allowlisted host", async () => {
+		// #given — the https + mzstatic/dzcdn check ran when the candidate was built,
+		// so a followed redirect would leave the allowlist behind
+		mockFetch.mockResolvedValue({
+			ok: true,
+			status: 200,
+			arrayBuffer: async () => new ArrayBuffer(16),
+		});
+
+		// #when
+		await resolveCoverArt({
+			artist: "Avicii",
+			title: "Levels",
+			thumbnailUrl: "https://i.ytimg.com/vi/x/hqdefault.jpg",
+			preferredArtwork: PREFERRED,
+		});
+
+		// #then
+		expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({
+			redirect: "manual",
+		});
+	});
+
+	it("falls through to today's order when the proven URL answers a redirect", async () => {
+		// #given — a 302 is a miss, not a cover
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: false,
+				status: 302,
+				arrayBuffer: async () => new ArrayBuffer(0),
+			})
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				json: async () => ({
+					results: [
+						{ artworkUrl100: "https://is1-ssl.mzstatic.com/100x100bb.jpg" },
+					],
+				}),
+			})
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				arrayBuffer: async () => new ArrayBuffer(8),
+			});
+
+		// #when
+		const result = await resolveCoverArt({
+			artist: "Avicii",
+			title: "Levels",
+			thumbnailUrl: "https://i.ytimg.com/vi/x/hqdefault.jpg",
+			preferredArtwork: PREFERRED,
+		});
+
+		// #then — the iTunes search ran after the preferred fetch missed
+		expect(result?.source).toBe("itunes");
+	});
+
+	it("falls through when the proven URL returns nothing at all", async () => {
+		// #given
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				arrayBuffer: async () => new ArrayBuffer(0),
+			})
+			.mockResolvedValue({
+				ok: true,
+				status: 200,
+				json: async () => ({ results: [] }),
+			});
+
+		// #when
+		const result = await resolveCoverArt({
+			artist: "Avicii",
+			title: "Levels",
+			thumbnailUrl: "https://i.ytimg.com/vi/x/hqdefault.jpg",
+			preferredArtwork: PREFERRED,
+		});
+
+		// #then — a dead CDN URL must not cost the track its cover
+		expect(mockFetch.mock.calls.length).toBeGreaterThan(1);
+		expect(result).not.toBeUndefined();
+	});
+});

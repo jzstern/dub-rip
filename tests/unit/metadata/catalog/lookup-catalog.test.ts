@@ -1,9 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CatalogCandidate } from "$lib/metadata/catalog/catalog-candidate";
 import {
 	candidateCacheKey,
+	clearDeezerAlbumCache,
 	fetchCatalogCandidates,
 	lookupCatalogMetadata,
 	searchTerm,
+	vouchedCandidates,
 } from "$lib/metadata/catalog/lookup-catalog";
 import { stubCatalogFetch } from "./catalog-fixtures";
 
@@ -40,7 +43,11 @@ describe("fetchCatalogCandidates()", () => {
 		});
 
 		// #then
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(
+			fetchMock.mock.calls.filter(
+				(call) => !String(call[0]).includes("/album/"),
+			),
+		).toHaveLength(3);
 	});
 
 	it("still returns search results when the ISRC is unknown", async () => {
@@ -86,7 +93,229 @@ describe("fetchCatalogCandidates()", () => {
 	});
 });
 
+describe("vouchedCandidates()", () => {
+	const QUERY = { artist: "Adele", title: "Hello", isrc: "GBBKS1500214" };
+
+	function deezerRow(
+		overrides: Partial<CatalogCandidate> = {},
+	): CatalogCandidate {
+		return {
+			source: "deezer",
+			artist: "Adele",
+			title: "Hello",
+			album: "25",
+			albumId: "7",
+			durationSeconds: 295,
+			isrc: "GBBKS1500214",
+			...overrides,
+		};
+	}
+
+	function stubAlbums(
+		answer: (url: string) => { ok: boolean; status: number; body: unknown },
+	): ReturnType<typeof vi.fn> {
+		const fetchMock = vi.fn(async (input: unknown) => {
+			const { ok, status, body } = answer(String(input));
+			return { ok, status, json: async () => body };
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		return fetchMock;
+	}
+
+	const ADELE_ALBUM = {
+		ok: true,
+		status: 200,
+		body: { artist: { name: "Adele" }, record_type: "album" },
+	};
+
+	beforeEach(() => {
+		clearDeezerAlbumCache();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("drops a Deezer row whose album cannot be read, rather than trust it", async () => {
+		// #given
+		stubAlbums(() => ({ ok: false, status: 503, body: {} }));
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(vouched).toEqual([]);
+	});
+
+	it("keeps every other row when one album cannot be read", async () => {
+		// #given — Deezer has pulled the album, so it answers 404 on every call
+		stubAlbums(() => ({ ok: false, status: 404, body: {} }));
+		const itunesRow = deezerRow({ source: "itunes", albumId: undefined });
+
+		// #when
+		const vouched = await vouchedCandidates(
+			QUERY,
+			[deezerRow(), itunesRow],
+			1000,
+		);
+
+		// #then
+		expect(vouched).toEqual([itunesRow]);
+	});
+
+	it("asks again on the next lookup, so a failed check is never an answer", async () => {
+		// #given — the first album call fails, the second succeeds
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({}) })
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				json: async () => ADELE_ALBUM.body,
+			});
+		vi.stubGlobal("fetch", fetchMock);
+		await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(vouched.map((row) => row.albumArtist)).toEqual(["Adele"]);
+	});
+
+	it("drops a row whose album answers without saying whose it is", async () => {
+		// #given
+		stubAlbums(() => ({ ok: true, status: 200, body: { title: "25" } }));
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(vouched).toEqual([]);
+	});
+
+	it("asks no album about a row that names another song", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+
+		// #when
+		await vouchedCandidates(
+			QUERY,
+			[deezerRow({ title: "Someone Like You", albumId: "8" })],
+			1000,
+		);
+
+		// #then
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("checks at most three albums, taking the catalog's top rows", async () => {
+		// #given — five releases of the same song
+		stubAlbums(() => ADELE_ALBUM);
+		const rows = ["1", "2", "3", "4", "5"].map((albumId, rank) =>
+			deezerRow({ albumId, rank }),
+		);
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, rows, 1000);
+
+		// #then
+		expect(vouched.map((row) => row.albumId)).toEqual(["1", "2", "3"]);
+	});
+
+	it("spends its album checks on the upload's version, not on live takes of it", async () => {
+		// #given — three live takes rank above the studio release
+		stubAlbums(() => ADELE_ALBUM);
+		const liveTakes = ["1", "2", "3"].map((albumId, rank) =>
+			deezerRow({ title: "Hello (Live)", albumId, rank }),
+		);
+		const studio = deezerRow({ albumId: "4", rank: 3 });
+
+		// #when
+		const vouched = await vouchedCandidates(
+			QUERY,
+			[...liveTakes, studio],
+			1000,
+		);
+
+		// #then
+		expect(vouched.find((row) => row.albumId === "4")?.albumArtist).toBe(
+			"Adele",
+		);
+	});
+
+	it("asks for an album once, however many lookups need it", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+		await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #when
+		await vouchedCandidates(
+			{ ...QUERY, durationSeconds: 295 },
+			[deezerRow()],
+			1000,
+		);
+
+		// #then
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("passes iTunes rows through, which carry their collection's credit", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+		const itunesRow = deezerRow({ source: "itunes", albumId: undefined });
+
+		// #when
+		const vouched = await vouchedCandidates(QUERY, [itunesRow], 1000);
+
+		// #then
+		expect([vouched, fetchMock.mock.calls.length]).toEqual([[itunesRow], 0]);
+	});
+
+	it("records whose album the row carrying the upload's ISRC sits on", async () => {
+		// #given
+		stubCatalogFetch();
+		const query = {
+			artist: "Billie Eilish",
+			title: "bad guy",
+			isrc: "USUM71900764",
+		};
+
+		// #when
+		const vouched = await vouchedCandidates(
+			query,
+			await fetchCatalogCandidates(query),
+			5000,
+		);
+
+		// #then
+		expect(
+			vouched.find((candidate) => candidate.isrc === "USUM71900764")
+				?.albumArtist,
+		).toBe("Billie Eilish");
+	});
+
+	it("makes no album call for a lookup without an ISRC", async () => {
+		// #given
+		const fetchMock = stubAlbums(() => ADELE_ALBUM);
+
+		// #when
+		await vouchedCandidates(
+			{ artist: "Adele", title: "Hello" },
+			[deezerRow()],
+			1000,
+		);
+
+		// #then — only a row carrying the upload's ISRC can name a release
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+});
+
 describe("lookupCatalogMetadata()", () => {
+	beforeEach(() => {
+		clearDeezerAlbumCache();
+	});
+
 	afterEach(() => {
 		vi.unstubAllGlobals();
 	});
@@ -96,15 +325,12 @@ describe("lookupCatalogMetadata()", () => {
 		stubCatalogFetch();
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{
-				artist: "Billie Eilish",
-				title: "bad guy",
-				isrc: "USUM71900764",
-				durationSeconds: 194,
-			},
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Billie Eilish",
+			title: "bad guy",
+			isrc: "USUM71900764",
+			durationSeconds: 194,
+		});
 
 		// #then
 		expect(verdict).toMatchObject({
@@ -154,26 +380,58 @@ describe("lookupCatalogMetadata()", () => {
 		expect(verdict.status).toBe("unmatched");
 	});
 
-	it("does not fetch an album unless asked to enrich", async () => {
+	it("takes a proven Deezer release's label from the album it checked", async () => {
 		// #given
-		const fetchMock = stubCatalogFetch();
+		stubCatalogFetch();
 
 		// #when
-		await lookupCatalogMetadata({
+		const verdict = await lookupCatalogMetadata({
 			artist: "Billie Eilish",
 			title: "bad guy",
 			isrc: "USUM71900764",
 		});
 
 		// #then
-		expect(
-			fetchMock.mock.calls.filter((call) =>
-				String(call[0]).includes("/album/"),
-			),
-		).toEqual([]);
+		expect(verdict.status === "matched" && verdict.metadata.label).toBe(
+			"Darkroom/Interscope Records",
+		);
 	});
 
-	it("drops the album when enrichment reveals a compilation", async () => {
+	it("fails closed when either catalog cannot be searched", async () => {
+		// #given — Deezer answers; iTunes is down
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: unknown) => {
+				if (String(input).includes("itunes")) throw new Error("network down");
+				return {
+					ok: true,
+					status: 200,
+					json: async () => ({
+						data: [
+							{
+								title: "Hello",
+								duration: 295,
+								artist: { name: "Adele" },
+								album: { id: 7, title: "25" },
+							},
+						],
+					}),
+				};
+			}),
+		);
+
+		// #when
+		const verdict = await lookupCatalogMetadata({
+			artist: "Adele",
+			title: "Hello",
+			durationSeconds: 295,
+		});
+
+		// #then
+		expect(verdict.status).toBe("unmatched");
+	});
+
+	it("writes only the artist and title of a track found on a compilation", async () => {
 		// #given — the recorded search matches, but its album is a Various Artists set
 		const fetchMock = vi.fn(async (input: unknown) => {
 			const url = String(input);
@@ -185,6 +443,7 @@ describe("lookupCatalogMetadata()", () => {
 					ok: true,
 					status: 200,
 					json: async () => ({
+						artist: { name: "Various Artists" },
 						label: "Deadline Rec",
 						record_type: "compile",
 						genres: { data: [{ name: "Electronic" }] },
@@ -209,20 +468,129 @@ describe("lookupCatalogMetadata()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const verdict = await lookupCatalogMetadata(
-			{ artist: "Klaps", title: "Se Cura", durationSeconds: 286 },
-			{ enrich: true },
-		);
+		const verdict = await lookupCatalogMetadata({
+			artist: "Klaps",
+			title: "Se Cura",
+			durationSeconds: 286,
+		});
 
 		// #then
-		expect(verdict).toMatchObject({
-			status: "matched",
-			metadata: {
-				album: undefined,
-				label: "Deadline Rec",
-				genre: "Electronic",
-			},
+		expect(verdict.status === "matched" && verdict.metadata).toEqual({
+			artist: "Klaps",
+			title: "Se Cura",
+			source: "deezer",
 		});
+	});
+
+	it("names the song but no release for an upload without an ISRC", async () => {
+		// #given — recorded: Deezer's same-runtime row sits on The Amalgamates' album
+		stubCatalogFetch();
+
+		// #when
+		const verdict = await lookupCatalogMetadata({
+			artist: "Flume",
+			title: "Never Be Like You feat. Kai",
+			durationSeconds: 233,
+		});
+
+		// #then — the knock-offs name the same song, so only the song is written
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.artist,
+				verdict.metadata.title,
+				verdict.metadata.album,
+				verdict.metadata.isrc,
+			],
+		).toEqual(["Flume", undefined, undefined, undefined]);
+	});
+
+	it("takes no ISRC or label from the knock-offs beside the real single", async () => {
+		// #given
+		stubCatalogFetch();
+
+		// #when
+		const verdict = await lookupCatalogMetadata({
+			artist: "Flume",
+			title: "Never Be Like You feat. Kai",
+			durationSeconds: 233,
+		});
+
+		// #then
+		expect(
+			verdict.status === "matched" && [
+				verdict.metadata.isrc,
+				verdict.metadata.label,
+			],
+		).toEqual([undefined, undefined]);
+	});
+
+	it("leaves the title as today when Deezer files its feature outside the title", async () => {
+		// #given
+		stubCatalogFetch();
+
+		// #when
+		const verdict = await lookupCatalogMetadata({
+			artist: "Disclosure",
+			title: "Latch ft. Sam Smith",
+			durationSeconds: 256,
+		});
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.title).toBe(
+			undefined,
+		);
+	});
+
+	it("dates a release by the other catalog's copy, even one dated Jan 1", async () => {
+		// #given — Deezer dates the album by its 2008 reissue; iTunes says 1972, day unknown
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: unknown) => {
+				const url = String(input);
+				const body = url.includes("itunes")
+					? {
+							results: [
+								{
+									kind: "song",
+									trackName: "Stuck In The Middle With You",
+									artistName: "Stealers Wheel",
+									collectionName: "Stealers Wheel",
+									releaseDate: "1972-01-01T00:00:00Z",
+									trackTimeMillis: 208_000,
+								},
+							],
+						}
+					: url.includes("/album/")
+						? {
+								artist: { name: "Stealers Wheel" },
+								label: "A&M",
+								release_date: "2008-05-22",
+							}
+						: {
+								data: [
+									{
+										title: "Stuck In The Middle With You",
+										duration: 208,
+										isrc: "GBAAM7200002",
+										artist: { name: "Stealers Wheel" },
+										album: { id: 5, title: "Stealers Wheel" },
+									},
+								],
+							};
+				return { ok: true, status: 200, json: async () => body };
+			}),
+		);
+
+		// #when
+		const verdict = await lookupCatalogMetadata({
+			artist: "Stealers Wheel",
+			title: "Stuck In The Middle With You",
+			durationSeconds: 209,
+			isrc: "GBAAM7200002",
+		});
+
+		// #then
+		expect(verdict.status === "matched" && verdict.metadata.year).toBe(1972);
 	});
 
 	it("survives both catalogs failing", async () => {
@@ -301,10 +669,10 @@ describe("lookupCatalogMetadata()", () => {
 		);
 
 		// #then
-		expect([fetchMock.mock.calls.length, second.status]).toEqual([
-			2,
-			"matched",
-		]);
+		const searches = fetchMock.mock.calls.filter(
+			(call) => !String(call[0]).includes("/album/"),
+		);
+		expect([searches.length, second.status]).toEqual([2, "matched"]);
 	});
 });
 

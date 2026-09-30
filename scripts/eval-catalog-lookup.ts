@@ -25,6 +25,11 @@ interface EvalCase {
 	expect: "match" | "none";
 	expectArtist?: string;
 	expectTitle?: string;
+	/**
+	 * The release the file should name. A knock-off credited to the artist
+	 * passes every artist and title check, so only the album shows it.
+	 */
+	expectAlbum?: string;
 }
 
 const cases = corpus.cases as EvalCase[];
@@ -64,19 +69,21 @@ function sameRecording(uploadTitle: string, matchedTitle: string): boolean {
 }
 
 for (const testCase of cases) {
-	const verdict = await lookupCatalogMetadata(
-		{
-			artist: testCase.artist,
-			title: testCase.title,
-			isrc: testCase.isrc,
-			durationSeconds: testCase.durationSeconds,
-		},
-		{ enrich: true },
-	);
+	const verdict = await lookupCatalogMetadata({
+		artist: testCase.artist,
+		title: testCase.title,
+		isrc: testCase.isrc,
+		durationSeconds: testCase.durationSeconds,
+	});
 
+	/** A verdict without a title leaves the upload's own in place. */
+	const writtenTitle =
+		verdict.status === "matched"
+			? (verdict.metadata.title ?? testCase.title)
+			: undefined;
 	const got =
 		verdict.status === "matched"
-			? `${verdict.metadata.artist} — ${verdict.metadata.title}`
+			? `${verdict.metadata.artist} — ${writtenTitle}`
 			: `(none: ${verdict.reason})`;
 
 	if (verdict.status === "matched" && testCase.expect === "none") {
@@ -91,21 +98,21 @@ for (const testCase of cases) {
 	}
 	if (verdict.status === "matched") {
 		const titleMatches = sameTitle(
-			parseTrackTitle(verdict.metadata.title).base,
+			parseTrackTitle(writtenTitle ?? "").base,
 			testCase.expectTitle,
 		);
 		const artistMatches = sameArtist(
 			verdict.metadata.artist,
 			testCase.expectArtist,
 		);
-		const versionMatches = sameRecording(
-			testCase.title,
-			verdict.metadata.title,
-		);
-		if (!titleMatches || !artistMatches || !versionMatches) {
+		const versionMatches = sameRecording(testCase.title, writtenTitle ?? "");
+		const albumMatches =
+			testCase.expectAlbum === undefined ||
+			sameTitle(verdict.metadata.album, testCase.expectAlbum);
+		if (!titleMatches || !artistMatches || !versionMatches || !albumMatches) {
 			tally.wrong += 1;
 			console.log(
-				`WRONG   ${testCase.name}\n        wanted ${testCase.expectArtist} — ${testCase.expectTitle}\n        got    ${got}`,
+				`WRONG   ${testCase.name}\n        wanted ${testCase.expectArtist} — ${testCase.expectTitle}${testCase.expectAlbum ? ` · ${testCase.expectAlbum}` : ""}\n        got    ${got} · ${verdict.metadata.album ?? "no album"}`,
 			);
 			continue;
 		}

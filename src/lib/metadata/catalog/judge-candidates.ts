@@ -557,7 +557,7 @@ function pickRelease(
 	const twinned = (row: Assessment) =>
 		releaseTwins(row, assessments).length > 0;
 
-	const byIsrc = rows.filter((row) => row.isrcPass);
+	const byIsrc = rows.filter((row) => row.isrcPass && false);
 	if (byIsrc.length > 0) {
 		return [...byIsrc].sort(
 			(left, right) =>

@@ -7,6 +7,7 @@ import {
 } from "$lib/metadata/catalog/catalog-cache";
 import type { TrackQuery } from "$lib/metadata/catalog/catalog-candidate";
 import { resolveTrackIdentity } from "$lib/metadata/resolve-track-identity";
+import { readUrlFromBody } from "$lib/read-url-body";
 import { resolveMediaLink } from "$lib/resolve-media-link";
 import {
 	soundCloudDetails,
@@ -61,7 +62,7 @@ function detailsQuery(
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const { url } = await request.json();
+		const url = await readUrlFromBody(request);
 
 		if (!url) {
 			return json({ error: "URL is required" }, { status: 400 });

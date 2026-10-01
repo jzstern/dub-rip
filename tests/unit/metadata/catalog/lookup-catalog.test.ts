@@ -134,6 +134,7 @@ describe("vouchedCandidates()", () => {
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
 	});
 
 	it("drops a Deezer row whose album cannot be read, rather than trust it", async () => {
@@ -192,6 +193,34 @@ describe("vouchedCandidates()", () => {
 
 		// #then
 		expect(vouched).toEqual([]);
+	});
+
+	it("logs a row dropped because its album names no artist", async () => {
+		// #given
+		stubAlbums(() => ({ ok: true, status: 200, body: { title: "25" } }));
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		// #when
+		await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(warn).toHaveBeenCalledWith(
+			"[catalog] deezer album 7 has no artist; row dropped",
+		);
+	});
+
+	it("does not log an artist-less album for a failed album call", async () => {
+		// #given — requestDeezer logs that failure itself
+		stubAlbums(() => ({ ok: false, status: 503, body: {} }));
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		// #when
+		await vouchedCandidates(QUERY, [deezerRow()], 1000);
+
+		// #then
+		expect(warn).not.toHaveBeenCalledWith(
+			expect.stringContaining("has no artist"),
+		);
 	});
 
 	it("asks no album about a row that names another song", async () => {

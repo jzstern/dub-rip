@@ -194,9 +194,10 @@ breadcrumbs.
 - Artwork resolution failures (`warning` — the track still ships, without a
   cover)
 - Catalog lookup bugs (`warning`, `service: "catalog"`, `operation: "lookup"`)
-  — an exception thrown while judging or enriching the iTunes/Deezer candidates.
-  The lookup still answers "unmatched", so the preview and the download carry
-  on with the upload's own title
+  — an exception thrown while fetching, judging or enriching the iTunes/Deezer
+  candidates, logged as `[catalog] lookup failed:` with the error, never as an
+  outage. The lookup still answers "unmatched", so the preview and the
+  download carry on with the upload's own title
 
 **Browser**
 
@@ -224,9 +225,11 @@ breadcrumbs.
   upload's own title. Either catalog failing counts as an outage, since the
   rules that refuse a wrong match need both; it is not cached, so the next
   request tries again. A failed Deezer album check (logged as
-  `[catalog] deezer album lookup failed`) drops only the row it was checking, so the
-  track keeps its canonical artist and title and loses just the release fields
-  that row would have proven.
+  `[catalog] deezer album lookup failed`, or as
+  `[catalog] deezer album <id> has no artist; row dropped` when the album
+  answers without one) drops only the row it was checking, so the track keeps
+  its canonical artist and title and loses just the release fields that row
+  would have proven.
 - **Thumbnail 404s** are expected; `maxresdefault.jpg` legitimately doesn't
   exist for many videos, hence the fallback chain.
 - **The bgutil-pot prewarm ping** from `/api/preview` is fire-and-forget. The

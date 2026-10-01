@@ -566,6 +566,56 @@ describe("buildID3Tags() with a proven catalog match", () => {
 		expect(tags.album).toBe("Deadline Records Va 05");
 	});
 
+	it("keeps the upload's title as the album when the match proved no release", () => {
+		// #given — the song is proven and retitled, but no ISRC proved its release
+		const canonical = {
+			artist: "Flume",
+			title: "Never Be Like You (feat. Kai)",
+			source: "deezer" as const,
+		};
+
+		// #when
+		const tags = buildID3Tags({
+			trackTitle: "Never Be Like You feat. Kai",
+			videoTitle: "Flume - Never Be Like You feat. Kai",
+			artist: "Flume",
+			image: null,
+			details: null,
+			canonical,
+		});
+
+		// #then — the album main wrote, not the catalog's title
+		expect(tags.album).toBe("Never Be Like You feat. Kai");
+	});
+
+	describe("when the match credits other guests and so carries no title", () => {
+		const ARTIST_ONLY = { artist: "Adele", source: "itunes" as const };
+
+		it("titles the file with yt-dlp's track", () => {
+			// #when
+			const tags = buildID3Tags({
+				...HEURISTIC,
+				details: { track: "Hello" },
+				canonical: ARTIST_ONLY,
+			});
+
+			// #then
+			expect(tags.title).toBe("Hello");
+		});
+
+		it("titles the file with the parsed title when yt-dlp has no track", () => {
+			// #when
+			const tags = buildID3Tags({
+				...HEURISTIC,
+				details: null,
+				canonical: ARTIST_ONLY,
+			});
+
+			// #then
+			expect(tags.title).toBe("Hello (Official Music Video)");
+		});
+	});
+
 	it("keeps SoundCloud's own label over the catalog's", () => {
 		// #when — a distributor filled in label_name for this exact upload
 		const tags = buildID3Tags({

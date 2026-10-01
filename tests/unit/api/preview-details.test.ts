@@ -193,6 +193,36 @@ describe("POST /api/preview/details - duration extraction", () => {
 		});
 	});
 
+	it("sends no title when the match credits other guests than the upload", async () => {
+		// #given — the artist is proven; the catalog's title is not written
+		mockYtDlpJson({
+			duration: 233,
+			title: "Flume - Never Be Like You feat. Kai",
+		});
+		sharedCatalogLookupMock.mockResolvedValue({
+			verdict: {
+				status: "matched",
+				via: "duration",
+				candidate: {
+					source: "itunes",
+					artist: "Flume",
+					title: "Never Be Like You (feat. Kai & Tove Lo)",
+				},
+				metadata: { artist: "Flume", source: "itunes" },
+			},
+		});
+		const POST = await importPost();
+
+		// #when
+		const response = await POST(
+			makeEvent({ url: "https://youtube.com/watch?v=dQw4w9WgXcQ" }),
+		);
+		const data = await response.json();
+
+		// #then — an absent key leaves the card's own title standing
+		expect(data).not.toHaveProperty("title");
+	});
+
 	it("leaves the heuristic identity alone when nothing matched", async () => {
 		// #given
 		mockYtDlpJson({ duration: 295, title: "Some Bedroom Jam" });

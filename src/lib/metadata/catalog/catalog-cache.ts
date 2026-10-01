@@ -42,6 +42,7 @@ const UNMATCHED: CatalogLookup = {
  * ordinary and already logged; anything else reaching here is our own bug.
  */
 function reportLookupBug(error: unknown, query: TrackQuery): void {
+	console.error("[catalog] lookup failed:", error);
 	Sentry.captureException(
 		error instanceof Error ? error : new Error(String(error)),
 		{
@@ -81,10 +82,11 @@ export async function sharedCatalogLookup(
 			CANDIDATE_TTL_MS,
 		);
 	} catch (error) {
-		if (!(error instanceof CatalogUnavailableError)) {
+		if (error instanceof CatalogUnavailableError) {
+			console.log("[catalog] unmatched reason=catalogs-unreachable");
+		} else {
 			reportLookupBug(error, query);
 		}
-		console.log("[catalog] unmatched reason=catalogs-unreachable");
 		return UNMATCHED;
 	}
 

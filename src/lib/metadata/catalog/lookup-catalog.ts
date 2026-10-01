@@ -201,7 +201,15 @@ export async function vouchedCandidates(
 	return candidates.flatMap((candidate) => {
 		if (!needsCheck(candidate)) return [candidate];
 		const album = candidate.albumId ? albums.get(candidate.albumId) : undefined;
-		if (!album?.artist) return [];
+		if (!album?.artist) {
+			/** A failed call is already logged by `requestDeezer`; an answer without an artist is not. */
+			if (album) {
+				console.warn(
+					`[catalog] deezer album ${candidate.albumId} has no artist; row dropped`,
+				);
+			}
+			return [];
+		}
 		return [
 			{
 				...candidate,

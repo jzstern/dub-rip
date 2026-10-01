@@ -24,7 +24,7 @@ This document outlines the deployment architecture for dub-rip on Railway: the S
 │  ┌───────────────────────────────────────────────────────────┐      │
 │  │              dub-rip SvelteKit App                        │      │
 │  │  • Git-push deployment                                    │      │
-│  │  • Python via RAILPACK_DEPLOY_APT_PACKAGES (yt-dlp)       │      │
+│  │  • Python+ffmpeg via RAILPACK_DEPLOY_APT_PACKAGES         │      │
 │  │  • BGUTIL_POT_URL → bgutil-pot.railway.internal           │      │
 │  └───────────────────────────────────────────────────────────┘      │
 │                     (yt-dlp PO tokens)                              │
@@ -60,8 +60,8 @@ The main web application that provides the user interface and orchestrates downl
 
 **Environment Variables:**
 ```bash
-# Required: Python for yt-dlp
-RAILPACK_DEPLOY_APT_PACKAGES=python3
+# Required: Python for yt-dlp, ffmpeg for transcoding (see Optional: FFMPEG_PATH)
+RAILPACK_DEPLOY_APT_PACKAGES="python3 ffmpeg"
 
 # Required: bgutil-pot sidecar for yt-dlp PO tokens
 BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
@@ -127,7 +127,7 @@ Production and PR-preview environments get the var via Railway service vars; no 
 2. Select your dub-rip repository
 3. Add environment variables:
    ```bash
-   RAILPACK_DEPLOY_APT_PACKAGES=python3
+   RAILPACK_DEPLOY_APT_PACKAGES="python3 ffmpeg"
    BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
    ```
 4. Enable public networking

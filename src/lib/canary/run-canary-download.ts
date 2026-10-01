@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
@@ -8,6 +7,7 @@ import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { pathExists } from "$lib/download-pipeline/path-exists";
 import { tryYtDlpDownload } from "$lib/download-pipeline/try-yt-dlp";
 import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
+import { resolveFfmpegPath } from "$lib/ffmpeg-path";
 import {
 	type WaitForBgutilPotResult,
 	waitForBgutilPot,
@@ -19,8 +19,6 @@ import {
 	type CanaryClassification,
 	classifyCanaryRun,
 } from "./classify-canary-run";
-
-const require = createRequire(import.meta.url);
 
 /** "Me at the zoo" — the first YouTube video, 19s, always public and unlisted-safe to hit on a schedule. */
 export const CANARY_VIDEO_URL = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
@@ -86,13 +84,12 @@ export async function runCanaryDownload(): Promise<CanaryClassification> {
 			getYTDlp(),
 			ensureBgutilPlugin(),
 		]);
-		const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 
 		await tryYtDlpDownload({
 			videoUrl: CANARY_VIDEO_URL,
 			outputPath,
 			bgutilPotUrl,
-			ffmpegPath: ffmpegInstaller.path,
+			ffmpegPath: resolveFfmpegPath(),
 			pluginDir,
 			debugMode: false,
 			ytDlp,

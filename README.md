@@ -74,7 +74,7 @@ This project is configured to deploy on Railway. Downloads run through yt-dlp, w
 
 ```bash
 # dub-rip service
-RAILPACK_DEPLOY_APT_PACKAGES=python3
+RAILPACK_DEPLOY_APT_PACKAGES="python3 ffmpeg"
 # bgutil-ytdlp-pot-provider sidecar; required for yt-dlp PO tokens
 BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
 

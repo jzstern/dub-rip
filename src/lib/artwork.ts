@@ -1,12 +1,11 @@
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import * as Sentry from "@sentry/sveltekit";
+import { resolveFfmpegPath } from "$lib/ffmpeg-path";
 
-const require = createRequire(import.meta.url);
 const execFilePromise = promisify(execFile);
 
 const ITUNES_TIMEOUT = 6000;
@@ -197,8 +196,7 @@ export async function fetchThumbnailBuffer(
 }
 
 export async function squareCropToBuffer(input: Buffer): Promise<Buffer> {
-	const ffmpegPath = (require("@ffmpeg-installer/ffmpeg") as { path: string })
-		.path;
+	const ffmpegPath = resolveFfmpegPath();
 	const { readFile, writeFile, unlink } = await import("node:fs/promises");
 
 	const id = randomBytes(16).toString("hex");

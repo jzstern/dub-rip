@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
@@ -15,6 +14,7 @@ import {
 import { METADATA_PROCESSING_PERCENT } from "$lib/download-pipeline/progress-stages";
 import { titleFromVideoDetails } from "$lib/download-pipeline/title-from-video-details";
 import { getYTDlp } from "$lib/download-pipeline/yt-dlp-instance";
+import { resolveFfmpegPath } from "$lib/ffmpeg-path";
 import { type MediaLinkKind, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
 import { resolveMediaLink } from "$lib/resolve-media-link";
 import { retryWithBackoff } from "$lib/retry";
@@ -26,8 +26,6 @@ import {
 	isRetryableYtDlpError,
 } from "$lib/yt-dlp-errors";
 import type { RequestHandler } from "./$types";
-
-const require = createRequire(import.meta.url);
 
 const MISSING_OUTPUT_MESSAGE = "Download completed but file not found";
 
@@ -140,13 +138,12 @@ export const GET: RequestHandler = async ({ url }) => {
 				const debugMode =
 					url.searchParams.get("debug") === "1" && isDebugModeAllowed(env);
 				const ytDlp = await getYTDlp();
-				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 
 				await retryWithBackoff(
 					() =>
 						prepared.runAttempt({
 							outputPath,
-							ffmpegPath: ffmpegInstaller.path,
+							ffmpegPath: resolveFfmpegPath(),
 							debugMode,
 							ytDlp,
 							signal: abortController.signal,

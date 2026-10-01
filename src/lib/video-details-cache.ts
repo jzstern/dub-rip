@@ -8,6 +8,7 @@ const cache = createSingleFlightCache<VideoDetails | null>();
 export interface GetVideoDetailsOptions {
 	ttlMs?: number;
 	timeout?: number;
+	signal?: AbortSignal;
 }
 
 /**
@@ -32,8 +33,10 @@ export function getVideoDetails(
 ): Promise<VideoDetails | null> {
 	return cache.get(
 		videoId,
-		() => fetchVideoDetails(videoUrl, options.timeout),
+		(flightSignal) =>
+			fetchVideoDetails(videoUrl, options.timeout, flightSignal),
 		options.ttlMs ?? DEFAULT_VIDEO_DETAILS_TTL_MS,
+		options.signal,
 	);
 }
 

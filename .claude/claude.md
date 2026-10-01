@@ -44,6 +44,7 @@ For full templates, see `.claude/skills/svelte-patterns/`
 Required environment variables for production:
 - `BGUTIL_POT_URL` - Internal bgutil-pot service URL (e.g., `http://bgutil-pot.railway.internal:4416`). Downloads fail fast without it.
 - `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp (Railway doesn't include Python by default)
+- `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` - adapter-node reads these so `event.getClientAddress()` returns the visitor's IP rather than Railway's proxy address. The per-client rate limiter (`src/lib/rate-limiter.ts`, wired in `hooks.server.ts`, covering `/api/preview*` and `/api/download-stream` only) keys on it; without them every visitor shares one bucket and the whole site is throttled together. Not yet set in Railway (config is dashboard state); verify the depth against what Railway's edge actually appends. The limiter skips (never 500s) if `getClientAddress` throws. Limits are generous (burst 30, 30/min) and the state is in-memory with no timers, so app-sleep is unaffected. A limited `download-stream` still answers 200 with one SSE `error` event, because `EventSource` shows any non-200 as a bare "Connection lost"; the `Retry-After` header is present either way, and a limit hit is a breadcrumb, never a Sentry event.
 
 Optional:
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking. Deploys work without them; errors just go to logs only.

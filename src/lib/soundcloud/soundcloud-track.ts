@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/sveltekit";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
+const IMAGE_CHECK_TIMEOUT_MS = 3_000;
 const HYDRATION = /window\.__sc_hydration\s*=\s*(\[.*?\]);\s*<\/script>/s;
 const IMAGE_SIZE_SUFFIX = /-(?:large|t\d+x\d+|original)(\.\w+)$/;
 const SOUNDCLOUD_IMAGE_HOST = /(?:^|\.)sndcdn\.com$/i;
@@ -248,4 +249,51 @@ export async function fetchSoundCloudTrack(
 		},
 	);
 	return track;
+}
+
+/**
+ * True unless SoundCloud's CDN answers that the image is gone. Old uploads can
+ * list an `artwork_url` whose file was deleted (every size 404s), and a timeout
+ * or network error proves nothing, so only a 4xx drops the URL.
+ */
+async function imageIsServed(
+	url: string | undefined,
+	timeout: number,
+): Promise<boolean> {
+	if (!url) return false;
+	try {
+		const response = await fetch(url, {
+			method: "HEAD",
+			signal: AbortSignal.timeout(timeout),
+		});
+		return response.status < 400 || response.status >= 500;
+	} catch {
+		return true;
+	}
+}
+
+/**
+ * Drops artwork and avatar URLs that SoundCloud no longer serves, so a dead
+ * cover reads as "no cover" everywhere: the preview falls through to the
+ * catalog cover or the avatar, and the card matches the file's cover.
+ */
+export async function withServedImages(
+	track: SoundCloudTrack,
+	timeout: number = IMAGE_CHECK_TIMEOUT_MS,
+): Promise<SoundCloudTrack> {
+	const [artworkServed, avatarServed] = await Promise.all([
+		imageIsServed(track.artworkUrl, timeout),
+		imageIsServed(track.avatarUrl, timeout),
+	]);
+	if (
+		artworkServed === Boolean(track.artworkUrl) &&
+		avatarServed === Boolean(track.avatarUrl)
+	) {
+		return track;
+	}
+	return {
+		...track,
+		artworkUrl: artworkServed ? track.artworkUrl : undefined,
+		avatarUrl: avatarServed ? track.avatarUrl : undefined,
+	};
 }

@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	fetchSoundCloudTrack,
 	parseTrackPage,
+	type SoundCloudTrack,
 	SoundCloudTrackError,
+	withServedImages,
 } from "$lib/soundcloud/soundcloud-track";
 
 const BAD_GUY_SOUND = {
@@ -228,5 +230,97 @@ describe("fetchSoundCloudTrack()", () => {
 		expect(error).toBeInstanceOf(SoundCloudTrackError);
 		expect(error.isUnavailable).toBe(false);
 		expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("withServedImages()", () => {
+	const ARTWORK =
+		"https://i1.sndcdn.com/artworks-000103249553-vped6c-t500x500.jpg";
+	const AVATAR =
+		"https://i1.sndcdn.com/avatars-uEz9ujjRaHQK9gzS-wTsgDA-t500x500.jpg";
+	const TRACK: SoundCloudTrack = {
+		title: "Taken",
+		uploader: "Toro y Moi",
+		artworkUrl: ARTWORK,
+		avatarUrl: AVATAR,
+		isPreviewOnly: false,
+		isGeoBlocked: false,
+	};
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	function stubImageStatuses(statuses: Record<string, number | Error>) {
+		const fetchMock = vi.fn(async (url: string) => {
+			const status = statuses[url];
+			if (status instanceof Error) throw status;
+			return response(status);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+		return fetchMock;
+	}
+
+	it("keeps images SoundCloud still serves, checking each with HEAD", async () => {
+		// #given
+		const fetchMock = stubImageStatuses({ [ARTWORK]: 200, [AVATAR]: 200 });
+
+		// #when
+		const track = await withServedImages(TRACK);
+
+		// #then
+		expect(track).toBe(TRACK);
+		expect(fetchMock).toHaveBeenCalledWith(
+			ARTWORK,
+			expect.objectContaining({ method: "HEAD" }),
+		);
+	});
+
+	it("drops artwork whose file SoundCloud deleted, keeping the avatar", async () => {
+		// #given
+		stubImageStatuses({ [ARTWORK]: 404, [AVATAR]: 200 });
+
+		// #when
+		const track = await withServedImages(TRACK);
+
+		// #then
+		expect(track.artworkUrl).toBeUndefined();
+		expect(track.avatarUrl).toBe(AVATAR);
+	});
+
+	it("drops a dead avatar too", async () => {
+		// #given
+		stubImageStatuses({ [ARTWORK]: 200, [AVATAR]: 404 });
+
+		// #when
+		const track = await withServedImages(TRACK);
+
+		// #then
+		expect(track.artworkUrl).toBe(ARTWORK);
+		expect(track.avatarUrl).toBeUndefined();
+	});
+
+	it("keeps images when the check itself fails, since that proves nothing", async () => {
+		// #given
+		stubImageStatuses({ [ARTWORK]: new Error("timeout"), [AVATAR]: 503 });
+
+		// #when
+		const track = await withServedImages(TRACK);
+
+		// #then
+		expect(track).toBe(TRACK);
+	});
+
+	it("makes no request for a track without images", async () => {
+		// #given
+		const fetchMock = stubImageStatuses({});
+		const bare = { ...TRACK, artworkUrl: undefined, avatarUrl: undefined };
+
+		// #when
+		const track = await withServedImages(bare);
+
+		// #then
+		expect(track).toBe(bare);
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

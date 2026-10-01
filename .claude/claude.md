@@ -43,7 +43,8 @@ For full templates, see `.claude/skills/svelte-patterns/`
 ## Railway Deployment
 Required environment variables for production:
 - `BGUTIL_POT_URL` - Internal bgutil-pot service URL (e.g., `http://bgutil-pot.railway.internal:4416`). Downloads fail fast without it.
-- `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp (Railway doesn't include Python by default)
+- `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `"python3 ffmpeg"`: Python for yt-dlp (Railway has none by default) and a current system ffmpeg. Until `ffmpeg` is added, the app falls back to the `ffmpeg-static` npm binary (ffmpeg 6.x), so a deploy before the variable changes still works; the system ffmpeg is preferred when present. This variable is dashboard-only (no `railpack.json` in the repo).
+- `FFMPEG_PATH` (optional) - Absolute path override for ffmpeg. Resolution order in `src/lib/ffmpeg-path.ts`: `FFMPEG_PATH` → `ffmpeg` on `PATH` → `ffmpeg-static`. A set-but-invalid `FFMPEG_PATH` is an error, not a fallthrough. The boot log says `Using ffmpeg at … (env|path|ffmpeg-static)`, followed by the `ffmpeg -version` line.
 - No env var is needed for per-client rate limiting (`src/lib/rate-limit-handle.ts`, covering `/api/preview*` and `/api/download-stream` only). On Railway it keys on the `X-Real-IP` request header, which Railway [documents as the client IP](https://docs.railway.com/networking/public-networking/specs-and-limits). It deliberately does not use `event.getClientAddress()` there: that is the edge proxy's address, shared by every visitor, so all of them would drain one bucket. Missing `X-Real-IP` on Railway skips limiting (one warning per process) rather than falling back. Off Railway it uses `getClientAddress()`. Limits are generous (burst 30, 30/min), in-memory, no timers. A limited `download-stream` answers 200 with one SSE `error` event, because `EventSource` shows any non-200 as a bare "Connection lost"; `Retry-After` is set either way, and a hit is a breadcrumb, never a Sentry event.
 
 Optional:
@@ -160,7 +161,7 @@ missed. `POST /api/canary` exists to catch the next one within hours.
 
 ## yt-dlp Integration
 - yt-dlp is the **only** download path — there is no fallback. A failure is user-visible.
-- Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES=python3`)
+- Requires Python3 in runtime (`RAILPACK_DEPLOY_APT_PACKAGES="python3 ffmpeg"`)
 - Requires `BGUTIL_POT_URL`; the route returns an explicit config error without it
 - **Do NOT use** `--cookies-from-browser` on Railway (no browser available)
 - Some videos require authentication and cannot be downloaded

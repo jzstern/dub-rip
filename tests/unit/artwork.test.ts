@@ -20,9 +20,8 @@ vi.mock("node:fs/promises", () => ({
 	unlink: (...args: unknown[]) => unlinkMock(...args),
 }));
 
-vi.mock("@ffmpeg-installer/ffmpeg", () => ({
-	default: { path: "/fake/ffmpeg" },
-	path: "/fake/ffmpeg",
+vi.mock("../../src/lib/ffmpeg-path", () => ({
+	resolveFfmpegPath: () => "/fake/ffmpeg",
 }));
 
 const mockFetch = vi.fn();

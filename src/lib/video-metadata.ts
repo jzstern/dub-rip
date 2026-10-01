@@ -324,13 +324,14 @@ export function buildID3Tags({
 	canonical,
 	trustPlatformRelease,
 }: ID3TagInput): ID3Tags {
-	const title = (
-		canonical?.title ||
-		details?.track ||
-		trackTitle ||
-		videoTitle ||
-		""
-	).trim();
+	/**
+	 * The title a file gets without a catalog match. A single is its own album,
+	 * so the album falls back to this one: only a release proven by the
+	 * upload's own ISRC may change the album, and a catalog title proves the
+	 * song, not the release.
+	 */
+	const uploadTitle = (details?.track || trackTitle || videoTitle || "").trim();
+	const title = (canonical?.title || uploadTitle).trim();
 	const finalArtist = (
 		canonical?.artist ||
 		details?.artist ||
@@ -345,7 +346,7 @@ export function buildID3Tags({
 	const album = (
 		canonical?.album ||
 		details?.album ||
-		title ||
+		uploadTitle ||
 		"Unknown Album"
 	).trim();
 	const composer = (details?.composer || finalArtist || "").trim();

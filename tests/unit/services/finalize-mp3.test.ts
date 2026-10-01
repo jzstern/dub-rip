@@ -477,6 +477,25 @@ describe("finalizeMp3() with a proven catalog match", () => {
 		);
 	});
 
+	it("keeps the upload's title in the filename when the match carries none", async () => {
+		// #given — the catalog credits other guests, so only its artist is written
+		const filePath = await createTempMp3();
+		sharedCatalogLookupMock.mockResolvedValue({
+			verdict: {
+				...SONG_ONLY.verdict,
+				metadata: { artist: "Adele", source: "deezer" },
+			},
+		});
+
+		// #when
+		await finalizeMp3(finalizeInputFor(filePath));
+
+		// #then
+		expect(registerDownloadMock).toHaveBeenCalledWith(
+			expect.objectContaining({ filename: "Adele - Test Track.mp3" }),
+		);
+	});
+
 	it("hands the proven cover to the artwork resolver", async () => {
 		// #given
 		const filePath = await createTempMp3();

@@ -36,8 +36,11 @@ export interface TryYtDlpInput {
 	debugMode: boolean;
 	ytDlp: YtDlpInstance;
 	send: (data: Record<string, unknown>) => void;
+	onYtDlpEvent?: YtDlpEventHandler;
 	signal?: AbortSignal;
 }
+
+export type YtDlpEventHandler = (eventType: string, eventData: string) => void;
 
 export interface YouTubeDownloadArgsInput {
 	videoUrl: string;
@@ -119,6 +122,7 @@ export interface RunYtDlpDownloadInput {
 	args: string[];
 	ytDlp: YtDlpInstance;
 	send: (data: Record<string, unknown>) => void;
+	onYtDlpEvent?: YtDlpEventHandler;
 	signal?: AbortSignal;
 }
 
@@ -126,6 +130,7 @@ export async function runYtDlpDownload({
 	args,
 	ytDlp,
 	send,
+	onYtDlpEvent,
 	signal,
 }: RunYtDlpDownloadInput): Promise<void> {
 	await withYtDlpConcurrencyLimit(async () => {
@@ -169,7 +174,7 @@ export async function runYtDlpDownload({
 				"ytDlpEvent",
 				(eventType: string, eventData: string) => {
 					console.log("yt-dlp event:", eventType, "|", eventData);
-					send({ type: "event", eventType, eventData });
+					onYtDlpEvent?.(eventType, eventData);
 				},
 			);
 
@@ -223,6 +228,7 @@ export async function runYtDlpDownload({
 export async function tryYtDlpDownload({
 	ytDlp,
 	send,
+	onYtDlpEvent,
 	signal,
 	...argsInput
 }: TryYtDlpInput): Promise<void> {
@@ -230,6 +236,7 @@ export async function tryYtDlpDownload({
 		args: buildYouTubeDownloadArgs(argsInput),
 		ytDlp,
 		send,
+		onYtDlpEvent,
 		signal,
 	});
 }

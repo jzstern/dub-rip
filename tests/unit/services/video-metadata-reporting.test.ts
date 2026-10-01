@@ -17,6 +17,21 @@ vi.mock("$lib/yt-dlp-binary", () => ({
 	buildJsRuntimeArgs: vi.fn().mockReturnValue([]),
 }));
 
+const limiterRejection = vi.hoisted(() => ({ error: null as Error | null }));
+vi.mock("../../../src/lib/yt-dlp-concurrency", async (importOriginal) => {
+	const actual =
+		await importOriginal<
+			typeof import("../../../src/lib/yt-dlp-concurrency")
+		>();
+	return {
+		...actual,
+		withYtDlpConcurrencyLimit: <T>(fn: () => Promise<T>) =>
+			limiterRejection.error
+				? Promise.reject(limiterRejection.error)
+				: actual.withYtDlpConcurrencyLimit(fn),
+	};
+});
+
 import { fetchVideoDetails } from "../../../src/lib/video-metadata";
 
 function mockExecFileError(err: Error) {
@@ -52,6 +67,7 @@ async function fetchAndSettle(failure: Error): Promise<void> {
 describe("fetchVideoDetails - failure reporting policy", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		limiterRejection.error = null;
 	});
 
 	it("does not file an issue for a video that can never be downloaded", async () => {
@@ -137,5 +153,39 @@ describe("fetchVideoDetails - failure reporting policy", () => {
 
 		// #then
 		expect(details).toBeNull();
+	});
+
+	it("does not file an issue when the downloader's queue is full", async () => {
+		// #given
+		const { YtDlpQueueFullError } = await import(
+			"../../../src/lib/yt-dlp-concurrency"
+		);
+		limiterRejection.error = new YtDlpQueueFullError();
+
+		// #when
+		const details = await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(details).toBeNull();
+		expect(Sentry.captureException).not.toHaveBeenCalled();
+	});
+
+	it("leaves a breadcrumb for a full queue instead", async () => {
+		// #given
+		const { YtDlpQueueFullError } = await import(
+			"../../../src/lib/yt-dlp-concurrency"
+		);
+		limiterRejection.error = new YtDlpQueueFullError();
+
+		// #when
+		await fetchVideoDetails("https://youtu.be/abc");
+
+		// #then
+		expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
+			expect.objectContaining({
+				category: "video-metadata",
+				message: expect.stringContaining("queue is full"),
+			}),
+		);
 	});
 });

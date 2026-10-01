@@ -2,9 +2,12 @@ import { basename } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({
-	env: { BGUTIL_POT_URL: "http://pot.internal:4416" },
-}));
+const mockEnv = vi.hoisted(
+	() =>
+		({ BGUTIL_POT_URL: "http://pot.internal:4416" }) as Record<string, string>,
+);
+
+vi.mock("$env/dynamic/private", () => ({ env: mockEnv }));
 
 vi.mock("$lib/video-utils", () => ({
 	extractVideoId: vi.fn(() => "dQw4w9WgXcQ"),
@@ -349,6 +352,123 @@ describe("GET /api/download-stream - missing output file", () => {
 				extra: expect.objectContaining({ videoId: "dQw4w9WgXcQ" }),
 			}),
 		);
+	});
+});
+
+async function drainStream(response: Response): Promise<string> {
+	const reader = response.body?.getReader();
+	const decoder = new TextDecoder();
+	let buffer = "";
+	while (true) {
+		const chunk = await reader?.read();
+		if (!chunk || chunk.done) break;
+		buffer += decoder.decode(chunk.value);
+	}
+	return buffer;
+}
+
+async function requestDownload(
+	params: Record<string, string> = {},
+): Promise<Response> {
+	const { GET } = await import(
+		"../../../src/routes/api/download-stream/+server"
+	);
+	const url = new URL("http://localhost/api/download-stream");
+	url.searchParams.set("url", "https://youtube.com/watch?v=dQw4w9WgXcQ");
+	for (const [key, value] of Object.entries(params)) {
+		url.searchParams.set(key, value);
+	}
+	return GET({ url } as unknown as Parameters<typeof GET>[0]);
+}
+
+describe("GET /api/download-stream - missing output file cleanup", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	afterEach(() => {
+		vi.resetModules();
+	});
+
+	it("removes the temp files yt-dlp left behind", async () => {
+		// #given
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+		readdirMock.mockImplementation(() =>
+			Promise.resolve([`${requestTempPrefix()}.mp4.part`]),
+		);
+
+		// #when
+		await drainStream(await requestDownload());
+
+		// #then
+		expect(unlinkMock).toHaveBeenCalledWith(
+			expect.stringContaining(`${requestTempPrefix()}.mp4.part`),
+		);
+	});
+
+	it("reports the missing file to Sentry exactly once", async () => {
+		// #given
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+
+		// #when
+		await drainStream(await requestDownload());
+
+		// #then
+		expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+	});
+
+	it("sends the client a single error message", async () => {
+		// #given
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+
+		// #when
+		const buffer = await drainStream(await requestDownload());
+
+		// #then
+		expect(buffer.match(/"type":"error"/g)).toHaveLength(1);
+	});
+});
+
+describe("GET /api/download-stream - debug mode", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		delete mockEnv.RAILWAY_ENVIRONMENT_NAME;
+		delete mockEnv.SENTRY_ENVIRONMENT;
+		tryYtDlpDownloadMock.mockResolvedValue(undefined);
+	});
+
+	afterEach(() => {
+		vi.resetModules();
+	});
+
+	it("ignores ?debug=1 in production", async () => {
+		// #given
+		mockEnv.RAILWAY_ENVIRONMENT_NAME = "production";
+
+		// #when
+		await drainStream(await requestDownload({ debug: "1" }));
+
+		// #then
+		expect(tryYtDlpDownloadMock.mock.calls[0][0].debugMode).toBe(false);
+	});
+
+	it("honors ?debug=1 outside production", async () => {
+		// #given
+		mockEnv.RAILWAY_ENVIRONMENT_NAME = "dub-rip-pr-7";
+
+		// #when
+		await drainStream(await requestDownload({ debug: "1" }));
+
+		// #then
+		expect(tryYtDlpDownloadMock.mock.calls[0][0].debugMode).toBe(true);
+	});
+
+	it("stays off without the debug parameter", async () => {
+		// #when
+		await drainStream(await requestDownload());
+
+		// #then
+		expect(tryYtDlpDownloadMock.mock.calls[0][0].debugMode).toBe(false);
 	});
 });
 

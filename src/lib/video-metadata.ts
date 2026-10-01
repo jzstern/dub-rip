@@ -10,7 +10,10 @@ import {
 	buildJsRuntimeArgs,
 	ensureYtDlpBinary,
 } from "./yt-dlp-binary";
-import { withYtDlpConcurrencyLimit } from "./yt-dlp-concurrency";
+import {
+	withYtDlpConcurrencyLimit,
+	YtDlpQueueFullError,
+} from "./yt-dlp-concurrency";
 import { classifyYtDlpError, isRetryableYtDlpError } from "./yt-dlp-errors";
 
 const execFilePromise = promisify(execFile);
@@ -175,6 +178,16 @@ function reportDetailsFailure(
 	message: string,
 	videoUrl: string,
 ): void {
+	if (error instanceof YtDlpQueueFullError) {
+		Sentry.addBreadcrumb({
+			category: "video-metadata",
+			level: "info",
+			message: "Details extraction rejected: downloader queue is full",
+			data: { videoUrl },
+		});
+		return;
+	}
+
 	const classified = classifyYtDlpError(message);
 
 	if (classified.category === "user") {

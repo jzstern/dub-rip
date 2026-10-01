@@ -75,10 +75,8 @@ export async function runCanaryDownload(): Promise<CanaryClassification> {
 	}
 
 	let stdout = "";
-	const collectStdout = (data: Record<string, unknown>): void => {
-		if (data.type === "event") {
-			stdout += `[${String(data.eventType)}]${String(data.eventData)}\n`;
-		}
+	const collectStdout = (eventType: string, eventData: string): void => {
+		stdout += `[${eventType}]${eventData}\n`;
 	};
 
 	try {
@@ -98,7 +96,8 @@ export async function runCanaryDownload(): Promise<CanaryClassification> {
 			pluginDir,
 			debugMode: false,
 			ytDlp,
-			send: collectStdout,
+			send: () => {},
+			onYtDlpEvent: collectStdout,
 		});
 
 		const succeeded = await pathExists(`${outputPath}.mp3`);

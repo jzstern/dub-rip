@@ -3,6 +3,7 @@ import { json } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { resolveArtworkUrl } from "$lib/artwork";
 import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import { readUrlFromBody } from "$lib/read-url-body";
 import { resolveMediaLink } from "$lib/resolve-media-link";
 import {
 	soundCloudRefusal,
@@ -87,7 +88,7 @@ async function previewSoundCloud(link: MediaLink): Promise<Response> {
 
 export const POST: RequestHandler = async ({ request }) => {
 	try {
-		const { url } = await request.json();
+		const url = await readUrlFromBody(request);
 
 		if (!url) {
 			return json({ error: "URL is required" }, { status: 400 });

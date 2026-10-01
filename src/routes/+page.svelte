@@ -226,6 +226,7 @@ async function saveDownload(
 		loading = false;
 		downloadComplete = true;
 		completedFilename = filename;
+		lastPreviewUrl = "";
 		url = "";
 		preview = null;
 	} catch (err) {

@@ -3,6 +3,8 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import * as Sentry from "@sentry/sveltekit";
+import { env } from "$env/dynamic/private";
+import { isDebugModeAllowed } from "$lib/debug-mode";
 import { cleanupTempFiles } from "$lib/download-pipeline/cleanup-temp-files";
 import { finalizeMp3 } from "$lib/download-pipeline/finalize-mp3";
 import { pathExists } from "$lib/download-pipeline/path-exists";
@@ -26,6 +28,15 @@ import {
 import type { RequestHandler } from "./$types";
 
 const require = createRequire(import.meta.url);
+
+const MISSING_OUTPUT_MESSAGE = "Download completed but file not found";
+
+class MissingOutputFileError extends Error {
+	constructor() {
+		super("yt-dlp exited 0 but produced no output file");
+		this.name = "MissingOutputFileError";
+	}
+}
 
 const QUEUE_FULL_MESSAGE =
 	"The downloader is busy right now. Please try again in a moment.";
@@ -126,7 +137,8 @@ export const GET: RequestHandler = async ({ url }) => {
 				}
 				const { titleState } = prepared;
 
-				const debugMode = url.searchParams.get("debug") === "1";
+				const debugMode =
+					url.searchParams.get("debug") === "1" && isDebugModeAllowed(env);
 				const ytDlp = await getYTDlp();
 				const ffmpegInstaller = require("@ffmpeg-installer/ffmpeg");
 
@@ -155,22 +167,9 @@ export const GET: RequestHandler = async ({ url }) => {
 				const actualFilePath = `${outputPath}.mp3`;
 
 				if (!(await pathExists(actualFilePath))) {
-					send({
-						type: "error",
-						message: "Download completed but file not found",
-					});
-					Sentry.captureException(
-						new Error("yt-dlp exited 0 but produced no output file"),
-						{
-							tags: {
-								service: "download-stream",
-								operation: "missing-output-file",
-							},
-							extra: { videoId },
-						},
-					);
-					closeStream();
-					return;
+					// Thrown rather than returned so the catch block's temp-file
+					// cleanup runs; the catch reports and answers it exactly once.
+					throw new MissingOutputFileError();
 				}
 
 				if (!titleState.videoTitle) {
@@ -237,6 +236,17 @@ export const GET: RequestHandler = async ({ url }) => {
 						message: "Download aborted: client disconnected before it finished",
 						data: { videoId },
 					});
+				} else if (error instanceof MissingOutputFileError) {
+					console.error("Download error:", error.message);
+					Sentry.captureException(error, {
+						tags: {
+							service: "download-stream",
+							operation: "missing-output-file",
+						},
+						extra: { videoId },
+					});
+					send({ type: "error", message: MISSING_OUTPUT_MESSAGE });
+					closeStream();
 				} else if (error instanceof YtDlpQueueFullError) {
 					// Load shedding working as designed, not a defect — a traffic spike
 					// would otherwise turn every rejected request into an issue.

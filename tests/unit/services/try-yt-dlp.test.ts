@@ -110,6 +110,44 @@ describe("tryYtDlpDownload()", () => {
 		expect(sent.filter((event) => event.type === "info")).toEqual([]);
 	});
 
+	it("never forwards yt-dlp's raw output lines to the SSE stream", async () => {
+		// #given
+		const promise = run();
+
+		// #when
+		proc.emitStdout(`[download] Destination: ${OUTPUT_PATH}.mp3\n`);
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(sent.filter((event) => event.type === "event")).toEqual([]);
+	});
+
+	it("hands yt-dlp's output lines to an in-process handler when one is given", async () => {
+		// #given
+		const events: [string, string][] = [];
+		const promise = tryYtDlpDownload({
+			videoUrl: "https://www.youtube.com/watch?v=q9lZ4p5YRkY",
+			outputPath: OUTPUT_PATH,
+			bgutilPotUrl: "http://bgutil-pot.railway.internal:4416",
+			ffmpegPath: "/usr/bin/ffmpeg",
+			pluginDir: "/tmp/yt-dlp-plugins",
+			debugMode: false,
+			ytDlp,
+			send: (data) => sent.push(data),
+			onYtDlpEvent: (eventType, eventData) =>
+				events.push([eventType, eventData]),
+		});
+
+		// #when
+		proc.emitStdout(`[download] Destination: ${OUTPUT_PATH}.mp3\n`);
+		proc.emit("close", 0);
+		await promise;
+
+		// #then
+		expect(events).toEqual([["download", ` Destination: ${OUTPUT_PATH}.mp3`]]);
+	});
+
 	it("enables a JS runtime so yt-dlp can solve YouTube's n challenge", async () => {
 		// #given
 		const promise = run();

@@ -62,11 +62,11 @@ vi.mock("$lib/wait-for-bgutil-pot", () => ({
 }));
 
 function emitEvent(
-	send: (data: Record<string, unknown>) => void,
+	onYtDlpEvent: (eventType: string, eventData: string) => void,
 	eventType: string,
 	eventData: string,
 ) {
-	send({ type: "event", eventType, eventData });
+	onYtDlpEvent(eventType, eventData);
 }
 
 describe("runCanaryDownload()", () => {
@@ -95,8 +95,8 @@ describe("runCanaryDownload()", () => {
 
 	it("classifies a completed download as ok and reports the itag it used", async () => {
 		// #given
-		tryYtDlpDownloadMock.mockImplementation(async ({ send }) => {
-			emitEvent(send, "info", " id: Downloading 1 format(s): 18");
+		tryYtDlpDownloadMock.mockImplementation(async ({ onYtDlpEvent }) => {
+			emitEvent(onYtDlpEvent, "info", " id: Downloading 1 format(s): 18");
 		});
 
 		// #when
@@ -129,8 +129,8 @@ describe("runCanaryDownload()", () => {
 		// #given — media_refused signature: a format was chosen but never had a
 		// Destination:, and the rejection embeds the real stderr text (mirroring
 		// how yt-dlp-wrap's own 'error' event carries it in production)
-		tryYtDlpDownloadMock.mockImplementation(async ({ send }) => {
-			emitEvent(send, "info", " id: Downloading 1 format(s): 251");
+		tryYtDlpDownloadMock.mockImplementation(async ({ onYtDlpEvent }) => {
+			emitEvent(onYtDlpEvent, "info", " id: Downloading 1 format(s): 251");
 			throw new Error(
 				"\nError code: 1\n\nStderr:\nERROR: unable to download video data: HTTP Error 403: Forbidden",
 			);
@@ -192,8 +192,8 @@ describe("runCanaryDownload()", () => {
 
 	it("never registers a download token", async () => {
 		// #given
-		tryYtDlpDownloadMock.mockImplementation(async ({ send }) => {
-			emitEvent(send, "info", " id: Downloading 1 format(s): 18");
+		tryYtDlpDownloadMock.mockImplementation(async ({ onYtDlpEvent }) => {
+			emitEvent(onYtDlpEvent, "info", " id: Downloading 1 format(s): 18");
 		});
 
 		// #when
@@ -208,8 +208,8 @@ describe("runCanaryDownload()", () => {
 
 	it("never calls finalizeMp3", async () => {
 		// #given
-		tryYtDlpDownloadMock.mockImplementation(async ({ send }) => {
-			emitEvent(send, "info", " id: Downloading 1 format(s): 18");
+		tryYtDlpDownloadMock.mockImplementation(async ({ onYtDlpEvent }) => {
+			emitEvent(onYtDlpEvent, "info", " id: Downloading 1 format(s): 18");
 		});
 
 		// #when

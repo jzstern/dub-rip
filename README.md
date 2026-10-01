@@ -77,6 +77,12 @@ This project is configured to deploy on Railway. Downloads run through yt-dlp, w
 RAILPACK_DEPLOY_APT_PACKAGES=python3
 # bgutil-ytdlp-pot-provider sidecar; required for yt-dlp PO tokens
 BGUTIL_POT_URL=http://bgutil-pot.railway.internal:4416
+# Per-client rate limiting (/api/preview*, /api/download-stream) keys on the
+# client IP. Behind Railway's proxy adapter-node must read it from the
+# forwarded header, or every visitor shares the proxy's address and one
+# bucket.
+ADDRESS_HEADER=X-Forwarded-For
+XFF_DEPTH=1
 
 # Optional — error monitoring. Omit all three to run without Sentry.
 SENTRY_DSN=https://...

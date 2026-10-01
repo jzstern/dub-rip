@@ -109,6 +109,7 @@ function labelFromDescription(
 async function fetchVideoDetailsOnce(
 	videoUrl: string,
 	timeout: number,
+	signal?: AbortSignal,
 ): Promise<VideoDetails> {
 	const deadline = Date.now() + timeout;
 	const remaining = () => Math.max(1, deadline - Date.now());
@@ -135,11 +136,14 @@ async function fetchVideoDetailsOnce(
 		...(await buildBgutilPotArgs()),
 		videoUrl,
 	];
-	const result = await withYtDlpConcurrencyLimit(() =>
-		execFilePromise(binaryPath, args, {
-			timeout: remaining(),
-			maxBuffer: 10 * 1024 * 1024,
-		}),
+	const result = await withYtDlpConcurrencyLimit(
+		() =>
+			execFilePromise(binaryPath, args, {
+				timeout: remaining(),
+				maxBuffer: 10 * 1024 * 1024,
+				signal,
+			}),
+		signal,
 	);
 	const info = JSON.parse(result.stdout) as YtDlpJson;
 
@@ -214,11 +218,13 @@ function reportDetailsFailure(
 export async function fetchVideoDetails(
 	videoUrl: string,
 	timeout: number = DETAILS_TIMEOUT,
+	signal?: AbortSignal,
 ): Promise<VideoDetails | null> {
 	try {
 		return await retryWithBackoff(
-			() => fetchVideoDetailsOnce(videoUrl, timeout),
+			() => fetchVideoDetailsOnce(videoUrl, timeout, signal),
 			{
+				signal,
 				isRetryable: (error) =>
 					isRetryableYtDlpError(
 						error instanceof Error ? error.message : String(error),
@@ -226,6 +232,7 @@ export async function fetchVideoDetails(
 			},
 		);
 	} catch (error) {
+		if (signal?.aborted) return null;
 		const message = error instanceof Error ? error.message : String(error);
 		console.warn("[video-metadata] fetchVideoDetails failed:", message);
 		reportDetailsFailure(

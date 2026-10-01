@@ -44,6 +44,7 @@ For full templates, see `.claude/skills/svelte-patterns/`
 Required environment variables for production:
 - `BGUTIL_POT_URL` - Internal bgutil-pot service URL (e.g., `http://bgutil-pot.railway.internal:4416`). Downloads fail fast without it.
 - `RAILPACK_DEPLOY_APT_PACKAGES` - Set to `python3` for yt-dlp (Railway doesn't include Python by default)
+- No env var is needed for per-client rate limiting (`src/lib/rate-limit-handle.ts`, covering `/api/preview*` and `/api/download-stream` only). On Railway it keys on the `X-Real-IP` request header, which Railway [documents as the client IP](https://docs.railway.com/networking/public-networking/specs-and-limits). It deliberately does not use `event.getClientAddress()` there: that is the edge proxy's address, shared by every visitor, so all of them would drain one bucket. Missing `X-Real-IP` on Railway skips limiting (one warning per process) rather than falling back. Off Railway it uses `getClientAddress()`. Limits are generous (burst 30, 30/min), in-memory, no timers. A limited `download-stream` answers 200 with one SSE `error` event, because `EventSource` shows any non-200 as a bare "Connection lost"; `Retry-After` is set either way, and a hit is a breadcrumb, never a Sentry event.
 
 Optional:
 - `SENTRY_DSN` / `PUBLIC_SENTRY_DSN` - Sentry error tracking. Deploys work without them; errors just go to logs only.

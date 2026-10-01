@@ -46,13 +46,26 @@ class Semaphore {
 		return this.queue.length >= this.maxQueueLength;
 	}
 
-	/** Slow path: resolves once a slot frees up. */
-	acquireQueued(): Promise<() => void> {
-		return new Promise((resolve) => {
-			this.queue.push(() => {
+	/**
+	 * Slow path: resolves once a slot frees up. Aborting `signal` while still
+	 * waiting removes the waiter from the queue and rejects with the signal's
+	 * reason; once the slot has been handed over, abort no longer affects it.
+	 */
+	acquireQueued(signal?: AbortSignal): Promise<() => void> {
+		return new Promise((resolve, reject) => {
+			const waiter = () => {
+				signal?.removeEventListener("abort", onAbort);
 				this.available -= 1;
 				resolve(() => this.release());
-			});
+			};
+			const onAbort = () => {
+				const index = this.queue.indexOf(waiter);
+				if (index === -1) return;
+				this.queue.splice(index, 1);
+				reject(abortReason(signal));
+			};
+			this.queue.push(waiter);
+			signal?.addEventListener("abort", onAbort, { once: true });
 		});
 	}
 
@@ -61,6 +74,10 @@ class Semaphore {
 		const next = this.queue.shift();
 		if (next) next();
 	}
+}
+
+function abortReason(signal: AbortSignal | undefined): unknown {
+	return signal?.reason ?? new Error("yt-dlp request aborted");
 }
 
 const ytDlpSemaphore = new Semaphore(
@@ -88,8 +105,20 @@ async function runAndRelease<T>(
  * a subprocess and immediately attach listeners to it can rely on those
  * listeners being attached before this call returns control to them — the
  * same synchronous-start semantics as calling `fn` directly.
+ *
+ * An optional `signal` frees the caller's place in the queue: aborting while
+ * waiting rejects with the signal's reason without ever running `fn`, so a
+ * disconnected client stops occupying one of the MAX_QUEUED_YT_DLP_REQUESTS
+ * slots. It has no effect once `fn` is running — the caller owns killing its
+ * own subprocess.
  */
-export function withYtDlpConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
+export function withYtDlpConcurrencyLimit<T>(
+	fn: () => Promise<T>,
+	signal?: AbortSignal,
+): Promise<T> {
+	if (signal?.aborted) {
+		return Promise.reject(abortReason(signal));
+	}
 	const release = ytDlpSemaphore.tryAcquire();
 	if (release) {
 		return runAndRelease(fn, release);
@@ -98,6 +127,6 @@ export function withYtDlpConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
 		return Promise.reject(new YtDlpQueueFullError());
 	}
 	return ytDlpSemaphore
-		.acquireQueued()
+		.acquireQueued(signal)
 		.then((queuedRelease) => runAndRelease(fn, queuedRelease));
 }

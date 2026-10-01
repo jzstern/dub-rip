@@ -153,6 +153,7 @@ async function prepareYouTubeDownload(
 	const detailsPromise: Promise<VideoDetails | null> = getVideoDetails(
 		link.id,
 		link.canonicalUrl,
+		{ signal },
 	).catch(() => null);
 	const thumbnailPromise: Promise<ThumbnailImage | null> = fetchThumbnailBuffer(
 		link.id,

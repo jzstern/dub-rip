@@ -86,6 +86,8 @@ PUBLIC_SENTRY_DSN=https://...
 SENTRY_AUTH_TOKEN=sntrys_...
 ```
 
+Per-client rate limiting on `/api/preview*` and `/api/download-stream` needs no configuration: on Railway it keys on the `X-Real-IP` header ([docs](https://docs.railway.com/networking/public-networking/specs-and-limits)), since the proxy's own address would put every visitor in one bucket.
+
 See [deployment-strategy.md](docs/deployment-strategy.md) for detailed setup instructions, and [error-reporting.md](docs/error-reporting.md) for what gets reported and why.
 
 ### PR Preview Environments

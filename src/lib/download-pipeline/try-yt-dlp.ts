@@ -222,7 +222,7 @@ export async function runYtDlpDownload({
 			// a stale listener registered here would accumulate one per attempt.
 			signal?.removeEventListener("abort", killOnAbort);
 		}
-	});
+	}, signal);
 }
 
 export async function tryYtDlpDownload({

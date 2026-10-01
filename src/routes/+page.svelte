@@ -47,6 +47,26 @@ let downloadComplete = $state(false);
 let completedFilename = $state("");
 let currentDownloadId = 0;
 
+const COMPLETION_HOLD_MS = 2500;
+let completionResetId: ReturnType<typeof setTimeout> | null = null;
+
+function cancelCompletionReset(): void {
+	if (completionResetId !== null) {
+		clearTimeout(completionResetId);
+		completionResetId = null;
+	}
+}
+
+function scheduleCompletionReset(): void {
+	cancelCompletionReset();
+	completionResetId = setTimeout(() => {
+		completionResetId = null;
+		status = "";
+		downloadComplete = false;
+		completedFilename = "";
+	}, COMPLETION_HOLD_MS);
+}
+
 let vinylState: "idle" | "ready" | "active" = $derived(
 	loading ? "active" : isValidUrl ? "ready" : "idle",
 );
@@ -148,6 +168,7 @@ $effect(() => {
 			errorUrl = "";
 		}
 		if (downloadComplete) {
+			cancelCompletionReset();
 			downloadComplete = false;
 			completedFilename = "";
 			status = "";
@@ -229,6 +250,7 @@ async function saveDownload(
 		lastPreviewUrl = "";
 		url = "";
 		preview = null;
+		scheduleCompletionReset();
 	} catch (err) {
 		if (downloadId !== currentDownloadId) return;
 		console.error("Failed to save file:", err);
@@ -261,6 +283,7 @@ function handleDownload() {
 		return;
 	}
 
+	cancelCompletionReset();
 	loading = true;
 	error = "";
 	status = "Connecting...";

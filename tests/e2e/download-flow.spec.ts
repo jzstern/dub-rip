@@ -105,6 +105,24 @@ test.describe("Download flow", () => {
 		await expect(page.locator(".text-destructive")).toHaveCount(0);
 	});
 
+	test("resets the progress bar and status after a successful download", async ({
+		page,
+	}) => {
+		// #given
+		await mockStream(page, completeStream);
+		await mockFile(page);
+		const downloadPromise = page.waitForEvent("download");
+		await startDownload(page);
+		await downloadPromise;
+		await expect(page.getByText("Downloaded!")).toBeVisible();
+
+		// #when
+		await page.waitForTimeout(3500);
+
+		// #then
+		await expect(page.getByRole("progressbar")).toHaveCount(0);
+	});
+
 	test("shows the server's error message when the stream reports an error", async ({
 		page,
 	}) => {

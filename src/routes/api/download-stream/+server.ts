@@ -205,7 +205,7 @@ export const GET: RequestHandler = async ({ url }) => {
 					signal: abortController.signal,
 					uploader: prepared.uploader,
 					sourceUrl: link.canonicalUrl,
-					soundCloudArtwork: prepared.soundCloudArtwork,
+					platformArtwork: prepared.platformArtwork,
 				});
 
 				// The file is deliberately left on disk: the browser fetches it from

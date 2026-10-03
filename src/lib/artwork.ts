@@ -324,19 +324,21 @@ export async function resolveCoverArt({
 	}
 }
 
-export interface SoundCloudArtwork {
+/** Cover art an upload carries on its own platform (SoundCloud, Bandcamp). */
+export interface PlatformArtwork {
+	source: "soundcloud" | "bandcamp";
 	artworkUrl?: string;
 	avatarUrl?: string;
 }
 
-interface ResolveSoundCloudAlbumArtInput {
+interface ResolvePlatformAlbumArtInput {
 	artist: string;
 	title: string;
-	artwork: SoundCloudArtwork;
+	artwork: PlatformArtwork;
 	preferredArtwork?: PreferredArtwork;
 }
 
-async function soundCloudImage(
+async function platformImage(
 	url: string | undefined,
 ): Promise<AlbumArtImage | null> {
 	const buffer = url ? await fetchThumbnailBuffer(url) : null;
@@ -346,21 +348,22 @@ async function soundCloudImage(
 /**
  * The reverse of the YouTube order: the upload's own artwork comes first.
  * SoundCloud is mostly remixes, edits and unreleased tracks, where a store
- * search for "artist title" returns the *original* release's cover. Store
- * artwork is only a fallback, and the uploader's avatar — what SoundCloud
- * itself shows for a track without artwork — is the last resort. The
- * artwork is already square (t500x500), so it is never cropped.
+ * search for "artist title" returns the *original* release's cover; on
+ * Bandcamp the artwork *is* the release's cover, set by whoever sells it.
+ * Store artwork is only a fallback, and the uploader's avatar — what
+ * SoundCloud itself shows for a track without artwork — is the last resort.
+ * Both platforms serve square artwork, so it is never cropped.
  */
-export async function resolveSoundCloudAlbumArt({
+export async function resolvePlatformAlbumArt({
 	artist,
 	title,
 	artwork,
 	preferredArtwork,
-}: ResolveSoundCloudAlbumArtInput): Promise<AlbumArtImage | null> {
+}: ResolvePlatformAlbumArtInput): Promise<AlbumArtImage | null> {
 	try {
-		const uploaded = await soundCloudImage(artwork.artworkUrl);
+		const uploaded = await platformImage(artwork.artworkUrl);
 		if (uploaded) {
-			console.log("[artwork] Using cover art from: soundcloud");
+			console.log(`[artwork] Using cover art from: ${artwork.source}`);
 			return uploaded;
 		}
 
@@ -393,17 +396,20 @@ export async function resolveSoundCloudAlbumArt({
 			return { buffer: deezer, mime: "image/jpeg" };
 		}
 
-		const avatar = await soundCloudImage(artwork.avatarUrl);
+		const avatar = await platformImage(artwork.avatarUrl);
 		console.log(
 			`[artwork] ${avatar ? "Using the uploader's avatar" : "No cover art resolved"}`,
 		);
 		return avatar;
 	} catch (err) {
-		console.error("[artwork] SoundCloud cover art resolution failed:", err);
+		console.error(
+			`[artwork] ${artwork.source} cover art resolution failed:`,
+			err,
+		);
 		Sentry.captureException(err, {
 			level: "warning",
-			tags: { service: "artwork", operation: "resolve-soundcloud-art" },
-			extra: { artist, title },
+			tags: { service: "artwork", operation: "resolve-platform-art" },
+			extra: { artist, title, source: artwork.source },
 		});
 		return null;
 	}

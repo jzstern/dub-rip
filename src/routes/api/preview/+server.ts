@@ -2,6 +2,12 @@ import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
 import { env } from "$env/dynamic/private";
 import { resolveArtworkUrl } from "$lib/artwork";
+import {
+	bandcampRefusal,
+	bandcampTitleState,
+} from "$lib/bandcamp/bandcamp-metadata";
+import { BandcampTrackError } from "$lib/bandcamp/bandcamp-track";
+import { getBandcampTrack } from "$lib/bandcamp/bandcamp-track-cache";
 import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
 import { readUrlFromBody } from "$lib/read-url-body";
 import { resolveMediaLink } from "$lib/resolve-media-link";
@@ -19,6 +25,7 @@ import type { RequestHandler } from "./$types";
 
 const PREVIEW_ARTWORK_SIZE = 300;
 const PREVIEW_ARTWORK_TIMEOUT = 4000;
+const BANDCAMP_FREE_DOWNLOAD_KBPS = 320;
 const BGUTIL_PREWARM_TIMEOUT = 2000;
 
 /**
@@ -47,7 +54,7 @@ function prewarmBgutilPot(): void {
 
 /**
  * The upload's own artwork is the preview image whenever it has one — the
- * same order resolveSoundCloudAlbumArt uses — so the cover a user sees is
+ * same order resolvePlatformAlbumArt uses — so the cover a user sees is
  * the cover they get. No bgutil prewarm: SoundCloud never uses the sidecar.
  * fetchSoundCloudTrack already decided what to report, as fetchYouTubeMetadata
  * does for YouTube, so its errors are answered here without a second capture.
@@ -86,6 +93,50 @@ async function previewSoundCloud(link: MediaLink): Promise<Response> {
 	}
 }
 
+/**
+ * Bandcamp's artwork is the release's own cover, so it is the preview image
+ * whenever it exists; a store search is only for a track with none.
+ */
+async function previewBandcamp(link: MediaLink): Promise<Response> {
+	try {
+		const track = await getBandcampTrack(link);
+		const refusal = bandcampRefusal(track);
+		if (refusal) {
+			return json({ error: refusal }, { status: 422 });
+		}
+
+		const { artist, trackTitle } = bandcampTitleState(track);
+		const artwork =
+			track.artworkUrl ??
+			(await resolveArtworkUrl(artist, trackTitle, {
+				itunesSize: PREVIEW_ARTWORK_SIZE,
+				timeout: PREVIEW_ARTWORK_TIMEOUT,
+			}));
+
+		return json({
+			success: true,
+			videoTitle: track.title,
+			artist,
+			title: trackTitle,
+			thumbnail: track.artworkUrl ?? "",
+			artwork: artwork ?? undefined,
+			duration: track.durationSeconds,
+			...(track.hasFreeDownload
+				? { bitrateKbps: BANDCAMP_FREE_DOWNLOAD_KBPS }
+				: {}),
+		});
+	} catch (error) {
+		if (!(error instanceof BandcampTrackError)) throw error;
+		console.error("Preview error:", error.message);
+		if (error.userMessage) {
+			return json({ error: error.userMessage }, { status: 422 });
+		}
+		return error.isUnavailable
+			? json({ error: "Track is unavailable" }, { status: 404 })
+			: json({ error: "Failed to load preview" }, { status: 500 });
+	}
+}
+
 export const POST: RequestHandler = async ({ request }) => {
 	try {
 		const url = await readUrlFromBody(request);
@@ -101,6 +152,9 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		if (link.kind === "soundcloud") {
 			return await previewSoundCloud(link);
+		}
+		if (link.kind === "bandcamp") {
+			return await previewBandcamp(link);
 		}
 
 		const videoId = link.id;

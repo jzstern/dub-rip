@@ -1,6 +1,12 @@
 import * as Sentry from "@sentry/sveltekit";
 import { json } from "@sveltejs/kit";
-import { UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
+import {
+	bandcampDetails,
+	bandcampTitleState,
+} from "$lib/bandcamp/bandcamp-metadata";
+import { getBandcampTrack } from "$lib/bandcamp/bandcamp-track-cache";
+import type { DownloadTitle } from "$lib/download-pipeline/title-from-video-details";
+import { type MediaLink, UNSUPPORTED_LINK_MESSAGE } from "$lib/media-link";
 import {
 	cardSizedArtwork,
 	sharedCatalogLookup,
@@ -13,13 +19,49 @@ import {
 	soundCloudDetails,
 	soundCloudTitleState,
 } from "$lib/soundcloud/soundcloud-metadata";
-import type { SoundCloudTrack } from "$lib/soundcloud/soundcloud-track";
 import { getSoundCloudTrack } from "$lib/soundcloud/soundcloud-track-cache";
 import { getVideoDetails } from "$lib/video-details-cache";
 import type { VideoDetails } from "$lib/video-metadata";
 import type { RequestHandler } from "./$types";
 
 const DURATION_EXTRACTION_TIMEOUT_MS = 12_000;
+
+/**
+ * A SoundCloud or Bandcamp track, read from its own page. The title state is
+ * kept, not just the details: those deliberately withhold `artist` and
+ * `track`, so without it there is no identity left to query the catalog with.
+ */
+interface PlatformTrack {
+	titleState: DownloadTitle;
+	details: VideoDetails;
+	hasOwnArtwork: boolean;
+}
+
+async function loadPlatformTrack(
+	link: MediaLink,
+): Promise<PlatformTrack | null> {
+	if (link.kind === "soundcloud") {
+		const track = await getSoundCloudTrack(link).catch(() => null);
+		return (
+			track && {
+				titleState: soundCloudTitleState(track),
+				details: soundCloudDetails(track),
+				hasOwnArtwork: Boolean(track.artworkUrl),
+			}
+		);
+	}
+	if (link.kind === "bandcamp") {
+		const track = await getBandcampTrack(link).catch(() => null);
+		return (
+			track && {
+				titleState: bandcampTitleState(track),
+				details: bandcampDetails(track),
+				hasOwnArtwork: Boolean(track.artworkUrl),
+			}
+		);
+	}
+	return null;
+}
 const DETAILS_CATALOG_TIMEOUT_MS = 4000;
 
 /**
@@ -36,15 +78,15 @@ const DETAILS_CATALOG_TIMEOUT_MS = 4000;
  */
 function detailsQuery(
 	details: VideoDetails,
-	track: SoundCloudTrack | null,
+	platform: PlatformTrack | null,
 ): TrackQuery {
-	if (track) {
-		const { artist, trackTitle } = soundCloudTitleState(track);
+	if (platform) {
+		const { artist, trackTitle } = platform.titleState;
 		return {
 			artist,
 			title: trackTitle,
-			isrc: track.isrc,
-			durationSeconds: track.durationSeconds,
+			isrc: platform.details.isrc,
+			durationSeconds: platform.details.duration,
 		};
 	}
 	/**
@@ -74,21 +116,13 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		const videoId = link.id;
 
-		/**
-		 * The track itself is kept, not just its details: `soundCloudDetails`
-		 * deliberately withholds `artist` and `track`, so without it there is no
-		 * identity left to query the catalog with.
-		 */
-		const track =
-			link.kind === "soundcloud"
-				? await getSoundCloudTrack(link).catch(() => null)
-				: null;
+		const platform = await loadPlatformTrack(link);
 		const details =
 			link.kind === "youtube"
 				? await getVideoDetails(videoId, link.canonicalUrl, {
 						timeout: DURATION_EXTRACTION_TIMEOUT_MS,
 					})
-				: track && soundCloudDetails(track);
+				: platform?.details;
 
 		/**
 		 * A null result means the extraction itself failed, and
@@ -108,8 +142,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (typeof details.duration !== "number") {
 			// SoundCloud's oEmbed fallback (used when the track page can't be
 			// parsed) carries no duration field at all, and even a successfully
-			// parsed track page can yield a `found` track with no
-			// `durationSeconds` — so a missing duration is expected here, not an
+			// parsed SoundCloud or Bandcamp page can yield a track with no
+			// duration — so a missing duration is expected here, not an
 			// extraction failure.
 			if (link.kind === "youtube") {
 				Sentry.captureException(
@@ -125,7 +159,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 
 		const { verdict } = await sharedCatalogLookup(
-			detailsQuery(details, track),
+			detailsQuery(details, platform),
 			{
 				timeout: DETAILS_CATALOG_TIMEOUT_MS,
 			},
@@ -135,12 +169,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		 * Match-only keys, never a `canonical: null`: the client merges whatever
 		 * arrives, so an absent key leaves the heuristic identity standing.
 		 *
-		 * No catalog cover for a SoundCloud upload that has its own: the file gets
-		 * the upload's cover (`resolveSoundCloudAlbumArt` tries it first), and the
-		 * card has to show the cover the file will carry.
+		 * No catalog cover for a SoundCloud or Bandcamp upload that has its own:
+		 * the file gets the upload's cover (`resolvePlatformAlbumArt` tries it
+		 * first), and the card has to show the cover the file will carry.
 		 */
 		const catalogCover =
-			verdict.status === "matched" && !track?.artworkUrl
+			verdict.status === "matched" && !platform?.hasOwnArtwork
 				? verdict.metadata.artworkUrl
 				: undefined;
 		return json({

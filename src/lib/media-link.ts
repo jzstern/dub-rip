@@ -1,14 +1,15 @@
+import { parseBandcampTrackUrl } from "$lib/bandcamp/bandcamp-url";
 import {
 	parseSoundCloudShortLinkCode,
 	parseSoundCloudTrackUrl,
 } from "$lib/soundcloud/soundcloud-url";
 import { buildWatchUrl, extractVideoId } from "$lib/video-utils";
 
-export type MediaLinkKind = "youtube" | "soundcloud";
+export type MediaLinkKind = "youtube" | "soundcloud" | "bandcamp";
 
 export interface MediaLink {
 	kind: MediaLinkKind;
-	/** YouTube video ID, or SoundCloud `user/slug[/s-token]`. */
+	/** YouTube video ID, SoundCloud `user/slug[/s-token]`, or Bandcamp `artist/slug`. */
 	id: string;
 	canonicalUrl: string;
 }
@@ -18,7 +19,7 @@ export type ParsedMediaLink =
 	| { kind: "soundcloud-short-link"; code: string };
 
 export const UNSUPPORTED_LINK_MESSAGE =
-	"Paste a YouTube video or SoundCloud track link";
+	"Paste a YouTube video, or a SoundCloud or Bandcamp track link";
 
 /**
  * Synchronous and browser-safe: the page calls it on every keystroke to
@@ -36,6 +37,8 @@ export function parseMediaLink(input: string): ParsedMediaLink | null {
 	}
 	const track = parseSoundCloudTrackUrl(input);
 	if (track) return { kind: "soundcloud", ...track };
+	const bandcampTrack = parseBandcampTrackUrl(input);
+	if (bandcampTrack) return { kind: "bandcamp", ...bandcampTrack };
 	const code = parseSoundCloudShortLinkCode(input);
 	return code ? { kind: "soundcloud-short-link", code } : null;
 }

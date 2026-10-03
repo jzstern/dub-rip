@@ -39,8 +39,34 @@ describe("parseMediaLink()", () => {
 		});
 	});
 
+	it("parses a Bandcamp track link to its canonical URL", () => {
+		// #when
+		const link = parseMediaLink(
+			"https://BenPrunty.bandcamp.com/track/Lanius-Battle?from=embed",
+		);
+
+		// #then
+		expect(link).toEqual({
+			kind: "bandcamp",
+			id: "benprunty/lanius-battle",
+			canonicalUrl: "https://benprunty.bandcamp.com/track/lanius-battle",
+		});
+	});
+
+	it("parses a scheme-less Bandcamp track link", () => {
+		// #when
+		const link = parseMediaLink("benprunty.bandcamp.com/track/lanius-battle");
+
+		// #then
+		expect(link?.kind).toBe("bandcamp");
+	});
+
 	it.each([
 		"https://soundcloud.com/billieeilish/sets/album",
+		"https://benprunty.bandcamp.com/album/ftl-advanced-edition-soundtrack",
+		"https://daily.bandcamp.com/track/lanius-battle",
+		"https://music.benprunty.com/track/lanius-battle",
+		"https://benprunty.bandcamp.com.evil.com/track/lanius-battle",
 		"https://vimeo.com/123456",
 		"",
 	])("rejects %j", (input) => {

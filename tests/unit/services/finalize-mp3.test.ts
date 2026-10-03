@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  */
 const {
 	resolveAlbumArtImageMock,
-	resolveSoundCloudAlbumArtMock,
+	resolvePlatformAlbumArtMock,
 	registerDownloadMock,
 	sharedCatalogLookupMock,
 } = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ const {
 	resolveAlbumArtImageMock: vi.fn<(input: unknown) => Promise<null>>(
 		async () => null,
 	),
-	resolveSoundCloudAlbumArtMock: vi.fn<(input: unknown) => Promise<null>>(
+	resolvePlatformAlbumArtMock: vi.fn<(input: unknown) => Promise<null>>(
 		async () => null,
 	),
 	registerDownloadMock: vi.fn(() => "fake-token"),
@@ -36,7 +36,7 @@ vi.mock("node-id3", () => ({
 
 vi.mock("$lib/artwork", () => ({
 	resolveAlbumArtImage: resolveAlbumArtImageMock,
-	resolveSoundCloudAlbumArt: resolveSoundCloudAlbumArtMock,
+	resolvePlatformAlbumArt: resolvePlatformAlbumArtMock,
 }));
 
 vi.mock("$lib/video-metadata", () => ({
@@ -369,7 +369,8 @@ describe("finalizeMp3() tag inputs", () => {
 		// #when
 		await finalizeMp3({
 			...finalizeInputFor(filePath),
-			soundCloudArtwork: {
+			platformArtwork: {
+				source: "soundcloud",
 				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
 			},
 		});
@@ -390,16 +391,20 @@ describe("finalizeMp3() SoundCloud cover art", () => {
 		// #when
 		await finalizeMp3({
 			...finalizeInputFor(filePath),
-			soundCloudArtwork: {
+			platformArtwork: {
+				source: "soundcloud",
 				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
 			},
 		});
 
 		// #then
-		expect(resolveSoundCloudAlbumArtMock).toHaveBeenCalledWith({
+		expect(resolvePlatformAlbumArtMock).toHaveBeenCalledWith({
 			artist: "Test Artist",
 			title: "Test Track",
-			artwork: { artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+			},
 		});
 		expect(resolveAlbumArtImageMock).not.toHaveBeenCalled();
 	});
@@ -432,7 +437,7 @@ describe("finalizeMp3() with a proven catalog match", () => {
 	beforeEach(() => {
 		registerDownloadMock.mockClear();
 		resolveAlbumArtImageMock.mockReset().mockResolvedValue(null);
-		resolveSoundCloudAlbumArtMock.mockReset().mockResolvedValue(null);
+		resolvePlatformAlbumArtMock.mockReset().mockResolvedValue(null);
 		sharedCatalogLookupMock.mockReset().mockResolvedValue({
 			verdict: { status: "unmatched", reason: "no-candidates" },
 		});

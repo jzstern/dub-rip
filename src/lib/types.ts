@@ -10,6 +10,8 @@ export interface VideoPreview {
 	thumbnail: string;
 	artwork?: string;
 	duration?: number;
+	/** Set only when the file will beat the default 128 kbps: a free Bandcamp download. */
+	bitrateKbps?: number;
 }
 
 export interface DownloadProgress {

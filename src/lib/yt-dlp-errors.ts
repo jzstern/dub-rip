@@ -205,14 +205,72 @@ const SOUNDCLOUD_RULES: ErrorRule[] = [
 	},
 ];
 
+const BANDCAMP_REFUSED_MESSAGE =
+	"Bandcamp refused the download. Please try again in a few minutes.";
+
+/**
+ * Like SoundCloud, Bandcamp has none of YouTube's bot-check, PO-token or SABR
+ * failure modes. A track with streaming turned off is refused before yt-dlp
+ * runs (bandcampRefusal), so "Requested format is not available" stays out of
+ * these rules: one reaching here is a real change on Bandcamp's side and
+ * belongs in `unknown`, where Sentry sees it.
+ */
+const BANDCAMP_RULES: ErrorRule[] = [
+	{
+		pattern: /http error 404|404 not found|http error 410/,
+		message: "This track was removed from Bandcamp.",
+		retryable: false,
+		category: "user",
+	},
+	{
+		pattern: /http error 429|too many requests/,
+		message:
+			"Bandcamp is limiting downloads right now. Please try again in a few minutes.",
+		retryable: false,
+		category: "transient",
+	},
+	{
+		pattern: HTTP_403_PATTERN,
+		message: BANDCAMP_REFUSED_MESSAGE,
+		retryable: true,
+		category: "transient",
+	},
+	{
+		pattern: EMPTY_FILE_PATTERN,
+		message: BANDCAMP_REFUSED_MESSAGE,
+		retryable: false,
+		category: "transient",
+	},
+	{
+		pattern: /timed? ?out|etimedout/,
+		message: "The request to Bandcamp timed out. Please try again.",
+		retryable: true,
+		category: "transient",
+	},
+	{
+		pattern:
+			/econnreset|econnrefused|enotfound|network error|socket hang up|fetch failed/,
+		message:
+			"A network error occurred while contacting Bandcamp. Please try again.",
+		retryable: true,
+		category: "transient",
+	},
+];
+
 const RULES_BY_SITE: Record<MediaLinkKind, ErrorRule[]> = {
 	youtube: YOUTUBE_RULES,
 	soundcloud: SOUNDCLOUD_RULES,
+	bandcamp: BANDCAMP_RULES,
 };
 
 const GENERIC_ERROR_BY_SITE: Record<MediaLinkKind, ClassifiedYtDlpError> = {
 	youtube: YOUTUBE_GENERIC_ERROR,
 	soundcloud: {
+		message: "Download failed. Please try a different track.",
+		retryable: false,
+		category: "unknown",
+	},
+	bandcamp: {
 		message: "Download failed. Please try a different track.",
 		retryable: false,
 		category: "unknown",

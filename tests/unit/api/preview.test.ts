@@ -98,7 +98,9 @@ describe("POST /api/preview", () => {
 
 			// #then
 			expect(response.status).toBe(400);
-			expect(data.error).toBe("Paste a YouTube video or SoundCloud track link");
+			expect(data.error).toBe(
+				"Paste a YouTube video, or a SoundCloud or Bandcamp track link",
+			);
 		});
 	});
 

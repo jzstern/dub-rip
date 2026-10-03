@@ -1,10 +1,10 @@
 # dub-rip
 
-A simple web app to download YouTube and SoundCloud audio with rich metadata including song title, artist name, album name, artwork, and release year.
+A simple web app to download YouTube, SoundCloud and Bandcamp audio with rich metadata including song title, artist name, album name, artwork, and release year.
 
 ## Features
 
-- Download audio from YouTube videos and SoundCloud tracks
+- Download audio from YouTube videos, SoundCloud tracks and Bandcamp tracks (MP3 320 for free downloads, otherwise Bandcamp's 128 kbps stream)
 - Automatically embed metadata:
   - Title
   - Artist
@@ -110,7 +110,7 @@ No GitHub Actions secrets are required for previews — Railway manages create/d
 
 ## How It Works
 
-1. User enters a YouTube or SoundCloud URL
+1. User enters a YouTube, SoundCloud or Bandcamp URL
 2. The frontend sends a request to `/api/download-stream`
 3. The backend downloads with yt-dlp + ffmpeg, which requests a PO token from the bgutil-pot sidecar during extraction
 4. Metadata is extracted (title, artist, album, artwork)

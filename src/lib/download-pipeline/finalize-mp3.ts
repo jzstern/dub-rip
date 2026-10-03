@@ -2,9 +2,9 @@ import { stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import * as Sentry from "@sentry/sveltekit";
 import {
+	type PlatformArtwork,
 	resolveAlbumArtImage,
-	resolveSoundCloudAlbumArt,
-	type SoundCloudArtwork,
+	resolvePlatformAlbumArt,
 } from "$lib/artwork";
 import { registerDownload } from "$lib/download-pipeline/download-tokens";
 import {
@@ -31,7 +31,7 @@ export interface FinalizeMp3Input {
 	artist: string;
 	trackTitle: string;
 	downloadMethod: DownloadMethod;
-	/** YouTube video ID, or SoundCloud `user/slug`; also Sentry context. */
+	/** YouTube video ID, SoundCloud `user/slug` or Bandcamp `artist/slug`; also Sentry context. */
 	videoId: string;
 	detailsPromise: Promise<VideoDetails | null>;
 	thumbnailPromise: Promise<ThumbnailImage | null>;
@@ -39,8 +39,8 @@ export interface FinalizeMp3Input {
 	signal?: AbortSignal;
 	uploader?: string;
 	sourceUrl?: string;
-	/** Present only for SoundCloud; selects its cover-art order. */
-	soundCloudArtwork?: SoundCloudArtwork;
+	/** Present only for SoundCloud and Bandcamp; selects their cover-art order. */
+	platformArtwork?: PlatformArtwork;
 }
 
 export interface FinalizeMp3Result {
@@ -118,7 +118,7 @@ export async function finalizeMp3({
 	signal,
 	uploader,
 	sourceUrl,
-	soundCloudArtwork,
+	platformArtwork,
 }: FinalizeMp3Input): Promise<FinalizeMp3Result> {
 	const NodeID3 = require("node-id3");
 	/** Declared out here because the filename is built after the try block. */
@@ -158,11 +158,11 @@ export async function finalizeMp3({
 		const preferredArtwork = lookup ? releaseCover(lookup) : undefined;
 
 		const coverTitle = trackTitle || videoTitle;
-		const image = soundCloudArtwork
-			? await resolveSoundCloudAlbumArt({
+		const image = platformArtwork
+			? await resolvePlatformAlbumArt({
 					artist,
 					title: coverTitle,
-					artwork: soundCloudArtwork,
+					artwork: platformArtwork,
 					...(preferredArtwork ? { preferredArtwork } : {}),
 				})
 			: await resolveAlbumArtImage({
@@ -182,8 +182,8 @@ export async function finalizeMp3({
 			uploader,
 			sourceUrl,
 			canonical,
-			/** SoundCloud's label field is a distributor's; YouTube's is a scraped ℗ line. */
-			trustPlatformRelease: Boolean(soundCloudArtwork),
+			/** SoundCloud's and Bandcamp's release fields are the seller's own; YouTube's label is a scraped ℗ line. */
+			trustPlatformRelease: Boolean(platformArtwork),
 		});
 
 		const { image: _image, ...tagsForLog } = tags;

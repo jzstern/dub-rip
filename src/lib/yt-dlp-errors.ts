@@ -51,7 +51,7 @@ const YOUTUBE_RULES: ErrorRule[] = [
 		category: "transient",
 	},
 	{
-		pattern: /video unavailable/,
+		pattern: /video (is )?unavailable/,
 		message: "This video is unavailable or private.",
 		retryable: false,
 		category: "user",

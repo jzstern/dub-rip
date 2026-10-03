@@ -1,7 +1,7 @@
 # dub-rip Development Guidelines
 
 ## Project Overview
-YouTube and SoundCloud audio downloader with rich metadata. Built with SvelteKit 5, TypeScript, shadcn-svelte, Tailwind, yt-dlp, node-id3.
+YouTube, SoundCloud and Bandcamp audio downloader with rich metadata. Built with SvelteKit 5, TypeScript, shadcn-svelte, Tailwind, yt-dlp, node-id3.
 
 ## Tech Stack
 - **Runtime**: Bun (not npm/yarn/pnpm)
@@ -199,6 +199,13 @@ missed. `POST /api/canary` exists to catch the next one within hours.
 - **Error messages are per site** (`classifyYtDlpError(message, "soundcloud")`). YouTube's rules and wording are untouched, and the canary still uses only the YouTube patterns.
 - **The canary stays YouTube-only.** A SoundCloud canary would add scheduled wake-ups (Railway Cost Practices) for a source with no failure history here. Revisit if SoundCloud failures show up in Sentry.
 
+## Bandcamp Integration
+- **Only `<artist>.bandcamp.com/track/<slug>`.** Album links are refused by `parseBandcampTrackUrl`. **Artists on a custom domain are refused too, and that check lives in the fetch:** Bandcamp 301s `<artist>.bandcamp.com/track/…` to the artist's own domain (e.g. `sufjanstevens` → `music.sufjan.com`), which the artist controls. So `fetchBandcampTrack` uses `redirect: "manual"` and follows only hops that parse back to a Bandcamp track page. Never switch it back to the default `follow`: that lets anyone make the server request whatever the custom domain redirects to. A custom domain answers with `BANDCAMP_CUSTOM_DOMAIN_MESSAGE` and is unreported.
+- **Bitrate depends on the track, not on us.** The preview returns `bitrateKbps: 320` for a free download, and the page footer shows it in place of the default 128. It is a prediction: the download copy is deliberately unchanged. A paid track exposes only `mp3-128`, the public stream. A name-your-price track with a $0 minimum and no email gate (`freeDownloadPage` set, `require_email` unset) also exposes `mp3-320`/`mp3-v0`/FLAC/WAV…, which yt-dlp reads from the free-download page with no purchase. `BANDCAMP_FORMAT_SELECTOR` takes `mp3-320` first, so `--audio-format mp3` copies it. Never prefer FLAC: it would be re-encoded into a lossy MP3 no better than 320. Buying a track never helps here, because that needs the buyer's cookies (verified 2026-10-02 against `benprunty/lanius-battle` (free) and `youtube-dl/youtube-dl-test-song` (paid)).
+- **Metadata comes from the track page's `data-tralbum` / `data-embed` / `data-band` attributes** (HTML-escaped JSON), one fetch per track via `getBandcampTrack` (10-minute TTL). A missing track is a plain 404 (unreported). Any other failure is reported and the download goes ahead, because yt-dlp parses the page itself. `getBandcampTrack` remembers a failed lookup for 2 minutes, because the single-flight cache never stores a rejection: without that, preview, details and download each refetched and reported one incident three times.
+- **The selling account is a label only when neither name contains the other** (normalized). That becomes TPUB. Containment, not equality, because an artist's own account credits collabs (`Ben Prunty & X`) and can carry a suffix (`Ben Prunty Music`). Artwork is `a<art_id>_16.jpg` (700×700) on `f4.bcbits.com`, built from the numeric ID. It is the release's own cover and goes first in `resolvePlatformAlbumArt`, as for SoundCloud.
+- **Streaming disabled = refused before yt-dlp** (`bandcampRefusal`: empty `trackinfo[0].file`). Like SoundCloud: no bgutil/PO-token args, no `BGUTIL_POT_URL` gate, a slot in the shared limiter, no canary.
+
 ## Metadata (node-id3)
 - Use node-id3 for ID3 tags (not ffmpeg)
 - Title should NOT include artist name
@@ -220,7 +227,7 @@ bun run test:e2e     # E2E tests (Playwright)
 - Check dev server for compilation errors
 - Run `bun run check` and `bun run lint`
 - Run code-simplifier and security-auditor agents
-- Test: a YouTube URL *and* a SoundCloud URL → preview → download works
+- Test: a YouTube URL, a SoundCloud URL *and* a Bandcamp URL → preview → download works
 - Test error cases: invalid URL, private video, playlist edge cases
 
 ## Git Workflow

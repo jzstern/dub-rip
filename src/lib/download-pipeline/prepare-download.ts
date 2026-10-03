@@ -1,7 +1,18 @@
 import * as Sentry from "@sentry/sveltekit";
 import { env } from "$env/dynamic/private";
-import type { SoundCloudArtwork } from "$lib/artwork";
+import type { PlatformArtwork } from "$lib/artwork";
+import {
+	bandcampDetails,
+	bandcampRefusal,
+	bandcampTitleState,
+} from "$lib/bandcamp/bandcamp-metadata";
+import {
+	type BandcampTrack,
+	BandcampTrackError,
+} from "$lib/bandcamp/bandcamp-track";
+import { getBandcampTrack } from "$lib/bandcamp/bandcamp-track-cache";
 import type { DownloadTitle } from "$lib/download-pipeline/title-from-video-details";
+import { tryBandcampDownload } from "$lib/download-pipeline/try-bandcamp";
 import { trySoundCloudDownload } from "$lib/download-pipeline/try-soundcloud";
 import {
 	tryYtDlpDownload,
@@ -47,8 +58,8 @@ export interface PreparedDownload {
 	uploader: string;
 	detailsPromise: Promise<VideoDetails | null>;
 	thumbnailPromise: Promise<ThumbnailImage | null>;
-	/** Present only for SoundCloud; selects its cover-art order in finalizeMp3. */
-	soundCloudArtwork?: SoundCloudArtwork;
+	/** Present only for SoundCloud and Bandcamp; selects their cover-art order in finalizeMp3. */
+	platformArtwork?: PlatformArtwork;
 	runAttempt: (input: DownloadAttemptInput) => Promise<void>;
 }
 
@@ -266,12 +277,76 @@ async function prepareSoundCloudDownload(
 		uploader: track?.uploader ?? "",
 		detailsPromise: Promise.resolve(track ? soundCloudDetails(track) : null),
 		thumbnailPromise: Promise.resolve(null),
-		soundCloudArtwork: {
+		platformArtwork: {
+			source: "soundcloud",
 			artworkUrl: track?.artworkUrl,
 			avatarUrl: track?.avatarUrl,
 		},
 		runAttempt: ({ outputPath, ffmpegPath, debugMode, ytDlp, signal }) =>
 			trySoundCloudDownload({
+				videoUrl: link.canonicalUrl,
+				outputPath,
+				ffmpegPath,
+				debugMode,
+				ytDlp,
+				send,
+				signal,
+			}),
+	};
+}
+
+/**
+ * The same shape as prepareSoundCloudDownload: a removed track or one with
+ * streaming turned off is answered before yt-dlp runs, and a lookup that
+ * failed any other way was already reported by fetchBandcampTrack, so the
+ * download goes ahead without metadata.
+ */
+async function prepareBandcampDownload(
+	link: MediaLink,
+	send: Send,
+): Promise<PreparedDownload | null> {
+	send({ type: "status", message: "Getting track info..." });
+
+	let track: BandcampTrack | null = null;
+	try {
+		track = await getBandcampTrack(link);
+	} catch (err) {
+		if (err instanceof BandcampTrackError && err.userMessage) {
+			send({ type: "error", message: err.userMessage });
+			return null;
+		}
+		if (err instanceof BandcampTrackError && err.isUnavailable) {
+			send({ type: "error", message: "Track not found or unavailable" });
+			return null;
+		}
+		console.error("Bandcamp metadata error:", err);
+	}
+
+	const refusal = track && bandcampRefusal(track);
+	if (refusal) {
+		Sentry.addBreadcrumb({
+			category: "download",
+			level: "info",
+			message: `Download rejected: ${refusal}`,
+			data: { videoId: link.id },
+		});
+		send({ type: "error", message: refusal });
+		return null;
+	}
+
+	const titleState = track ? bandcampTitleState(track) : emptyTitleState();
+	if (track) sendTitleInfo(send, titleState);
+
+	send({ type: "status", message: "Starting download..." });
+
+	return {
+		titleState,
+		uploader: track?.bandName ?? "",
+		detailsPromise: Promise.resolve(track ? bandcampDetails(track) : null),
+		thumbnailPromise: Promise.resolve(null),
+		platformArtwork: { source: "bandcamp", artworkUrl: track?.artworkUrl },
+		runAttempt: ({ outputPath, ffmpegPath, debugMode, ytDlp, signal }) =>
+			tryBandcampDownload({
 				videoUrl: link.canonicalUrl,
 				outputPath,
 				ffmpegPath,
@@ -289,7 +364,12 @@ export function prepareDownload(
 	send: Send,
 	signal: AbortSignal,
 ): Promise<PreparedDownload | null> {
-	return link.kind === "youtube"
-		? prepareYouTubeDownload(link, send, signal)
-		: prepareSoundCloudDownload(link, send);
+	switch (link.kind) {
+		case "youtube":
+			return prepareYouTubeDownload(link, send, signal);
+		case "soundcloud":
+			return prepareSoundCloudDownload(link, send);
+		case "bandcamp":
+			return prepareBandcampDownload(link, send);
+	}
 }

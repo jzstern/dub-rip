@@ -411,8 +411,8 @@ $effect(() => {
 			<div class="flex flex-col p-5">
 				<Input
 					bind:value={url}
-					placeholder="Paste a YouTube or SoundCloud link"
-					aria-label="YouTube or SoundCloud link"
+					placeholder="Paste a YouTube, SoundCloud or Bandcamp link"
+					aria-label="YouTube, SoundCloud or Bandcamp link"
 					disabled={loading}
 					autofocus
 					onkeydown={(e) => e.key === "Enter" && !e.isComposing && isValidUrl && !loading && handleDownload()}
@@ -485,7 +485,7 @@ $effect(() => {
 
 			<div class="flex justify-end border-t px-5 py-2">
 				<span class="font-mono text-[10px] tracking-[0.12em] text-muted-foreground"
-					>MP3 128 kbps · ID3v2</span
+					>MP3 {preview?.bitrateKbps ?? 128} kbps · ID3v2</span
 				>
 			</div>
 		</section>

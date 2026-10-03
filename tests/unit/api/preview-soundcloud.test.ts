@@ -218,7 +218,7 @@ describe("POST /api/preview/details — SoundCloud", () => {
 		};
 
 		it("keeps the upload's own cover on the card, since the file gets that cover", async () => {
-			// #given — resolveSoundCloudAlbumArt writes the upload's cover first, so a
+			// #given — resolvePlatformAlbumArt writes the upload's cover first, so a
 			// catalog sleeve here would show a cover the MP3 never carries
 			sharedCatalogLookupMock.mockResolvedValue(MATCHED);
 

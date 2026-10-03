@@ -30,7 +30,7 @@ const ARTIST_CHANNEL_SUFFIX = /\s+(?:mixes|official)$/i;
 const MULTI_WORD = /\S\s+\S/;
 const TRAILING_VERSION = /(?:\s*[([][^()[\]]*[)\]])+$/;
 
-function normalizeName(name: string): string {
+export function normalizeName(name: string): string {
 	return name
 		.normalize("NFKC")
 		.toLowerCase()

@@ -120,7 +120,9 @@ describe("GET /api/download-stream - input validation", () => {
 		// #then
 		expect(response.status).toBe(400);
 		const text = await response.text();
-		expect(text).toBe("Paste a YouTube video or SoundCloud track link");
+		expect(text).toBe(
+			"Paste a YouTube video, or a SoundCloud or Bandcamp track link",
+		);
 	});
 
 	it("validates video ID to prevent command injection", async () => {
@@ -139,7 +141,9 @@ describe("GET /api/download-stream - input validation", () => {
 		// #then
 		expect(response.status).toBe(400);
 		const text = await response.text();
-		expect(text).toBe("Paste a YouTube video or SoundCloud track link");
+		expect(text).toBe(
+			"Paste a YouTube video, or a SoundCloud or Bandcamp track link",
+		);
 	});
 
 	it("returns SSE headers for valid YouTube URL", async () => {

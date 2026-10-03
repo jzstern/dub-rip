@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveSoundCloudAlbumArt } from "$lib/artwork";
+import { resolvePlatformAlbumArt } from "$lib/artwork";
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff]).buffer;
 const image = () => ({ ok: true, status: 200, arrayBuffer: async () => JPEG });
@@ -9,7 +9,7 @@ const searchResult = (body: unknown) => ({
 	json: async () => body,
 });
 
-describe("resolveSoundCloudAlbumArt()", () => {
+describe("resolvePlatformAlbumArt()", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 	});
@@ -20,10 +20,13 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const art = await resolveSoundCloudAlbumArt({
+		const art = await resolvePlatformAlbumArt({
 			artist: "The Chainsmokers",
 			title: "Don't Let Me Down (W&W Remix)",
-			artwork: { artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+			},
 		});
 
 		// #then
@@ -40,10 +43,13 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const art = await resolveSoundCloudAlbumArt({
+		const art = await resolvePlatformAlbumArt({
 			artist: "blk.",
 			title: "I Cant Fail",
-			artwork: { avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg",
+			},
 			preferredArtwork: {
 				url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
 				source: "itunes",
@@ -65,10 +71,13 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		await resolveSoundCloudAlbumArt({
+		await resolvePlatformAlbumArt({
 			artist: "blk.",
 			title: "I Cant Fail",
-			artwork: { artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				artworkUrl: "https://i1.sndcdn.com/artworks-x-t500x500.jpg",
+			},
 			preferredArtwork: {
 				url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
 				source: "itunes",
@@ -99,10 +108,13 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const art = await resolveSoundCloudAlbumArt({
+		const art = await resolvePlatformAlbumArt({
 			artist: "blk.",
 			title: "I Cant Fail",
-			artwork: { avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg",
+			},
 			preferredArtwork: {
 				url: "https://is1-ssl.mzstatic.com/proven/600x600bb.jpg",
 				source: "itunes",
@@ -128,10 +140,13 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const art = await resolveSoundCloudAlbumArt({
+		const art = await resolvePlatformAlbumArt({
 			artist: "Billie Eilish",
 			title: "bad guy",
-			artwork: { avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg",
+			},
 		});
 
 		// #then
@@ -153,10 +168,13 @@ describe("resolveSoundCloudAlbumArt()", () => {
 		vi.stubGlobal("fetch", fetchMock);
 
 		// #when
-		const art = await resolveSoundCloudAlbumArt({
+		const art = await resolvePlatformAlbumArt({
 			artist: "Unknown",
 			title: "Bootleg",
-			artwork: { avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg" },
+			artwork: {
+				source: "soundcloud",
+				avatarUrl: "https://i1.sndcdn.com/avatars-x-t500x500.jpg",
+			},
 		});
 
 		// #then

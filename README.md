@@ -84,7 +84,13 @@ PUBLIC_SENTRY_DSN=https://...
 # Build-time only; without it no source maps are uploaded and browser
 # stack traces stay minified.
 SENTRY_AUTH_TOKEN=sntrys_...
+
+# Optional — enables the scheduled production canary (/api/canary returns
+# 404 when unset). Must match the CANARY_TOKEN GitHub repo secret.
+CANARY_TOKEN=...
 ```
+
+These live only as Railway service variables on the `dub-rip` service in the `production` environment. There's no secrets manager and no `.env` file. Set or rotate one with `railway variable set <NAME> --stdin -s dub-rip`, which redeploys automatically. Use `railway run -s dub-rip -- <cmd>` to run something locally with them injected. PR environments inherit them from production. CI-only keys such as `RAILWAY_API_TOKEN` and `RAMS_API_KEY` are GitHub repository secrets instead.
 
 Per-client rate limiting on `/api/preview*` and `/api/download-stream` needs no configuration: on Railway it keys on the `X-Real-IP` header ([docs](https://docs.railway.com/networking/public-networking/specs-and-limits)), since the proxy's own address would put every visitor in one bucket.
 

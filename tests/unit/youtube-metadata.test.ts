@@ -173,6 +173,18 @@ describe("fetchYouTubeMetadata", () => {
 			});
 		});
 
+		it("treats 400 for a nonexistent video ID as unavailable and does not report it", async () => {
+			// #given
+			mockFetch.mockResolvedValue({ ok: false, status: 400 });
+
+			// #when/#then
+			await expect(fetchYouTubeMetadata("aaaaaaaaaaa")).rejects.toMatchObject({
+				name: "YouTubeMetadataError",
+				isUnavailable: true,
+			});
+			expect(Sentry.captureException).not.toHaveBeenCalled();
+		});
+
 		it("throws YouTubeMetadataError without isUnavailable for 500", async () => {
 			// #given
 			mockFetch.mockResolvedValue({

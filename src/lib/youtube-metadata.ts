@@ -36,7 +36,7 @@ export async function fetchYouTubeMetadata(
 			if (response.status === 401 || response.status === 403) {
 				throw new YouTubeMetadataError("Video is unavailable or private", true);
 			}
-			if (response.status === 404) {
+			if (response.status === 400 || response.status === 404) {
 				throw new YouTubeMetadataError("Video not found", true);
 			}
 			/**
